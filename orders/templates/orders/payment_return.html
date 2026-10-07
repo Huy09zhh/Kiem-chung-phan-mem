@@ -1,0 +1,105 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Kết quả thanh toán | Green Shop{% endblock %}
+
+{% block content %}
+<div class="cart-page">
+    <div class="container">
+        <div class="cart-shell">
+            <div class="cart-hero">
+                <span class="sub">Green Shop</span>
+
+                {% if is_success %}
+                    <h1>Thanh toán thành công</h1>
+                    <p>Đơn hàng của bạn đã được xác nhận qua VNPAY.</p>
+                {% else %}
+                    <h1>Thanh toán chưa thành công</h1>
+                    <p>Giao dịch chưa được xác nhận. Bạn có thể kiểm tra lại và thử lại.</p>
+                {% endif %}
+            </div>
+
+            <div class="summary-card" style="max-width: 760px; margin: 0 auto;">
+                <div class="card-head summary-head">
+                    <h2>Thông tin giao dịch</h2>
+                    <span>Kết quả trả về từ hệ thống thanh toán</span>
+                </div>
+
+                <div class="card-body">
+                    <div class="summary-line">
+                        <span>Mã đơn tham chiếu</span>
+                        <strong>{{ transaction.order_ref|default:"Không tìm thấy" }}</strong>
+                    </div>
+
+                    <div class="summary-line">
+                        <span>Số tiền</span>
+                        <strong>
+                            {% if transaction %}
+                                {{ transaction.amount|floatformat:0 }} VND
+                            {% else %}
+                                -
+                            {% endif %}
+                        </strong>
+                    </div>
+
+                    <div class="summary-line">
+                        <span>Trạng thái</span>
+                        <strong>
+                            {% if is_success %}
+                                Thành công
+                            {% else %}
+                                Thất bại
+                            {% endif %}
+                        </strong>
+                    </div>
+
+                    <div class="summary-line">
+                        <span>Mã phản hồi VNPAY</span>
+                        <strong>{{ response_code|default:"-" }}</strong>
+                    </div>
+
+                    <div class="summary-line">
+                        <span>Mã giao dịch VNPAY</span>
+                        <strong>
+                            {% if transaction and transaction.transaction_no %}
+                                {{ transaction.transaction_no }}
+                            {% else %}
+                                -
+                            {% endif %}
+                        </strong>
+                    </div>
+
+                    <div class="summary-line">
+                        <span>Ngân hàng</span>
+                        <strong>
+                            {% if transaction and transaction.bank_code %}
+                                {{ transaction.bank_code }}
+                            {% else %}
+                                -
+                            {% endif %}
+                        </strong>
+                    </div>
+
+                    <div class="summary-note">
+                        {% if not is_valid_checksum %}
+                            Dữ liệu trả về không hợp lệ do sai chữ ký bảo mật.
+                        {% elif is_success %}
+                            Thanh toán đã hoàn tất. Giỏ hàng đã được làm trống tự động.
+                        {% else %}
+                            Giao dịch chưa thành công hoặc chưa được xác nhận đầy đủ.
+                        {% endif %}
+                    </div>
+
+                    <a href="{% url 'cart_detail' %}" class="checkout-btn">
+                        Quay lại giỏ hàng
+                    </a>
+
+                    <a href="{% url 'product_list' %}" class="continue-btn">
+                        Tiếp tục mua sắm
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

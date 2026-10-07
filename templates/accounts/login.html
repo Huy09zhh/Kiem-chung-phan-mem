@@ -1,0 +1,68 @@
+{% extends 'base.html' %}
+{% load static %}
+{% load socialaccount %}
+
+{% block title %}Đăng nhập{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/auth.css' %}">
+{% endblock %}
+
+{% block content %}
+<section class="auth-page">
+
+    <div class="auth-card">
+        <h1 class="auth-title">Đăng nhập</h1>
+
+        <form method="post" action="{% provider_login_url 'google' %}">
+            {% csrf_token %}
+            <button type="submit" class="auth-google-btn auth-google-submit">
+                <img src="{% static 'images/google-image.png' %}" alt="Google">
+                <span>Đăng nhập với Google</span>
+            </button>
+        </form>
+
+        <div class="auth-divider">
+            <span>Hoặc</span>
+        </div>
+
+        <form method="post" class="auth-form">
+            {% csrf_token %}
+
+            {% if form.non_field_errors %}
+                <div class="auth-error-box">
+                    {% for error in form.non_field_errors %}
+                        <div>{{ error }}</div>
+                    {% endfor %}
+                </div>
+            {% endif %}
+
+            <div class="auth-form-group">
+                <label for="{{ form.username.id_for_label }}">Tài khoản</label>
+                {{ form.username }}
+                {% if form.username.errors %}
+                    <small class="auth-error">{{ form.username.errors.0 }}</small>
+                {% endif %}
+            </div>
+
+            <div class="auth-form-group">
+                <label for="{{ form.password.id_for_label }}">Mật khẩu</label>
+                {{ form.password }}
+                {% if form.password.errors %}
+                    <small class="auth-error">{{ form.password.errors.0 }}</small>
+                {% endif %}
+            </div>
+
+            <button type="submit" class="auth-submit-btn">Đăng nhập</button>
+        </form>
+        <p class="auth-switch-text">
+            <a href="{% url 'password_reset' %}">Quên mật khẩu?</a>
+        </p>
+
+        <p class="auth-switch-text">
+            Chưa có tài khoản?
+            <a href="{% url 'register' %}">Đăng ký</a>
+        </p>
+    </div>
+</section>
+{% endblock %}

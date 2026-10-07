@@ -1,0 +1,121 @@
+{% load static %}
+
+<div class="left-side-bar">
+    <div class="brand-logo">
+        <a href="{% url 'admin_dashboard' %}">
+            <img src="{% static 'images/logo.png' %}" alt="Logo" style="height: 54px; width: auto;">
+            <span style="font-size: 22px; font-weight: 700; color: #2f6b3b; margin-left: 12px;">
+                Green Shop
+            </span>
+        </a>
+        <div class="close-sidebar" data-toggle="left-sidebar-close">
+            <i class="ion-close-round"></i>
+        </div>
+    </div>
+    <div class="menu-block customscroll">
+        <div class="sidebar-menu">
+            <ul id="accordion-menu">
+
+                <li>
+                    <div class="sidebar-small-cap">Tổng quan</div>
+                </li>
+
+                <li>
+                    <a href="{% url 'admin_dashboard' %}" class="dropdown-toggle no-arrow">
+                        <span class="micon bi bi-grid-1x2"></span>
+                        <span class="mtext">Tổng quan</span>
+                    </a>
+                </li>
+
+                <li>
+                    <div class="dropdown-divider"></div>
+                </li>
+
+                <li>
+                    <div class="sidebar-small-cap">Quản lý cửa hàng</div>
+                </li>
+
+                <li class="dropdown">
+                    <a href="javascript:;" class="dropdown-toggle">
+                        <span class="micon bi bi-box-seam"></span>
+                        <span class="mtext">Sản phẩm</span>
+                    </a>
+                    <ul class="submenu">
+                        <li>
+                            <a href="{% url 'admin_product_list' %}">Danh sách sản phẩm</a>
+                        </li>
+                        <li>
+                            <a href="{% url 'admin_category_list' %}">Danh mục</a>
+                        </li>
+                    </ul>
+                </li>
+
+                <li>
+                    <a href="{% url 'admin_order_list' %}" class="dropdown-toggle no-arrow">
+                        <span class="micon bi bi-receipt-cutoff"></span>
+                        <span class="mtext">Đơn hàng</span>
+                    </a>
+                </li>
+
+                <li>
+                    <a href="#" class="dropdown-toggle no-arrow">
+                        <span class="micon bi bi-megaphone"></span>
+                        <span class="mtext">Khuyến mãi</span>
+                    </a>
+                </li>
+
+                <li>
+                    <div class="dropdown-divider"></div>
+                </li>
+
+                <li>
+                    <div class="sidebar-small-cap">Người dùng</div>
+                </li>
+
+                <li>
+                    <a href="#" class="dropdown-toggle no-arrow">
+                        <span class="micon bi bi-people"></span>
+                        <span class="mtext">Tài khoản người dùng</span>
+                    </a>
+                </li>
+
+                <li>
+                    <div class="dropdown-divider"></div>
+                </li>
+
+                <li>
+                    <div class="sidebar-small-cap">Hệ thống</div>
+                </li>
+
+                <li>
+                    <a href="#" class="dropdown-toggle no-arrow">
+                        <span class="micon bi bi-gear"></span>
+                        <span class="mtext">Cài đặt</span>
+                    </a>
+                </li>
+
+                <li>
+                    <a href="{% url 'home' %}" class="dropdown-toggle no-arrow">
+                        <span class="micon bi bi-globe2"></span>
+                        <span class="mtext">Xem website</span>
+                    </a>
+                </li>
+
+                <li>
+                    <form method="post" action="{% url 'logout' %}" style="margin: 0;">
+                        {% csrf_token %}
+                        <button
+                            type="submit"
+                            class="dropdown-toggle no-arrow"
+                            style="width: 100%; border: none; background: transparent; text-align: left;"
+                        >
+                            <span class="micon bi bi-box-arrow-right"></span>
+                            <span class="mtext">Đăng xuất</span>
+                        </button>
+                    </form>
+                </li>
+
+            </ul>
+        </div>
+    </div>
+</div>

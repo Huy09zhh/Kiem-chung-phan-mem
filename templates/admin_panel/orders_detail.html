@@ -1,0 +1,96 @@
+{% extends 'admin_panel/base.html' %}
+{% load humanize %}
+
+{% block title %}Chi tiết đơn hàng{% endblock %}
+
+{% block content %}
+<div class="pd-20 card-box mb-30">
+    <div class="d-flex justify-content-between align-items-center mb-20">
+        <div>
+            <h4 class="h4 mb-0">Chi tiết đơn hàng #{{ order.id }}</h4>
+            <p class="mb-0 text-muted">Theo dõi thông tin và cập nhật trạng thái đơn hàng</p>
+        </div>
+        <a href="{% url 'admin_order_list' %}" class="btn btn-outline-secondary">Quay lại danh sách</a>
+    </div>
+
+    <div class="row">
+        <div class="col-lg-6 mb-30">
+            <div class="card-box pd-20 h-100">
+                <h5 class="mb-20">Thông tin khách hàng</h5>
+
+                <div class="mb-10"><strong>Họ tên:</strong> {{ order.full_name }}</div>
+                <div class="mb-10"><strong>Tài khoản:</strong> {{ order.user.username }}</div>
+                <div class="mb-10"><strong>Số điện thoại:</strong> {{ order.phone }}</div>
+                <div class="mb-10"><strong>Địa chỉ:</strong> {{ order.address }}</div>
+                <div class="mb-10"><strong>Ghi chú:</strong> {{ order.note|default:"-" }}</div>
+                <div class="mb-10"><strong>Ngày tạo:</strong> {{ order.created_at|date:"d/m/Y H:i" }}</div>
+            </div>
+        </div>
+
+        <div class="col-lg-6 mb-30">
+            <div class="card-box pd-20 h-100">
+                <h5 class="mb-20">Thông tin đơn hàng</h5>
+
+                <div class="mb-10"><strong>Phương thức thanh toán:</strong> {{ order.get_payment_method_display }}</div>
+                <div class="mb-10"><strong>Trạng thái hiện tại:</strong> {{ order.get_status_display }}</div>
+                <div class="mb-20"><strong>Tổng tiền:</strong> {{ order.total_price|floatformat:0|intcomma }} đ</div>
+
+                <form method="post" action="{% url 'admin_order_update_status' order.id %}">
+                    {% csrf_token %}
+                    <input type="hidden" name="next" value="detail">
+
+                    <div class="form-group">
+                        <label><strong>Cập nhật trạng thái</strong></label>
+                        <select name="status" class="form-control">
+                            {% for value, label in status_choices %}
+                                <option value="{{ value }}" {% if order.status == value %}selected{% endif %}>{{ label }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <button type="submit" class="btn btn-success">Lưu trạng thái</button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div class="card-box pd-20">
+        <h5 class="mb-20">Sản phẩm trong đơn</h5>
+
+        <div class="table-responsive">
+            <table class="table table-bordered">
+                <thead>
+                    <tr>
+                        <th>#</th>
+                        <th>Tên sản phẩm</th>
+                        <th>Đơn giá</th>
+                        <th>Số lượng</th>
+                        <th>Thành tiền</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for item in order.items.all %}
+                    <tr>
+                        <td>{{ forloop.counter }}</td>
+                        <td>{{ item.product_name }}</td>
+                        <td>{{ item.price|floatformat:0|intcomma }} đ</td>
+                        <td>{{ item.quantity }}</td>
+                        <td>{{ item.price|floatformat:0|intcomma }} đ × {{ item.quantity }}</td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="5" class="text-center">Không có sản phẩm trong đơn.</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+                <tfoot>
+                    <tr>
+                        <th colspan="4" class="text-right">Tổng cộng</th>
+                        <th>{{ order.total_price|floatformat:0|intcomma }} đ</th>
+                    </tr>
+                </tfoot>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

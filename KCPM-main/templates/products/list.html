@@ -1,0 +1,114 @@
+{% extends 'base.html' %}
+{% load static %}
+{% load humanize %}
+
+{% block title %}Tất cả sản phẩm{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/products.css' %}">
+{% endblock %}
+
+{% block content %}
+<section class="product-page">
+    <div class="container">
+        <div class="product-shell">
+
+            <div class="product-breadcrumb">
+                <a href="{% url 'home' %}">Trang chủ</a>
+                <span>/</span>
+                <span>Tất cả sản phẩm</span>
+            </div>
+
+            <div class="product-hero-card">
+                <div class="product-page-header">
+                    <h1 class="product-page-title">Tất cả sản phẩm</h1>
+                    <p class="product-page-subtitle">
+                        Khám phá các sản phẩm xanh, thân thiện với môi trường và phù hợp cho lối sống bền vững.
+                    </p>
+                </div>
+
+                <div class="product-toolbar">
+                    <div class="toolbar-left">
+                        <span class="toolbar-label">Sắp xếp theo</span>
+                    </div>
+
+                    <div class="toolbar-right">
+                        <a href="?{% if q %}q={{ q }}&{% endif %}{% if category_id %}category={{ category_id }}&{% endif %}"
+                           class="sort-chip {% if not sort %}active{% endif %}">
+                            Mặc định
+                        </a>
+
+                        <a href="?{% if q %}q={{ q }}&{% endif %}{% if category_id %}category={{ category_id }}&{% endif %}sort=name_asc"
+                           class="sort-chip {% if sort == 'name_asc' %}active{% endif %}">
+                            Tên A-Z
+                        </a>
+
+                        <a href="?{% if q %}q={{ q }}&{% endif %}{% if category_id %}category={{ category_id }}&{% endif %}sort=name_desc"
+                           class="sort-chip {% if sort == 'name_desc' %}active{% endif %}">
+                            Tên Z-A
+                        </a>
+
+                        <a href="?{% if q %}q={{ q }}&{% endif %}{% if category_id %}category={{ category_id }}&{% endif %}sort=price_asc"
+                           class="sort-chip {% if sort == 'price_asc' %}active{% endif %}">
+                            Giá thấp đến cao
+                        </a>
+
+                        <a href="?{% if q %}q={{ q }}&{% endif %}{% if category_id %}category={{ category_id }}&{% endif %}sort=price_desc"
+                           class="sort-chip {% if sort == 'price_desc' %}active{% endif %}">
+                            Giá cao xuống thấp
+                        </a>
+                    </div>
+                </div>
+
+                {% if q %}
+                <div class="product-result-count">
+                    Kết quả tìm kiếm cho: "<strong>{{ q }}</strong>"
+                </div>
+                {% endif %}
+            </div>
+
+            <div class="product-grid-list">
+                {% for product in products %}
+                <div class="home-product-card shop-card-upgrade">
+                    <a href="{% url 'product_detail' product.pk %}" class="home-product-thumb shop-thumb-upgrade">
+                        {% if product.image %}
+                            <img src="{{ product.image.url }}" alt="{{ product.name }}">
+                        {% else %}
+                            <div class="home-thumb-placeholder">No image</div>
+                        {% endif %}
+
+                        <div class="shop-hover-actions">
+                            <span class="shop-hover-chip">Xem chi tiết</span>
+                        </div>
+                    </a>
+
+                    <div class="home-product-info">
+                        <h3>
+                            <a href="{% url 'product_detail' product.pk %}">{{ product.name }}</a>
+                        </h3>
+
+                        <div class="home-price-row">
+                            <span class="price-new">{{ product.price|intcomma }}đ</span>
+                        </div>
+
+                        <div class="shop-card-actions">
+                            <a href="{% url 'cart_add' product.id %}" class="shop-btn shop-btn-primary">
+                                Thêm vào giỏ
+                            </a>
+                        </div>
+                    </div>
+
+                    <a href="{% url 'product_detail' product.pk %}" class="shop-card-link" aria-label="{{ product.name }}"></a>
+                </div>
+                {% empty %}
+                <div class="empty-product-box">
+                    <h3>Chưa tìm thấy sản phẩm phù hợp</h3>
+                    <p>Hãy thử tìm với từ khóa khác hoặc quay lại sau nhé.</p>
+                </div>
+                {% endfor %}
+            </div>
+
+        </div>
+    </div>
+</section>
+{% endblock %}

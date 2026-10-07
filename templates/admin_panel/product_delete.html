@@ -1,0 +1,15 @@
+{% extends 'admin_panel/base.html' %}
+
+{% block content %}
+<div class="pd-20 card-box">
+    <h4>Xóa sản phẩm</h4>
+
+    <p>Bạn có chắc muốn xóa <strong>{{ product.name }}</strong>?</p>
+
+    <form method="post">
+        {% csrf_token %}
+        <button type="submit" class="btn btn-danger">Xóa</button>
+        <a href="{% url 'admin_product_list' %}" class="btn btn-secondary">Hủy</a>
+    </form>
+</div>
+{% endblock %}

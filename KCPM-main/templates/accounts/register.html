@@ -1,0 +1,91 @@
+{% extends 'base.html' %}
+{% load static %}
+{% load socialaccount %}
+
+{% block title %}Đăng ký{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/auth.css' %}">
+{% endblock %}
+
+{% block content %}
+<section class="auth-page">
+
+    <div class="auth-card">
+        <h1 class="auth-title">Đăng ký</h1>
+
+        <!-- Google -->
+        <form method="post" action="{% provider_login_url 'google' %}">
+            {% csrf_token %}
+            <button type="submit" class="auth-google-btn auth-google-submit">
+                <img src="{% static 'images/google-image.png' %}" alt="Google">
+                <span>Đăng ký với Google</span>
+            </button>
+        </form>
+
+        <!-- Divider -->
+        <div class="auth-divider">
+            <span>Hoặc</span>
+        </div>
+
+        <!-- Form -->
+        <form method="post" class="auth-form">
+            {% csrf_token %}
+
+            {% if form.non_field_errors %}
+                <div class="auth-error-box">
+                    {% for error in form.non_field_errors %}
+                        <div>{{ error }}</div>
+                    {% endfor %}
+                </div>
+            {% endif %}
+
+            <!-- Username -->
+            <div class="auth-form-group">
+                <label for="{{ form.username.id_for_label }}">Tài khoản</label>
+                {{ form.username }}
+                {% if form.username.errors %}
+                    <small class="auth-error">{{ form.username.errors.0 }}</small>
+                {% endif %}
+            </div>
+
+            <!-- Email -->
+            <div class="auth-form-group">
+                <label for="{{ form.email.id_for_label }}">Email</label>
+                {{ form.email }}
+                {% if form.email.errors %}
+                    <small class="auth-error">{{ form.email.errors.0 }}</small>
+                {% endif %}
+            </div>
+
+            <!-- Password -->
+            <div class="auth-form-group">
+                <label for="{{ form.password1.id_for_label }}">Mật khẩu</label>
+                {{ form.password1 }}
+                {% if form.password1.errors %}
+                    <small class="auth-error">{{ form.password1.errors.0 }}</small>
+                {% endif %}
+            </div>
+
+            <!-- Confirm -->
+            <div class="auth-form-group">
+                <label for="{{ form.password2.id_for_label }}">Nhập lại mật khẩu</label>
+                {{ form.password2 }}
+                {% if form.password2.errors %}
+                    <small class="auth-error">{{ form.password2.errors.0 }}</small>
+                {% endif %}
+            </div>
+
+            <!-- Submit -->
+            <button type="submit" class="auth-submit-btn">Đăng ký</button>
+        </form>
+
+        <!-- Switch -->
+        <p class="auth-switch-text">
+            Đã có tài khoản?
+            <a href="{% url 'login' %}">Đăng nhập</a>
+        </p>
+    </div>
+
+</section>
+{% endblock %}

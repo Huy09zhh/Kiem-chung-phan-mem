@@ -1,0 +1,55 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="utf-8" />
+    <title>{% block title %}Quản trị Green Shop{% endblock %}</title>
+
+    <link rel="apple-touch-icon" sizes="180x180"
+          href="{% static 'admin_panel/vendors/images/apple-touch-icon.png' %}">
+    <link rel="icon" type="image/png" sizes="32x32"
+          href="{% static 'admin_panel/vendors/images/favicon-32x32.png' %}">
+    <link rel="icon" type="image/png" sizes="16x16"
+          href="{% static 'admin_panel/vendors/images/favicon-16x16.png' %}">
+
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1" />
+
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap"
+          rel="stylesheet" />
+
+    <link rel="stylesheet" href="{% static 'admin_panel/vendors/styles/core.css' %}">
+    <link rel="stylesheet" href="{% static 'admin_panel/vendors/styles/icon-font.min.css' %}">
+    <link rel="stylesheet" href="{% static 'admin_panel/src/plugins/datatables/css/dataTables.bootstrap4.min.css' %}">
+    <link rel="stylesheet" href="{% static 'admin_panel/src/plugins/datatables/css/responsive.bootstrap4.min.css' %}">
+    <link rel="stylesheet" href="{% static 'admin_panel/vendors/styles/style.css' %}">
+
+    {% block extra_css %}{% endblock %}
+</head>
+<body>
+    {% include 'admin_panel/partials/header.html' %}
+    {% include 'admin_panel/partials/sidebar.html' %}
+
+    <div class="mobile-menu-overlay"></div>
+
+    <div class="main-container">
+        <div class="pd-ltr-20 xs-pd-20-10">
+            <div class="min-height-200px">
+                {% block content %}{% endblock %}
+            </div>
+        </div>
+    </div>
+
+    <script src="{% static 'admin_panel/vendors/scripts/core.js' %}"></script>
+    <script src="{% static 'admin_panel/vendors/scripts/script.min.js' %}"></script>
+    <script src="{% static 'admin_panel/vendors/scripts/process.js' %}"></script>
+    <script src="{% static 'admin_panel/vendors/scripts/layout-settings.js' %}"></script>
+    <script src="{% static 'admin_panel/src/plugins/apexcharts/apexcharts.min.js' %}"></script>
+    <script src="{% static 'admin_panel/src/plugins/datatables/js/jquery.dataTables.min.js' %}"></script>
+    <script src="{% static 'admin_panel/src/plugins/datatables/js/dataTables.bootstrap4.min.js' %}"></script>
+    <script src="{% static 'admin_panel/src/plugins/datatables/js/dataTables.responsive.min.js' %}"></script>
+    <script src="{% static 'admin_panel/src/plugins/datatables/js/responsive.bootstrap4.min.js' %}"></script>
+    <script src="{% static 'admin_panel/vendors/scripts/dashboard.js' %}"></script>
+
+    {% block extra_js %}{% endblock %}
+</body>
+</html>

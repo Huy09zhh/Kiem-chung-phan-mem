@@ -1,0 +1,156 @@
+{% extends 'base.html' %}
+{% load humanize %}
+
+{% block title %}Chuyển khoản QR{% endblock %}
+
+{% block content %}
+<style>
+    .qr-section {
+        padding: 80px 0;
+        background: #f8faf8;
+    }
+
+    .qr-card {
+        max-width: 760px;
+        margin: 0 auto;
+        background: #fff;
+        border-radius: 18px;
+        padding: 40px 30px;
+        border: 1px solid #edf2ee;
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.06);
+    }
+
+    .qr-card h2 {
+        margin: 0 0 12px;
+        font-size: 32px;
+        font-weight: 700;
+        color: #1f2937;
+        text-align: center;
+    }
+
+    .qr-card p {
+        color: #6b7280;
+        text-align: center;
+        margin-bottom: 24px;
+    }
+
+    .qr-info {
+        border: 1px solid #e5eee7;
+        border-radius: 16px;
+        padding: 20px;
+        background: #f9fcf9;
+    }
+
+    .qr-info-item {
+        display: flex;
+        justify-content: space-between;
+        gap: 12px;
+        padding: 12px 0;
+        border-bottom: 1px solid #edf2ee;
+    }
+
+    .qr-info-item:last-child {
+        border-bottom: none;
+    }
+
+    .qr-info-item span {
+        color: #6b7280;
+    }
+
+    .qr-info-item strong {
+        color: #1f2937;
+        text-align: right;
+    }
+
+    .qr-actions {
+        margin-top: 24px;
+        text-align: center;
+    }
+
+    .qr-btn,
+    .qr-btn-outline {
+        display: inline-block;
+        padding: 13px 22px;
+        border-radius: 12px;
+        font-weight: 700;
+        text-decoration: none !important;
+        transition: 0.2s ease;
+        margin: 6px;
+        border: none;
+        cursor: pointer;
+    }
+
+    .qr-btn {
+        background: linear-gradient(135deg, #46a358, #2e7d32);
+        color: #fff;
+    }
+
+    .qr-btn-outline {
+        background: #fff;
+        color: #2e7d32 !important;
+        border: 1px solid #cfe3d2;
+    }
+</style>
+
+<div class="qr-section">
+    <div class="container">
+        <div class="qr-card">
+            <h2>Chuyển khoản bằng QR</h2>
+            <div style="text-align:center; margin-bottom: 24px;">
+                <img
+                    src="{{ qr_info.qr_image_url }}"
+                    alt="QR chuyển khoản"
+                    style="max-width: 300px; width: 100%; border-radius: 16px; border: 1px solid #e5eee7; padding: 12px; background: #fff;"
+                >
+            </div>
+
+            <div class="qr-info">
+                <div class="qr-info-item">
+                    <span>Ngân hàng</span>
+                    <strong>{{ qr_info.bank_name }}</strong>
+                </div>
+                <div class="qr-info-item">
+                    <span>Số tài khoản</span>
+                    <strong id="acc-number">{{ qr_info.account_number }}</strong>
+                    <button onclick="copyText('acc-number')">Copy</button>
+                </div>
+                <div class="qr-info-item">
+                    <span>Chủ tài khoản</span>
+                    <strong>{{ qr_info.account_name }}</strong>
+                </div>
+                <div class="qr-info-item">
+                    <span>Số tiền</span>
+                    <strong style="color:#2e7d32; font-size:20px;">
+                        {{ qr_info.amount|intcomma:0 }} VND
+                    </strong>
+                </div>
+                <div class="qr-info-item">
+                    <span>Nội dung chuyển khoản</span>
+                    <strong id="transfer-note">{{ qr_info.transfer_note }}</strong>
+                    <button onclick="copyText('transfer-note')">Copy</button>
+                </div>
+                <div style="margin-top:16px; color:#c0392b; font-size:14px;">
+                    ⚠️ Vui lòng chuyển khoản đúng số tiền và nội dung để hệ thống xác nhận nhanh hơn.
+                </div>
+            </div>
+
+            <div class="qr-actions">
+                <form method="post" action="{% url 'orders:confirm_qr_paid' order.id %}" style="display:inline-block;">
+                    {% csrf_token %}
+                    <button type="submit" class="qr-btn">Tôi đã chuyển khoản</button>
+                </form>
+                <a href="{% url 'cart_detail' %}" class="qr-btn-outline">Quay lại giỏ hàng</a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function copyText(id) {
+    const text = document.getElementById(id).innerText;
+    navigator.clipboard.writeText(text).then(() => {
+        alert("Đã copy!");
+    });
+}
+</script>
+{% endblock %}

@@ -1,0 +1,48 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Thanh toán online mô phỏng | Green Shop{% endblock %}
+
+{% block content %}
+<div class="cart-page">
+    <div class="container">
+        <div class="cart-shell">
+            <div class="cart-hero">
+                <span class="sub">Green Shop</span>
+                <h1>Thanh toán online mô phỏng</h1>
+                <p>Chọn kết quả để mô phỏng luồng thanh toán online khi demo website.</p>
+            </div>
+
+            <div class="summary-card" style="max-width:820px;margin:0 auto;">
+                <div class="card-head summary-head">
+                    <h2>Xác nhận thanh toán</h2>
+                    <span>Đơn hàng {{ order.order_code }}</span>
+                </div>
+
+                <div class="card-body">
+                    <div class="summary-line">
+                        <span>Khách hàng</span>
+                        <strong>{{ order.full_name }}</strong>
+                    </div>
+                    <div class="summary-line">
+                        <span>Số tiền</span>
+                        <strong>{{ order.total_amount|floatformat:0 }} VND</strong>
+                    </div>
+                    <div class="summary-line">
+                        <span>Phương thức</span>
+                        <strong>Online mô phỏng</strong>
+                    </div>
+
+                    <a href="{% url 'orders:mock_payment_success' order.order_code %}" class="checkout-btn">
+                        Mô phỏng thanh toán thành công
+                    </a>
+
+                    <a href="{% url 'orders:mock_payment_fail' order.order_code %}" class="continue-btn" style="display:block;margin-top:12px;text-align:center;">
+                        Mô phỏng thanh toán thất bại
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

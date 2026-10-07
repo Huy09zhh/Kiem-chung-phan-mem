@@ -1,0 +1,114 @@
+{% extends 'admin_panel/base.html' %}
+{% load humanize %}
+
+{% block title %}Quản lý đơn hàng{% endblock %}
+
+{% block content %}
+<div class="pd-20 card-box mb-30">
+    <div class="clearfix mb-20">
+        <div class="pull-left">
+            <h4 class="h4">Quản lý đơn hàng</h4>
+            <p>Theo dõi và xử lý toàn bộ đơn hàng của Green Shop</p>
+        </div>
+    </div>
+
+    <form method="get" class="mb-20">
+        <div class="row">
+            <div class="col-md-4 mb-10">
+                <input type="text" name="keyword" value="{{ keyword }}" class="form-control" placeholder="Tìm theo tên, số điện thoại hoặc mã đơn">
+            </div>
+
+            <div class="col-md-3 mb-10">
+                <select name="status" class="form-control">
+                    <option value="">-- Tất cả trạng thái --</option>
+                    {% for value, label in status_choices %}
+                        <option value="{{ value }}" {% if status_filter == value %}selected{% endif %}>{{ label }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div class="col-md-3 mb-10">
+                <select name="payment_method" class="form-control">
+                    <option value="">-- Tất cả thanh toán --</option>
+                    {% for value, label in payment_choices %}
+                        <option value="{{ value }}" {% if payment_filter == value %}selected{% endif %}>{{ label }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div class="col-md-2 mb-10">
+                <button type="submit" class="btn btn-success btn-block">Lọc</button>
+            </div>
+        </div>
+    </form>
+
+    <div class="table-responsive">
+        <table class="table table-bordered table-hover">
+            <thead>
+                <tr>
+                    <th>#</th>
+                    <th>Khách hàng</th>
+                    <th>Liên hệ</th>
+                    <th>Thanh toán</th>
+                    <th>Trạng thái</th>
+                    <th>Tổng tiền</th>
+                    <th>Ngày tạo</th>
+                    <th style="width: 220px;">Xử lý nhanh</th>
+                    <th style="width: 100px;">Chi tiết</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for order in orders %}
+                <tr>
+                    <td>#{{ order.id }}</td>
+                    <td>
+                        <strong>{{ order.full_name }}</strong><br>
+                        <small class="text-muted">{{ order.user.username }}</small>
+                    </td>
+                    <td>
+                        {{ order.phone }}<br>
+                        <small class="text-muted">{{ order.address|truncatechars:40 }}</small>
+                    </td>
+                    <td>{{ order.get_payment_method_display }}</td>
+                    <td>
+                        <span class="badge badge-pill
+                            {% if order.status == 'pending' %}badge-warning
+                            {% elif order.status == 'awaiting_transfer' %}badge-info
+                            {% elif order.status == 'paid' or order.status == 'confirmed' or order.status == 'completed' %}badge-success
+                            {% elif order.status == 'shipping' %}badge-primary
+                            {% elif order.status == 'failed' or order.status == 'cancelled' %}badge-danger
+                            {% else %}badge-secondary{% endif %}">
+                            {{ order.get_status_display }}
+                        </span>
+                    </td>
+                    <td>{{ order.total_price|floatformat:0|intcomma }} đ</td>
+                    <td>{{ order.created_at|date:"d/m/Y H:i" }}</td>
+                    <td>
+                        <form method="post" action="{% url 'admin_order_update_status' order.id %}">
+                            {% csrf_token %}
+                            <div class="d-flex" style="gap: 8px;">
+                                <select name="status" class="form-control form-control-sm">
+                                    {% for value, label in status_choices %}
+                                        <option value="{{ value }}" {% if order.status == value %}selected{% endif %}>{{ label }}</option>
+                                    {% endfor %}
+                                </select>
+                                <button type="submit" class="btn btn-sm btn-success">Lưu</button>
+                            </div>
+                        </form>
+                    </td>
+                    <td>
+                        <a href="{% url 'admin_order_detail' order.id %}" class="btn btn-sm btn-outline-primary">
+                            Xem
+                        </a>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="9" class="text-center">Chưa có đơn hàng nào.</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,194 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Liên hệ | Green Shop{% endblock %}
+
+{% block content %}
+<div class="contact-page">
+    <div class="container">
+        <div class="contact-shell">
+
+            <div class="contact-hero">
+                <span class="contact-badge">Green Shop</span>
+                <h1>Liên hệ & Góp ý</h1>
+                <p>Chúng tôi luôn sẵn sàng lắng nghe thắc mắc, hỗ trợ đơn hàng và tiếp nhận mọi góp ý để cải thiện trải nghiệm mua sắm của bạn.</p>
+            </div>
+
+            <div class="contact-grid">
+                <div class="contact-info-card">
+                    <div class="info-block">
+                        <h2>Kết nối với Green Shop</h2>
+                        <p>Hãy để lại thông tin nếu bạn cần tư vấn sản phẩm, hỗ trợ đơn hàng hoặc muốn hợp tác cùng chúng tôi.</p>
+                    </div>
+
+                    <div class="info-list">
+                        <div class="info-item">
+                            <span class="info-label">Hotline</span>
+                            <strong>1900 29 29 62</strong>
+                        </div>
+                        <div class="info-item">
+                            <span class="info-label">Email</span>
+                            <strong>greenshop@gmail.com</strong>
+                        </div>
+                        <div class="info-item">
+                            <span class="info-label">Địa chỉ</span>
+                            <strong>TP. Hồ Chí Minh, Việt Nam</strong>
+                        </div>
+                        <div class="info-item">
+                            <span class="info-label">Thời gian hỗ trợ</span>
+                            <strong>08:00 - 21:00 mỗi ngày</strong>
+                        </div>
+                    </div>
+
+                    <div class="contact-note-box">
+                        <h3>Vì sao nên liên hệ với chúng tôi?</h3>
+                        <ul>
+                            <li>Được hỗ trợ nhanh về sản phẩm và đơn hàng</li>
+                            <li>Tiếp nhận góp ý để cải thiện dịch vụ</li>
+                            <li>Tư vấn thân thiện, rõ ràng, dễ hiểu</li>
+                        </ul>
+                    </div>
+                </div>
+
+                <div class="contact-form-card">
+                    <div class="section-head-contact">
+                        <h2>Gửi liên hệ</h2>
+                        <p>Điền thông tin dưới đây, Green Shop sẽ phản hồi sớm nhất.</p>
+                    </div>
+
+                    {% if contact_success %}
+                    <div class="success-box">
+                        Gửi liên hệ thành công. Green Shop sẽ phản hồi bạn sớm nhất.
+                    </div>
+                    {% endif %}
+
+                    <form method="post" class="contact-form-layout">
+                        {% csrf_token %}
+                        <input type="hidden" name="form_type" value="contact">
+
+                        <div class="form-grid-2">
+                            <div>
+                                {{ contact_form.name }}
+                                {% if contact_form.name.errors %}
+                                    <div class="form-error">{{ contact_form.name.errors.0 }}</div>
+                                {% endif %}
+                            </div>
+                            <div>
+                                {{ contact_form.email }}
+                                {% if contact_form.email.errors %}
+                                    <div class="form-error">{{ contact_form.email.errors.0 }}</div>
+                                {% endif %}
+                            </div>
+                        </div>
+
+                        <div class="form-grid-2">
+                            <div>
+                                {{ contact_form.phone }}
+                                {% if contact_form.phone.errors %}
+                                    <div class="form-error">{{ contact_form.phone.errors.0 }}</div>
+                                {% endif %}
+                            </div>
+                            <div>
+                                {{ contact_form.subject }}
+                                {% if contact_form.subject.errors %}
+                                    <div class="form-error">{{ contact_form.subject.errors.0 }}</div>
+                                {% endif %}
+                            </div>
+                        </div>
+
+                        <div>
+                            {{ contact_form.message }}
+                            {% if contact_form.message.errors %}
+                                <div class="form-error">{{ contact_form.message.errors.0 }}</div>
+                            {% endif %}
+                        </div>
+
+                        <button type="submit" class="contact-submit-btn">Gửi liên hệ</button>
+                    </form>
+                </div>
+            </div>
+
+            <div class="feedback-section">
+                <div class="feedback-card">
+                    <div class="section-head-contact">
+                        <h2>Góp ý nhanh</h2>
+                        <p>Chia sẻ cảm nhận để Green Shop phục vụ bạn tốt hơn mỗi ngày.</p>
+                    </div>
+
+                    {% if feedback_success %}
+                    <div class="success-box">
+                        Cảm ơn bạn đã gửi góp ý. Phản hồi của bạn rất quan trọng với Green Shop.
+                    </div>
+                    {% endif %}
+
+                    <form method="post" class="contact-form-layout">
+                        {% csrf_token %}
+                        <input type="hidden" name="form_type" value="feedback">
+
+                        <div class="form-grid-2">
+                            <div>
+                                {{ feedback_form.name }}
+                                {% if feedback_form.name.errors %}
+                                    <div class="form-error">{{ feedback_form.name.errors.0 }}</div>
+                                {% endif %}
+                            </div>
+                            <div>
+                                {{ feedback_form.email }}
+                                {% if feedback_form.email.errors %}
+                                    <div class="form-error">{{ feedback_form.email.errors.0 }}</div>
+                                {% endif %}
+                            </div>
+                        </div>
+
+                        <div class="form-grid-2">
+                            <div>
+                                {{ feedback_form.category }}
+                                {% if feedback_form.category.errors %}
+                                    <div class="form-error">{{ feedback_form.category.errors.0 }}</div>
+                                {% endif %}
+                            </div>
+                            <div>
+                                {{ feedback_form.satisfaction }}
+                                {% if feedback_form.satisfaction.errors %}
+                                    <div class="form-error">{{ feedback_form.satisfaction.errors.0 }}</div>
+                                {% endif %}
+                            </div>
+                        </div>
+
+                        <div>
+                            {{ feedback_form.message }}
+                            {% if feedback_form.message.errors %}
+                                <div class="form-error">{{ feedback_form.message.errors.0 }}</div>
+                            {% endif %}
+                        </div>
+
+                        <button type="submit" class="contact-submit-btn secondary-btn">Gửi góp ý</button>
+                    </form>
+                </div>
+
+                <div class="faq-card">
+                    <div class="section-head-contact">
+                        <h2>Câu hỏi thường gặp</h2>
+                    </div>
+
+                    <div class="faq-item">
+                        <h3>Green Shop hỗ trợ vào thời gian nào?</h3>
+                        <p>Chúng tôi hỗ trợ khách hàng từ 08:00 đến 21:00 mỗi ngày.</p>
+                    </div>
+
+                    <div class="faq-item">
+                        <h3>Tôi có thể liên hệ để hỏi về đơn hàng không?</h3>
+                        <p>Có. Bạn chỉ cần chọn chủ đề “Hỗ trợ đơn hàng” trong biểu mẫu liên hệ.</p>
+                    </div>
+
+                    <div class="faq-item">
+                        <h3>Góp ý của tôi có được ghi nhận không?</h3>
+                        <p>Có. Tất cả phản hồi đều được lưu lại để đội ngũ Green Shop xem xét và cải thiện dịch vụ.</p>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+</div>
+{% endblock %}

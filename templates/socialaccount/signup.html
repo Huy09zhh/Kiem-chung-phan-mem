@@ -1,0 +1,56 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Hoàn tất đăng ký{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/auth.css' %}">
+{% endblock %}
+
+{% block content %}
+<section class="auth-page">
+    <div class="auth-card">
+        <h1 class="auth-title">Hoàn tất đăng ký</h1>
+
+        <div class="auth-divider">
+            <span>Chỉ còn một bước nữa</span>
+        </div>
+
+        <form method="post" class="auth-form">
+            {% csrf_token %}
+
+            {% if form.non_field_errors %}
+                <div class="auth-error-box">
+                    {% for error in form.non_field_errors %}
+                        <div>{{ error }}</div>
+                    {% endfor %}
+                </div>
+            {% endif %}
+
+            {% for field in form %}
+            <div class="auth-form-group">
+                <label for="{{ field.id_for_label }}">
+                    {% if field.name == 'email' %}
+                        Email
+                    {% elif field.name == 'username' %}
+                        Tên đăng nhập
+                    {% else %}
+                        {{ field.label }}
+                    {% endif %}
+                </label>
+                {{ field }}
+                {% if field.errors %}
+                    <small class="auth-error">{{ field.errors.0 }}</small>
+                {% endif %}
+            </div>
+            {% endfor %}
+
+            <button type="submit" class="auth-submit-btn">Hoàn tất</button>
+        </form>
+
+        <p class="auth-switch-text">
+            Bạn đang đăng ký bằng tài khoản Google.
+        </p>
+    </div>
+</section>
+{% endblock %}

@@ -1,0 +1,456 @@
+{% extends 'admin_panel/base.html' %}
+{% load humanize %}
+
+{% block title %}Danh sách sản phẩm{% endblock %}
+
+{% block content %}
+<div class="pd-20 card-box mb-30">
+    <div class="clearfix mb-20">
+        <div class="pull-left">
+            <h4 class="h4">Danh sách sản phẩm</h4>
+            <p>Quản lý toàn bộ sản phẩm của Green Shop</p>
+        </div>
+        <div class="pull-right">
+            <button type="button"
+					class="btn admin-btn-primary btn-sm"
+					data-toggle="modal"
+					data-target="#productModal"
+					onclick="openCreateModal()">
+				+ Thêm sản phẩm
+			</button>
+        </div>
+    </div>
+
+    <div class="table-responsive">
+        <table class="table table-bordered">
+            <thead>
+                <tr>
+                    <th>#</th>
+                    <th>Ảnh</th>
+                    <th>Tên sản phẩm</th>
+                    <th>Giá bán</th>
+                    <th>Giá cũ</th>
+                    <th>Danh mục</th>
+                    <th>Nổi bật</th>
+                    <th>Flash sale</th>
+                    <th>Hành động</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for product in products %}
+                <tr>
+					
+                    <td>{{ forloop.counter }}</td>
+                    <td>
+                        {% if product.image %}
+                            <img src="{{ product.image.url }}" alt="{{ product.name }}" width="60" height="60" style="object-fit: cover;">
+                        {% else %}
+                            Không có ảnh
+                        {% endif %}
+                    </td>
+                    <td>{{ product.name }}</td>
+                    <td>{{ product.price|intcomma }}</td>
+                    <td>{% if product.old_price %}{{ product.old_price|intcomma }}{% else %}-{% endif %}</td>
+                    <td>{% if product.category %}{{ product.category.name }}{% else %}-{% endif %}</td>
+                    <td class="text-center">
+                        <input type="checkbox" {% if product.is_featured %}checked{% endif %} disabled>
+                    </td>
+                    <td class="text-center">
+                        <input type="checkbox" {% if product.is_flash_sale %}checked{% endif %} disabled>
+                    </td>
+                    <td>
+						<button type="button"
+								class="btn btn-sm btn-outline-secondary btn-edit"
+								data-id="{{ product.id }}"
+								data-name="{{ product.name }}"
+								data-price="{{ product.price }}"
+								data-old_price="{{ product.old_price }}"
+								data-description="{{ product.description }}"
+								data-category="{% if product.category %}{{ product.category.id }}{% endif %}"
+								data-featured="{{ product.is_featured|yesno:'true,false' }}"
+								data-flash="{{ product.is_flash_sale|yesno:'true,false' }}"
+								data-toggle="modal"
+								data-target="#productModal">
+							Sửa
+						</button>
+
+						<button type="button"
+								class="btn btn-sm btn-outline-danger btn-delete"
+								data-id="{{ product.id }}"
+								data-name="{{ product.name }}"
+								data-toggle="modal"
+								data-target="#deleteModal">
+							Xóa
+						</button>
+					</td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="9" class="text-center">Chưa có sản phẩm nào.</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+		<div class="modal fade admin-modal" id="deleteModal" tabindex="-1">
+			<div class="modal-dialog modal-dialog-centered">
+				<div class="modal-content">
+
+					<div class="modal-header">
+						<h5 class="modal-title">Xác nhận xóa sản phẩm</h5>
+						<button type="button" class="close" data-dismiss="modal" aria-label="Đóng">
+							<span>&times;</span>
+						</button>
+					</div>
+
+					<div class="modal-body">
+						<div class="modal-warning-box">
+							Bạn sắp xóa sản phẩm:
+							<strong id="deleteProductName"></strong><br>
+							Hành động này không thể hoàn tác.
+						</div>
+					</div>
+
+					<div class="modal-footer">
+						<button type="button" class="btn admin-btn-secondary" data-dismiss="modal">
+							Hủy
+						</button>
+
+						<form method="post" id="deleteForm">
+							{% csrf_token %}
+							<button type="submit" class="btn admin-btn-danger">
+								Xóa sản phẩm
+							</button>
+						</form>
+					</div>
+
+				</div>
+			</div>
+		</div>
+		<div class="modal fade admin-modal" id="productModal" tabindex="-1">
+			<div class="modal-dialog modal-dialog-centered modal-lg">
+				<div class="modal-content">
+
+					<div class="modal-header">
+						<h5 class="modal-title" id="modalTitle">Thêm sản phẩm</h5>
+						<button type="button" class="close" data-dismiss="modal" aria-label="Đóng">
+							<span>&times;</span>
+						</button>
+					</div>
+
+					<form method="post" enctype="multipart/form-data" id="productForm">
+						{% csrf_token %}
+
+						<div class="modal-body">
+							<div class="row">
+								<div class="col-md-6">
+									<div class="form-group">
+										<label for="productName">Tên sản phẩm</label>
+										<input type="text" name="name" id="productName" class="form-control" required>
+									</div>
+								</div>
+
+								<div class="col-md-6">
+									<div class="form-group">
+										<label for="productCategory">Danh mục</label>
+										<select name="category" id="productCategory" class="form-control">
+											<option value="">-- Chọn danh mục --</option>
+											{% for c in categories %}
+												<option value="{{ c.id }}">{{ c.name }}</option>
+											{% endfor %}
+										</select>
+									</div>
+								</div>
+
+								<div class="col-md-6">
+									<div class="form-group">
+										<label for="productPrice">Giá bán</label>
+										<input type="number" name="price" id="productPrice" class="form-control" required>
+									</div>
+								</div>
+
+								<div class="col-md-6">
+									<div class="form-group">
+										<label for="productOldPrice">Giá cũ</label>
+										<input type="number" name="old_price" id="productOldPrice" class="form-control">
+									</div>
+								</div>
+
+								<div class="col-12">
+									<div class="form-group">
+										<label for="productDescription">Mô tả</label>
+										<textarea name="description" id="productDescription" class="form-control"></textarea>
+										<div class="modal-note">Mô tả ngắn gọn, rõ công dụng và điểm nổi bật của sản phẩm.</div>
+									</div>
+								</div>
+
+								<div class="col-md-6">
+									<div class="form-group">
+										<label for="productImage">Ảnh sản phẩm</label>
+										<input type="file" name="image" id="productImage" class="form-control">
+									</div>
+								</div>
+
+								<div class="col-md-6 d-flex align-items-center">
+									<div>
+										<div class="form-check mb-2">
+											<input type="checkbox" name="is_featured" id="productFeatured" class="form-check-input">
+											<label class="form-check-label">
+												Sản phẩm nổi bật:
+												<span id="featuredStatus" class="ml-1 text-muted">Chưa chọn</span>
+											</label>
+										</div>
+
+										<div class="form-check">
+											<input type="checkbox" name="is_flash_sale" id="productFlash" class="form-check-input">
+											<label class="form-check-label">
+												Flash sale:
+												<span id="flashStatus" class="ml-1 text-muted">Chưa chọn</span>
+											</label>
+										</div>
+									</div>
+								</div>
+							</div>
+						</div>
+
+						<div class="modal-footer">
+							<button type="button" class="btn admin-btn-secondary" data-dismiss="modal">
+								Hủy
+							</button>
+							<button type="submit" class="btn admin-btn-primary">
+								Lưu sản phẩm
+							</button>
+						</div>
+
+					</form>
+
+				</div>
+			</div>
+		</div>
+</div>
+<style>
+/* ===== Modal admin đồng bộ ===== */
+.admin-modal .modal-content {
+    border: none;
+    border-radius: 18px;
+    box-shadow: 0 18px 50px rgba(0, 0, 0, 0.18);
+    overflow: hidden;
+}
+
+.admin-modal .modal-header {
+    border-bottom: 1px solid #eef1f4;
+    padding: 18px 22px;
+    background: #ffffff;
+}
+
+.admin-modal .modal-title {
+    font-size: 18px;
+    font-weight: 700;
+    color: #1f2937;
+}
+
+.admin-modal .close {
+    font-size: 26px;
+    font-weight: 400;
+    color: #6b7280;
+    opacity: 1;
+    outline: none;
+    box-shadow: none;
+}
+
+.admin-modal .modal-body {
+    padding: 22px;
+    background: #ffffff;
+}
+
+.admin-modal .modal-footer {
+    border-top: 1px solid #eef1f4;
+    padding: 16px 22px;
+    background: #fafbfc;
+}
+
+.admin-modal .form-group label {
+    font-size: 14px;
+    font-weight: 600;
+    color: #374151;
+    margin-bottom: 8px;
+}
+
+.admin-modal .form-control,
+.admin-modal .custom-select,
+.admin-modal textarea {
+    height: 44px;
+    border: 1px solid #d8dee6;
+    border-radius: 10px;
+    box-shadow: none;
+    font-size: 14px;
+    color: #111827;
+    background: #fff;
+}
+
+.admin-modal textarea.form-control {
+    min-height: 110px;
+    height: auto;
+    resize: vertical;
+    padding-top: 12px;
+}
+
+.admin-modal .form-control:focus,
+.admin-modal .custom-select:focus,
+.admin-modal textarea:focus {
+    border-color: #8fbf9f;
+    box-shadow: 0 0 0 3px rgba(63, 143, 82, 0.12);
+}
+
+.admin-modal .form-check {
+    margin-top: 10px;
+}
+
+.admin-modal .form-check-label {
+    font-size: 14px;
+    color: #374151;
+}
+
+.admin-btn-primary {
+    background: #2f6b3b;
+    border: 1px solid #2f6b3b;
+    color: #fff;
+    border-radius: 10px;
+    padding: 8px 18px;
+    font-weight: 600;
+}
+
+.admin-btn-primary:hover {
+    background: #255730;
+    border-color: #255730;
+    color: #fff;
+}
+
+.admin-btn-secondary {
+    background: #fff;
+    border: 1px solid #d1d5db;
+    color: #374151;
+    border-radius: 10px;
+    padding: 8px 18px;
+    font-weight: 600;
+}
+
+.admin-btn-secondary:hover {
+    background: #f3f4f6;
+    color: #111827;
+}
+
+.admin-btn-danger {
+    background: #dc2626;
+    border: 1px solid #dc2626;
+    color: #fff;
+    border-radius: 10px;
+    padding: 8px 18px;
+    font-weight: 600;
+}
+
+.admin-btn-danger:hover {
+    background: #b91c1c;
+    border-color: #b91c1c;
+    color: #fff;
+}
+
+.admin-modal .modal-note {
+    margin-top: 8px;
+    font-size: 13px;
+    color: #6b7280;
+}
+
+.admin-modal .modal-warning-box {
+    background: #fff7ed;
+    border: 1px solid #fed7aa;
+    color: #9a3412;
+    padding: 12px 14px;
+    border-radius: 12px;
+    font-size: 14px;
+    line-height: 1.5;
+}
+</style>
+
+<script>
+function updateCheckboxText() {
+    const featuredInput = document.getElementById("productFeatured");
+    const flashInput = document.getElementById("productFlash");
+    const featuredStatus = document.getElementById("featuredStatus");
+    const flashStatus = document.getElementById("flashStatus");
+
+    if (!featuredInput || !flashInput || !featuredStatus || !flashStatus) return;
+
+    featuredStatus.innerHTML = featuredInput.checked
+        ? "<span style='color:green'>Đang bật</span>"
+        : "<span style='color:gray'>Tắt</span>";
+
+    flashStatus.innerHTML = flashInput.checked
+        ? "<span style='color:green'>Đang bật</span>"
+        : "<span style='color:gray'>Tắt</span>";
+}
+
+function openCreateModal() {
+    document.getElementById("modalTitle").innerText = "Thêm sản phẩm";
+    document.getElementById("productForm").action = "/admin-panel/products/create/";
+
+    document.getElementById("productName").value = "";
+    document.getElementById("productPrice").value = "";
+    document.getElementById("productOldPrice").value = "";
+    document.getElementById("productDescription").value = "";
+    document.getElementById("productCategory").value = "";
+    document.getElementById("productFeatured").checked = false;
+    document.getElementById("productFlash").checked = false;
+    document.getElementById("productImage").value = "";
+
+    updateCheckboxText();
+}
+
+document.addEventListener("DOMContentLoaded", function () {
+    const deleteButtons = document.querySelectorAll(".btn-delete");
+    const editButtons = document.querySelectorAll(".btn-edit");
+    const featuredInput = document.getElementById("productFeatured");
+    const flashInput = document.getElementById("productFlash");
+
+    deleteButtons.forEach(function (btn) {
+        btn.addEventListener("click", function () {
+            const id = this.getAttribute("data-id");
+            const name = this.getAttribute("data-name");
+
+            document.getElementById("deleteProductName").innerText = name;
+            document.getElementById("deleteForm").action = `/admin-panel/products/${id}/delete/`;
+        });
+    });
+
+    editButtons.forEach(function (btn) {
+        btn.addEventListener("click", function () {
+            const id = this.dataset.id;
+
+            document.getElementById("modalTitle").innerText = "Sửa sản phẩm";
+            document.getElementById("productForm").action = `/admin-panel/products/${id}/edit/`;
+
+            document.getElementById("productName").value = this.dataset.name || "";
+            document.getElementById("productPrice").value = this.dataset.price || "";
+            document.getElementById("productOldPrice").value = this.dataset.old_price || "";
+            document.getElementById("productDescription").value = this.dataset.description || "";
+            document.getElementById("productCategory").value = this.dataset.category || "";
+            document.getElementById("productFeatured").checked = this.dataset.featured === "true";
+            document.getElementById("productFlash").checked = this.dataset.flash === "true";
+            document.getElementById("productImage").value = "";
+
+            updateCheckboxText();
+        });
+    });
+
+    if (featuredInput) {
+        featuredInput.addEventListener("change", updateCheckboxText);
+    }
+
+    if (flashInput) {
+        flashInput.addEventListener("change", updateCheckboxText);
+    }
+
+    updateCheckboxText();
+});
+</script>
+
+{% endblock %}
