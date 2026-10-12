@@ -209,16 +209,21 @@ def admin_order_list(request):
             orders = orders.none()
 
     if keyword:
-        keyword_query = (
-            Q(full_name__icontains=keyword)
-            | Q(phone__icontains=keyword)
-        )
+        clean_kw = keyword.strip()
+        id_part = clean_kw.lstrip('#')
 
-        # Tìm chính xác mã đơn nếu nhập số.
-        if keyword.isdigit():
-            keyword_query |= Q(pk=int(keyword))
+        if clean_kw.startswith('#') and id_part.isdigit():
+            orders = orders.filter(pk=int(id_part))
+        else:
+            keyword_query = Q(full_name__icontains=clean_kw)
 
-        orders = orders.filter(keyword_query)
+            if len(clean_kw) >= 6:
+                keyword_query |= Q(phone__icontains=clean_kw)
+
+            if clean_kw.isdigit():
+                keyword_query |= Q(pk=int(clean_kw))
+
+            orders = orders.filter(keyword_query)
 
     context = {
         'orders': orders,
