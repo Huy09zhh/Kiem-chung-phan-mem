@@ -152,7 +152,8 @@ LOGIN_REDIRECT_URL = '/'
 LOGOUT_REDIRECT_URL = '/'
 
 # Gửi email thật qua SMTP (mặc định Gmail). Cấu hình trong file .env, xem .env.example.
-# Nếu chưa cấu hình EMAIL_HOST_USER thì email chỉ được in ra terminal (console backend).
+# Nếu chưa cấu hình EMAIL_HOST_USER thì email được lưu vào thư mục sent_emails/
+# và xem tại trang /dev/mailbox/ (chỉ khi DEBUG=True).
 EMAIL_HOST = os.environ.get('EMAIL_HOST', 'smtp.gmail.com')
 EMAIL_PORT = int(os.environ.get('EMAIL_PORT', '587'))
 EMAIL_USE_TLS = os.environ.get('EMAIL_USE_TLS', 'True').lower() in ('1', 'true', 'yes')
@@ -163,7 +164,9 @@ EMAIL_TIMEOUT = 20
 if EMAIL_HOST_USER:
     EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
 else:
-    EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
+    EMAIL_BACKEND = 'django.core.mail.backends.filebased.EmailBackend'
+EMAIL_FILE_PATH = BASE_DIR / 'sent_emails'
+DEV_MAILBOX_ENABLED = DEBUG and not EMAIL_HOST_USER
 
 DEFAULT_FROM_EMAIL = os.environ.get(
     'DEFAULT_FROM_EMAIL',

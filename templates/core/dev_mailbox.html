@@ -1,0 +1,55 @@
+{% extends 'base.html' %}
+
+{% block title %}Hộp thư dev{% endblock %}
+
+{% block extra_css %}
+<style>
+    .dev-mailbox { max-width: 860px; margin: 32px auto; padding: 0 16px; }
+    .dev-mailbox-head { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; }
+    .dev-mailbox-note { background: #fff7e6; border: 1px solid #f5c26b; border-radius: 8px; padding: 10px 14px; margin: 12px 0 20px; font-size: 14px; }
+    .dev-mail { background: #fff; border: 1px solid #e5e7eb; border-radius: 10px; margin-bottom: 16px; box-shadow: 0 1px 4px rgba(0,0,0,.06); }
+    .dev-mail summary { cursor: pointer; padding: 14px 18px; list-style: none; }
+    .dev-mail summary::-webkit-details-marker { display: none; }
+    .dev-mail-subject { font-weight: 600; }
+    .dev-mail-meta { color: #6b7280; font-size: 13px; margin-top: 4px; }
+    .dev-mail-body { border-top: 1px solid #e5e7eb; padding: 14px 18px; white-space: pre-wrap; font-size: 15px; word-break: break-word; }
+    .dev-mail-body a { color: #16a34a; font-weight: 600; }
+    .dev-mailbox-empty { text-align: center; color: #6b7280; padding: 48px 0; }
+    .dev-mailbox-clear { background: none; border: 1px solid #dc2626; color: #dc2626; border-radius: 6px; padding: 6px 12px; cursor: pointer; }
+</style>
+{% endblock %}
+
+{% block content %}
+<section class="dev-mailbox">
+    <div class="dev-mailbox-head">
+        <h1>📬 Hộp thư dev</h1>
+        {% if messages_list %}
+        <form method="post" action="{% url 'dev_mailbox_clear' %}">
+            {% csrf_token %}
+            <button type="submit" class="dev-mailbox-clear">Xóa tất cả</button>
+        </form>
+        {% endif %}
+    </div>
+
+    <div class="dev-mailbox-note">
+        Trang này chỉ có khi chạy dev (<code>DEBUG=True</code>) và <b>chưa cấu hình Gmail</b> trong file <code>.env</code>.
+        Mọi email hệ thống gửi đi được lưu tại <code>{{ mailbox_dir }}</code> và hiển thị ở đây.
+        Cấu hình <code>EMAIL_HOST_USER</code>/<code>EMAIL_HOST_PASSWORD</code> để gửi email thật.
+    </div>
+
+    {% for mail in messages_list %}
+    <details class="dev-mail" {% if forloop.first %}open{% endif %}>
+        <summary>
+            <div class="dev-mail-subject">{{ mail.subject }}</div>
+            <div class="dev-mail-meta">
+                Từ: {{ mail.from }} &nbsp;→&nbsp; Đến: <b>{{ mail.to }}</b>
+                {% if mail.sent_at %} &nbsp;·&nbsp; {{ mail.sent_at|date:"H:i:s d/m/Y" }}{% endif %}
+            </div>
+        </summary>
+        <div class="dev-mail-body">{{ mail.body }}</div>
+    </details>
+    {% empty %}
+    <div class="dev-mailbox-empty">Chưa có email nào. Thử chức năng <a href="{% url 'password_reset' %}">Quên mật khẩu</a>.</div>
+    {% endfor %}
+</section>
+{% endblock %}

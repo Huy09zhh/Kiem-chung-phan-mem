@@ -4,3 +4,4 @@ db.sqlite3
 *.pyc
 media/
 .env
+sent_emails/
