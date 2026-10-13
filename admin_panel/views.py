@@ -250,7 +250,7 @@ def admin_order_detail(request, pk):
 
     return render(
         request,
-        'admin_panel/order_detail.html',
+        'admin_panel/orders_detail.html',
         {
             'order': order,
             'status_choices': Order.STATUS_CHOICES,
