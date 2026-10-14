@@ -31,7 +31,7 @@ def admin_dashboard_view(request):
 
     context = {
         'total_products': Product.objects.count(),
-        'total_users': User.objects.count(),
+        'total_users': User.objects.filter(is_staff=False).count(),
         'total_featured': Product.objects.filter(
             is_featured=True
         ).count(),
