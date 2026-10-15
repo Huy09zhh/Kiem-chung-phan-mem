@@ -1,312 +1,188 @@
 {% extends 'admin_panel/base.html' %}
+{% load humanize %}
 
 {% block title %}Tổng quan{% endblock %}
 
 {% block content %}
-<div class="pd-ltr-20">
-	<div class="row">
-		<div class="col-xl-3 mb-30">
-			<div class="card-box height-100-p widget-style1">
-				<div class="d-flex flex-wrap align-items-center">
-					<div class="progress-data">
-						<div id="chart"></div>
-					</div>
-					<div class="widget-data">
-						<div class="h4 mb-0">{{ total_products }}</div>
-						<div class="weight-600 font-14">Sản phẩm</div>
-					</div>
-				</div>
-			</div>
-		</div>
+<div class="page-header">
+    <div class="row">
+        <div class="col-md-8 col-sm-12">
+            <div class="title">
+                <h4>Tổng quan</h4>
+            </div>
+            <nav aria-label="breadcrumb" role="navigation">
+                <ol class="breadcrumb">
+                    <li class="breadcrumb-item active" aria-current="page">Thống kê đơn hàng và doanh thu</li>
+                </ol>
+            </nav>
+        </div>
+        <div class="col-md-4 col-sm-12 text-md-right">
+            <span class="text-muted">Ngày {% now "d/m/Y" %}</span>
+        </div>
+    </div>
+</div>
 
-		<div class="col-xl-3 mb-30">
-			<div class="card-box height-100-p widget-style1">
-				<div class="d-flex flex-wrap align-items-center">
-					<div class="progress-data">
-						<div id="chart2"></div>
-					</div>
-					<div class="widget-data">
-						<div class="h4 mb-0">{{ total_featured }}</div>
-						<div class="weight-600 font-14">Nổi bật</div>
-					</div>
-				</div>
-			</div>
-		</div>
+{# ---------- Số lượng đơn hàng ---------- #}
+<div class="row">
+    <div class="col-xl-3 col-md-6 mb-30">
+        <div class="card-box height-100-p pd-20">
+            <div class="font-14 weight-600 text-muted">Tổng số đơn hàng</div>
+            <div class="h2 mb-0 mt-2">{{ total_orders|intcomma }}</div>
+            <a href="{% url 'admin_order_list' %}" class="font-14">Xem tất cả</a>
+        </div>
+    </div>
 
-		<div class="col-xl-3 mb-30">
-			<div class="card-box height-100-p widget-style1">
-				<div class="d-flex flex-wrap align-items-center">
-					<div class="progress-data">
-						<div id="chart3"></div>
-					</div>
-					<div class="widget-data">
-						<div class="h4 mb-0">{{ total_flash_sale }}</div>
-						<div class="weight-600 font-14">Flash sale</div>
-					</div>
-				</div>
-			</div>
-		</div>
+    <div class="col-xl-3 col-md-6 mb-30">
+        <div class="card-box height-100-p pd-20">
+            <div class="font-14 weight-600 text-muted">Đơn chờ xử lý</div>
+            <div class="h2 mb-0 mt-2 text-warning">{{ pending_orders|intcomma }}</div>
+            <a href="{% url 'admin_order_list' %}?status=pending" class="font-14">Xem các đơn này</a>
+        </div>
+    </div>
 
-		<div class="col-xl-3 mb-30">
-			<div class="card-box height-100-p widget-style1">
-				<div class="d-flex flex-wrap align-items-center">
-					<div class="progress-data">
-						<div id="chart4"></div>
-					</div>
-					<div class="widget-data">
-						<div class="h4 mb-0">{{ total_users }}</div>
-						<div class="weight-600 font-14">Người dùng</div>
-					</div>
-				</div>
-			</div>
-		</div>
-	</div>
-	<div class="row">
-		<div class="col-xl-8 mb-30">
-			<div class="card-box height-100-p pd-20">
-				<h2 class="h4 mb-20">Activity</h2>
-				<div id="chart5"></div>
-			</div>
-		</div>
-		<div class="col-xl-4 mb-30">
-			<div class="card-box height-100-p pd-20">
-				<h2 class="h4 mb-20">Lead Target</h2>
-				<div id="chart6"></div>
-			</div>
-		</div>
-	</div>
-	<div class="card-box mb-30">
-		<h2 class="h4 pd-20">Best Selling Products</h2>
-		<table class="data-table table nowrap">
-			<thead>
-				<tr>
-					<th class="table-plus datatable-nosort">Product</th>
-					<th>Name</th>
-					<th>Color</th>
-					<th>Size</th>
-					<th>Price</th>
-					<th>Oty</th>
-					<th class="datatable-nosort">Action</th>
-				</tr>
-			</thead>
-			<tbody>
-				<tr>
-					<td class="table-plus">
-						<img
-							src="vendors/images/product-1.jpg"
-							width="70"
-							height="70"
-							alt=""
-						/>
-					</td>
-					<td>
-						<h5 class="font-16">Shirt</h5>
-						by John Doe
-					</td>
-					<td>Black</td>
-					<td>M</td>
-					<td>$1000</td>
-					<td>1</td>
-					<td>
-						<div class="dropdown">
-							<a
-								class="btn btn-link font-24 p-0 line-height-1 no-arrow dropdown-toggle"
-								href="#"
-								role="button"
-								data-toggle="dropdown"
-							>
-								<i class="dw dw-more"></i>
-							</a>
-							<div
-								class="dropdown-menu dropdown-menu-right dropdown-menu-icon-list"
-							>
-								<a class="dropdown-item" href="#"
-									><i class="dw dw-eye"></i> View</a
-								>
-								<a class="dropdown-item" href="#"
-									><i class="dw dw-edit2"></i> Edit</a
-								>
-								<a class="dropdown-item" href="#"
-									><i class="dw dw-delete-3"></i> Delete</a
-								>
-							</div>
-						</div>
-					</td>
-				</tr>
-				<tr>
-					<td class="table-plus">
-						<img
-							src="vendors/images/product-2.jpg"
-							width="70"
-							height="70"
-							alt=""
-						/>
-					</td>
-					<td>
-						<h5 class="font-16">Boots</h5>
-						by Lea R. Frith
-					</td>
-					<td>brown</td>
-					<td>9UK</td>
-					<td>$900</td>
-					<td>1</td>
-					<td>
-						<div class="dropdown">
-							<a
-								class="btn btn-link font-24 p-0 line-height-1 no-arrow dropdown-toggle"
-								href="#"
-								role="button"
-								data-toggle="dropdown"
-							>
-								<i class="dw dw-more"></i>
-							</a>
-							<div
-								class="dropdown-menu dropdown-menu-right dropdown-menu-icon-list"
-							>
-								<a class="dropdown-item" href="#"
-									><i class="dw dw-eye"></i> View</a
-								>
-								<a class="dropdown-item" href="#"
-									><i class="dw dw-edit2"></i> Edit</a
-								>
-								<a class="dropdown-item" href="#"
-									><i class="dw dw-delete-3"></i> Delete</a
-								>
-							</div>
-						</div>
-					</td>
-				</tr>
-				<tr>
-					<td class="table-plus">
-						<img
-							src="vendors/images/product-3.jpg"
-							width="70"
-							height="70"
-							alt=""
-						/>
-					</td>
-					<td>
-						<h5 class="font-16">Hat</h5>
-						by Erik L. Richards
-					</td>
-					<td>Orange</td>
-					<td>M</td>
-					<td>$100</td>
-					<td>4</td>
-					<td>
-						<div class="dropdown">
-							<a
-								class="btn btn-link font-24 p-0 line-height-1 no-arrow dropdown-toggle"
-								href="#"
-								role="button"
-								data-toggle="dropdown"
-							>
-								<i class="dw dw-more"></i>
-							</a>
-							<div
-								class="dropdown-menu dropdown-menu-right dropdown-menu-icon-list"
-							>
-								<a class="dropdown-item" href="#"
-									><i class="dw dw-eye"></i> View</a
-								>
-								<a class="dropdown-item" href="#"
-									><i class="dw dw-edit2"></i> Edit</a
-								>
-								<a class="dropdown-item" href="#"
-									><i class="dw dw-delete-3"></i> Delete</a
-								>
-							</div>
-						</div>
-					</td>
-				</tr>
-				<tr>
-					<td class="table-plus">
-						<img
-							src="vendors/images/product-4.jpg"
-							width="70"
-							height="70"
-							alt=""
-						/>
-					</td>
-					<td>
-						<h5 class="font-16">Long Dress</h5>
-						by Renee I. Hansen
-					</td>
-					<td>Gray</td>
-					<td>L</td>
-					<td>$1000</td>
-					<td>1</td>
-					<td>
-						<div class="dropdown">
-							<a
-								class="btn btn-link font-24 p-0 line-height-1 no-arrow dropdown-toggle"
-								href="#"
-								role="button"
-								data-toggle="dropdown"
-							>
-								<i class="dw dw-more"></i>
-							</a>
-							<div
-								class="dropdown-menu dropdown-menu-right dropdown-menu-icon-list"
-							>
-								<a class="dropdown-item" href="#"
-									><i class="dw dw-eye"></i> View</a
-								>
-								<a class="dropdown-item" href="#"
-									><i class="dw dw-edit2"></i> Edit</a
-								>
-								<a class="dropdown-item" href="#"
-									><i class="dw dw-delete-3"></i> Delete</a
-								>
-							</div>
-						</div>
-					</td>
-				</tr>
-				<tr>
-					<td class="table-plus">
-						<img
-							src="vendors/images/product-5.jpg"
-							width="70"
-							height="70"
-							alt=""
-						/>
-					</td>
-					<td>
-						<h5 class="font-16">Blazer</h5>
-						by Vicki M. Coleman
-					</td>
-					<td>Blue</td>
-					<td>M</td>
-					<td>$1000</td>
-					<td>1</td>
-					<td>
-						<div class="dropdown">
-							<a
-								class="btn btn-link font-24 p-0 line-height-1 no-arrow dropdown-toggle"
-								href="#"
-								role="button"
-								data-toggle="dropdown"
-							>
-								<i class="dw dw-more"></i>
-							</a>
-							<div
-								class="dropdown-menu dropdown-menu-right dropdown-menu-icon-list"
-							>
-								<a class="dropdown-item" href="#"
-									><i class="dw dw-eye"></i> View</a
-								>
-								<a class="dropdown-item" href="#"
-									><i class="dw dw-edit2"></i> Edit</a
-								>
-								<a class="dropdown-item" href="#"
-									><i class="dw dw-delete-3"></i> Delete</a
-								>
-							</div>
-						</div>
-					</td>
-				</tr>
-			</tbody>
-		</table>
-	</div>
+    <div class="col-xl-3 col-md-6 mb-30">
+        <div class="card-box height-100-p pd-20">
+            <div class="font-14 weight-600 text-muted">Đơn đã thanh toán</div>
+            <div class="h2 mb-0 mt-2 text-success">{{ paid_orders|intcomma }}</div>
+            <a href="{% url 'admin_order_list' %}?status=paid" class="font-14">Xem các đơn này</a>
+        </div>
+    </div>
+
+    <div class="col-xl-3 col-md-6 mb-30">
+        <div class="card-box height-100-p pd-20">
+            <div class="font-14 weight-600 text-muted">Đơn đã hủy</div>
+            <div class="h2 mb-0 mt-2 text-danger">{{ cancelled_orders|intcomma }}</div>
+            <a href="{% url 'admin_order_list' %}?status=cancelled" class="font-14">Xem các đơn này</a>
+        </div>
+    </div>
+</div>
+
+{# ---------- Doanh thu và cơ cấu đơn ---------- #}
+<div class="row">
+    <div class="col-lg-5 mb-30">
+        <div class="card-box height-100-p pd-20">
+            <h5 class="h5 text-blue mb-10">Tổng doanh thu</h5>
+            <div class="h2 text-success mb-10">{{ revenue|floatformat:0|intcomma }} đ</div>
+            <p class="font-14 text-muted mb-0">
+                Cộng tổng tiền các đơn ở trạng thái Đã thanh toán, Đã xác nhận, Đang giao và Hoàn thành.
+                Đơn chờ xử lý, chờ chuyển khoản, thanh toán thất bại và đã hủy không được tính.
+            </p>
+        </div>
+    </div>
+
+    <div class="col-lg-7 mb-30">
+        <div class="card-box height-100-p pd-20">
+            <h5 class="h5 text-blue mb-20">Cơ cấu đơn hàng</h5>
+            {% if total_orders %}
+            <div class="mb-20">
+                <div class="d-flex justify-content-between font-14 mb-1">
+                    <span>Chờ xử lý</span>
+                    <span>{{ pending_orders }} đơn ({% widthratio pending_orders total_orders 100 %}%)</span>
+                </div>
+                <progress class="w-100" style="height: 10px; accent-color: #ffc107;" value="{{ pending_orders }}" max="{{ total_orders }}"></progress>
+            </div>
+            <div class="mb-20">
+                <div class="d-flex justify-content-between font-14 mb-1">
+                    <span>Đã thanh toán</span>
+                    <span>{{ paid_orders }} đơn ({% widthratio paid_orders total_orders 100 %}%)</span>
+                </div>
+                <progress class="w-100" style="height: 10px; accent-color: #28a745;" value="{{ paid_orders }}" max="{{ total_orders }}"></progress>
+            </div>
+            <div class="mb-20">
+                <div class="d-flex justify-content-between font-14 mb-1">
+                    <span>Đã hủy</span>
+                    <span>{{ cancelled_orders }} đơn ({% widthratio cancelled_orders total_orders 100 %}%)</span>
+                </div>
+                <progress class="w-100" style="height: 10px; accent-color: #dc3545;" value="{{ cancelled_orders }}" max="{{ total_orders }}"></progress>
+            </div>
+            <p class="font-13 text-muted mb-0">
+                Phần còn lại là các đơn đã xác nhận, đang giao, hoàn thành, chờ chuyển khoản hoặc thanh toán thất bại.
+            </p>
+            {% else %}
+            <p class="text-muted mb-0">Chưa có đơn hàng nào để thống kê.</p>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+{# ---------- Cửa hàng ---------- #}
+<div class="row">
+    <div class="col-xl-3 col-md-6 mb-30">
+        <div class="card-box height-100-p pd-20">
+            <div class="font-14 weight-600 text-muted">Sản phẩm</div>
+            <div class="h3 mb-0 mt-2">{{ total_products|intcomma }}</div>
+            <a href="{% url 'admin_product_list' %}" class="font-14">Quản lý sản phẩm</a>
+        </div>
+    </div>
+    <div class="col-xl-3 col-md-6 mb-30">
+        <div class="card-box height-100-p pd-20">
+            <div class="font-14 weight-600 text-muted">Khách hàng</div>
+            <div class="h3 mb-0 mt-2">{{ total_users|intcomma }}</div>
+        </div>
+    </div>
+    <div class="col-xl-3 col-md-6 mb-30">
+        <div class="card-box height-100-p pd-20">
+            <div class="font-14 weight-600 text-muted">Sản phẩm nổi bật</div>
+            <div class="h3 mb-0 mt-2">{{ total_featured|intcomma }}</div>
+        </div>
+    </div>
+    <div class="col-xl-3 col-md-6 mb-30">
+        <div class="card-box height-100-p pd-20">
+            <div class="font-14 weight-600 text-muted">Đang flash sale</div>
+            <div class="h3 mb-0 mt-2">{{ total_flash_sale|intcomma }}</div>
+        </div>
+    </div>
+</div>
+
+{# ---------- Đơn hàng mới nhất ---------- #}
+<div class="card-box mb-30">
+    <div class="pd-20 d-flex justify-content-between align-items-center">
+        <h4 class="text-blue h4 mb-0">Đơn hàng mới nhất</h4>
+        <a href="{% url 'admin_order_list' %}" class="btn btn-sm btn-outline-primary">Xem tất cả</a>
+    </div>
+    <div class="pb-20 table-responsive">
+        <table class="table table-hover mb-0">
+            <thead>
+                <tr>
+                    <th>Mã đơn</th>
+                    <th>Khách hàng</th>
+                    <th>Thanh toán</th>
+                    <th>Tổng tiền</th>
+                    <th>Ngày đặt</th>
+                    <th>Trạng thái</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for order in recent_orders %}
+                <tr>
+                    <td>#{{ order.id }}</td>
+                    <td>{{ order.full_name }}</td>
+                    <td>{{ order.get_payment_method_display }}</td>
+                    <td>{{ order.total_price|floatformat:0|intcomma }} đ</td>
+                    <td>{{ order.created_at|date:"d/m/Y H:i" }}</td>
+                    <td>
+                        <span class="badge badge-pill
+                            {% if order.status == 'pending' %}badge-warning
+                            {% elif order.status == 'awaiting_transfer' %}badge-info
+                            {% elif order.status == 'paid' or order.status == 'confirmed' or order.status == 'completed' %}badge-success
+                            {% elif order.status == 'shipping' %}badge-primary
+                            {% elif order.status == 'failed' or order.status == 'cancelled' %}badge-danger
+                            {% else %}badge-secondary{% endif %}">
+                            {{ order.get_status_display }}
+                        </span>
+                    </td>
+                    <td>
+                        <a href="{% url 'admin_order_detail' order.id %}" class="btn btn-sm btn-outline-primary">Xem</a>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="7" class="text-center text-muted">Chưa có đơn hàng nào.</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
 </div>
 {% endblock %}

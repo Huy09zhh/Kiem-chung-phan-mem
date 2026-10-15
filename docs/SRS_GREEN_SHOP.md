@@ -12,7 +12,7 @@
 | **Tên tài liệu** | Software Requirements Specification (SRS) |
 | **Phiên bản** | 1.0 (Quy chuẩn phân công nhóm 6 thành viên) |
 | **Ngày ban hành** | 07/10/2026 |
-| **Trạng thái** | Chính thức (Approved) |
+| **Trạng thái** | Chính thức |
 | **Tác giả / Nhóm thực hiện** | Nhóm Phát triển & Kiểm thử Phần mềm (KCPM - 6 Thành viên) |
 | **Chuẩn áp dụng** | IEEE Std 830-1998 / ISO/IEC/IEEE 29148:2018 |
 
@@ -149,21 +149,21 @@ flowchart LR
             UC_Logout["Đăng xuất"]
         end
 
-        subgraph Sub_Product[" [Phân hệ 2 - TV2] Duyệt & Tìm kiếm Sản phẩm "]
+        subgraph Sub_Product[" [Phân hệ 2 - Đỗ Văn Huy] Duyệt & Tìm kiếm Sản phẩm "]
             UC_Browse["Xem danh mục & Flash Sale"]
             UC_Search["Tìm kiếm sản phẩm & Gợi ý (UC02)"]
             UC_Filter["Lọc & Sắp xếp theo giá/tên"]
             UC_Detail["Xem chi tiết sản phẩm"]
         end
 
-        subgraph Sub_Cart[" [Phân hệ 3 - TV3] Giỏ hàng "]
+        subgraph Sub_Cart[" [Phân hệ 3 - Lê Bá Hoài Phong] Giỏ hàng "]
             UC_AddToCart["Thêm sản phẩm vào giỏ"]
             UC_ViewCart["Xem giỏ hàng & tính tiền (UC03)"]
             UC_UpdateCart["Tăng/Giảm số lượng"]
             UC_RemoveCart["Xóa sản phẩm khỏi giỏ"]
         end
 
-        subgraph Sub_Order[" [Phân hệ 4 - TV4] Đặt hàng & Thanh toán "]
+        subgraph Sub_Order[" [Phân hệ 4 - Trần Đình Đức] Đặt hàng & Thanh toán "]
             UC_Checkout["Nhập thông tin giao hàng"]
             UC_PayCOD["Thanh toán COD khi nhận"]
             UC_PayQR["Thanh toán chuyển khoản VietQR (UC04)"]
@@ -171,12 +171,12 @@ flowchart LR
             UC_TrackOrder["Xem thông báo & Trạng thái đơn"]
         end
 
-        subgraph Sub_AdminGoods[" [Phân hệ 5 - TV5] Quản trị Hàng hóa "]
+        subgraph Sub_AdminGoods[" [Phân hệ 5 - Nguyễn Mai Phúc Ân] Quản trị Hàng hóa "]
             UC_ManageCategory["Quản lý Danh mục (CRUD)"]
             UC_ManageProduct["Quản lý Sản phẩm & Upload ảnh (UC05)"]
         end
 
-        subgraph Sub_AdminOrders[" [Phân hệ 6 - TV6] Quản trị Đơn hàng & Hỗ trợ "]
+        subgraph Sub_AdminOrders[" [Phân hệ 6 - Nguyễn Lê Minh Quân] Quản trị Đơn hàng & Hỗ trợ "]
             UC_Dashboard["Dashboard KPI & Thống kê doanh thu"]
             UC_ManageOrder["Quản lý, Tìm kiếm & Lọc đơn hàng"]
             UC_UpdateOrderStatus["Cập nhật trạng thái đơn hàng (UC06)"]
@@ -325,24 +325,24 @@ Bảng phân chia API phục vụ bài tập thiết lập **Postman Workspaces,
 
 | Phân hệ / TV | Method | Endpoint URL | Dữ liệu gửi (Body / Params) | Mã HTTP kỳ vọng | Mô tả nghiệp vụ |
 | :---: | :---: | :--- | :--- | :---: | :--- |
-| **TV1** (Auth) | `POST` | `/accounts/login/` | `username`, `password`, `csrfmiddlewaretoken` | 302 / 200 | Đăng nhập tài khoản |
-| **TV1** (Auth) | `POST` | `/accounts/register/` | `username`, `email`, `password`, `confirm_password` | 302 / 200 | Đăng ký tài khoản |
-| **TV1** (Auth) | `POST` | `/accounts/logout/` | `csrfmiddlewaretoken` | 302 / 200 | Đăng xuất an toàn |
-| **TV2** (Product) | `GET` | `/products/` | `?q=...&category=...&sort=...` | 200 OK | Duyệt & lọc danh sách sản phẩm |
-| **TV2** (Product) | `GET` | `/products/search-suggestions/` | `?q={keyword}` (Ajax Request) | 200 OK (JSON) | Gợi ý tìm kiếm tức thì |
-| **TV2** (Product) | `GET` | `/products/<id>/` | Không | 200 OK | Xem chi tiết sản phẩm |
-| **TV3** (Cart) | `GET` | `/cart/` | Session Cookie | 200 OK | Xem danh sách giỏ hàng |
-| **TV3** (Cart) | `GET` | `/cart/add/<product_id>/` | Session Cookie | 302 Redirect | Thêm sản phẩm vào giỏ |
-| **TV3** (Cart) | `GET` | `/cart/increase/<product_id>/` | Session Cookie | 302 Redirect | Tăng số lượng sản phẩm |
-| **TV3** (Cart) | `GET` | `/cart/decrease/<product_id>/` | Session Cookie | 302 Redirect | Giảm số lượng sản phẩm |
-| **TV3** (Cart) | `GET` | `/cart/remove/<product_id>/` | Session Cookie | 302 Redirect | Xóa sản phẩm khỏi giỏ |
-| **TV4** (Order) | `POST` | `/orders/checkout/` | `full_name`, `phone`, `address`, `payment_method` | 302 Redirect | Xác nhận tạo đơn hàng |
-| **TV4** (Order) | `GET` | `/orders/qr/<order_id>/` | Order ID | 200 OK | Hiển thị mã QR VietQR |
-| **TV4** (Order) | `POST` | `/orders/qr/<order_id>/confirm/` | Order ID | 302 Redirect | Xác nhận đã chuyển khoản |
-| **TV5** (Admin) | `POST` | `/admin-panel/categories/create/` | `name` | 302 / 200 | Thêm danh mục mới |
-| **TV5** (Admin) | `POST` | `/admin-panel/products/create/` | `name`, `price`, `category`, `image` | 302 / 200 | Thêm sản phẩm mới kèm ảnh |
-| **TV6** (Admin) | `GET` | `/admin-panel/dashboard/` | Session Admin Cookie | 200 OK | Xem Dashboard KPI doanh thu |
-| **TV6** (Admin) | `POST` | `/admin-panel/orders/<id>/status/` | `status` (pending, shipping...) | 302 / 200 | Cập nhật trạng thái đơn |
+| **Trần Anh Tiên** (Auth) | `POST` | `/accounts/login/` | `username`, `password`, `csrfmiddlewaretoken` | 302 / 200 | Đăng nhập tài khoản |
+| **Trần Anh Tiên** (Auth) | `POST` | `/accounts/register/` | `username`, `email`, `password`, `confirm_password` | 302 / 200 | Đăng ký tài khoản |
+| **Trần Anh Tiên** (Auth) | `POST` | `/accounts/logout/` | `csrfmiddlewaretoken` | 302 / 200 | Đăng xuất an toàn |
+| **Đỗ Văn Huy** (Product) | `GET` | `/products/` | `?q=...&category=...&sort=...` | 200 OK | Duyệt & lọc danh sách sản phẩm |
+| **Đỗ Văn Huy** (Product) | `GET` | `/products/search-suggestions/` | `?q={keyword}` (Ajax Request) | 200 OK (JSON) | Gợi ý tìm kiếm tức thì |
+| **Đỗ Văn Huy** (Product) | `GET` | `/products/<id>/` | Không | 200 OK | Xem chi tiết sản phẩm |
+| **Lê Bá Hoài Phong** (Cart) | `GET` | `/cart/` | Session Cookie | 200 OK | Xem danh sách giỏ hàng |
+| **Lê Bá Hoài Phong** (Cart) | `GET` | `/cart/add/<product_id>/` | Session Cookie | 302 Redirect | Thêm sản phẩm vào giỏ |
+| **Lê Bá Hoài Phong** (Cart) | `GET` | `/cart/increase/<product_id>/` | Session Cookie | 302 Redirect | Tăng số lượng sản phẩm |
+| **Lê Bá Hoài Phong** (Cart) | `GET` | `/cart/decrease/<product_id>/` | Session Cookie | 302 Redirect | Giảm số lượng sản phẩm |
+| **Lê Bá Hoài Phong** (Cart) | `GET` | `/cart/remove/<product_id>/` | Session Cookie | 302 Redirect | Xóa sản phẩm khỏi giỏ |
+| **Trần Đình Đức** (Order) | `POST` | `/orders/checkout/` | `full_name`, `phone`, `address`, `payment_method` | 302 Redirect | Xác nhận tạo đơn hàng |
+| **Trần Đình Đức** (Order) | `GET` | `/orders/qr/<order_id>/` | Order ID | 200 OK | Hiển thị mã QR VietQR |
+| **Trần Đình Đức** (Order) | `POST` | `/orders/qr/<order_id>/confirm/` | Order ID | 302 Redirect | Xác nhận đã chuyển khoản |
+| **Nguyễn Mai Phúc Ân** (Admin) | `POST` | `/admin-panel/categories/create/` | `name` | 302 / 200 | Thêm danh mục mới |
+| **Nguyễn Mai Phúc Ân** (Admin) | `POST` | `/admin-panel/products/create/` | `name`, `price`, `category`, `image` | 302 / 200 | Thêm sản phẩm mới kèm ảnh |
+| **Nguyễn Lê Minh Quân** (Admin) | `GET` | `/admin-panel/dashboard/` | Session Admin Cookie | 200 OK | Xem Dashboard KPI doanh thu |
+| **Nguyễn Lê Minh Quân** (Admin) | `POST` | `/admin-panel/orders/<id>/status/` | `status` (pending, shipping...) | 302 / 200 | Cập nhật trạng thái đơn |
 
 ---
 
@@ -797,3 +797,15 @@ erDiagram
 | **FR6.5** | Tiếp nhận phản hồi Liên hệ | Support | **Thành viên 6** | - | `TC_RPT_05` | Form liên hệ tiếp nhận thông tin họ tên, email, tin nhắn góp ý thành công. |
 
 ---
+
+### DANH SÁCH VÀ PHÂN CÔNG NHIỆM VỤ CỦA CÁC THÀNH VIÊN (MEMBERS AND RESPONSIBILITIES)
+
+| Đại diện | Họ và tên | Nhiệm vụ |
+| :--- | :--- | :--- |
+| **Thành viên 1** | Trần Anh Tiên | Phụ trách Phân hệ Accounts & Auth |
+| **Thành viên 2** | Đỗ Văn Huy | Phụ trách Phân hệ Products & Search |
+| **Thành viên 3** | Lê Bá Hoài Phong | Phụ trách Phân hệ Shopping Cart |
+| **Thành viên 4** | Trần Đình Đức | Phụ trách Phân hệ Orders & Payment |
+| **Thành viên 5** | Nguyễn Mai Phúc Ân | Phụ trách Phân hệ Admin Catalog & Media |
+| **Thành viên 6** | Nguyễn Lê Minh Quân | Phụ trách Phân hệ Admin Orders & Analytics |
+| **Giảng viên hướng dẫn** | Ths: Nguyễn Văn Chiến | Giảng viên bộ môn Kiểm thử phần mềm |

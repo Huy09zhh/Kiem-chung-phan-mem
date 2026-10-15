@@ -1,0 +1,132 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Giới thiệu | Green Shop{% endblock %}
+
+{% block extra_css %}
+<style>
+    .about-card {
+        display: flex;
+        flex-direction: column;
+    }
+
+    .about-actions {
+        margin-top: auto;
+        padding-top: 24px;
+        display: flex;
+        gap: 12px;
+        flex-wrap: wrap;
+    }
+
+    .about-btn {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        height: 52px;
+        padding: 0 26px;
+        border-radius: 18px;
+        background: linear-gradient(135deg, #48a95b 0%, #2d8341 100%);
+        color: #fff;
+        font-size: 16px;
+        font-weight: 800;
+        text-decoration: none;
+        transition: transform 0.2s ease, opacity 0.2s ease;
+    }
+
+    .about-btn:hover,
+    .about-btn:focus {
+        color: #fff;
+        text-decoration: none;
+        transform: translateY(-1px);
+        opacity: 0.97;
+    }
+
+    .about-btn.outline {
+        background: #fff;
+        color: #2d8341;
+        border: 2px solid #48a95b;
+    }
+
+    .about-btn.outline:hover,
+    .about-btn.outline:focus {
+        color: #2d8341;
+        background: #f4fbf6;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="contact-page">
+    <div class="container">
+        <div class="contact-shell">
+
+            <div class="contact-hero">
+                <span class="contact-badge">Green Shop</span>
+                <h1>Giới thiệu về Green Shop</h1>
+                <p>Green Shop là cửa hàng thực phẩm xanh, mang đến rau củ quả tươi sạch, an toàn và có nguồn gốc rõ ràng cho mọi gia đình Việt.</p>
+            </div>
+
+            <div class="contact-grid">
+                <div class="contact-info-card about-card">
+                    <div class="info-block">
+                        <h2>Câu chuyện của chúng tôi</h2>
+                        <p>Green Shop ra đời với mong muốn giúp người tiêu dùng dễ dàng tiếp cận nguồn thực phẩm sạch. Chúng tôi hợp tác trực tiếp với các nông trại uy tín, kiểm soát chất lượng từ khâu thu hoạch đến khi sản phẩm đến tay khách hàng.</p>
+                    </div>
+
+                    <div class="contact-note-box">
+                        <h3>Sứ mệnh</h3>
+                        <ul>
+                            <li>Cung cấp thực phẩm tươi sạch, an toàn cho sức khỏe</li>
+                            <li>Minh bạch nguồn gốc và giá cả sản phẩm</li>
+                            <li>Ủng hộ nông nghiệp bền vững và nông dân địa phương</li>
+                        </ul>
+                    </div>
+
+                    <div class="info-list" style="margin-top: 24px;">
+                        <div class="info-item">
+                            <span class="info-label">Email</span>
+                            <strong>greenshop@gmail.com</strong>
+                        </div>
+                        <div class="info-item">
+                            <span class="info-label">Thời gian hỗ trợ</span>
+                            <strong>08:00 - 21:00 mỗi ngày</strong>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="contact-info-card about-card">
+                    <div class="info-block">
+                        <h2>Vì sao chọn Green Shop?</h2>
+                        <p>Chúng tôi luôn đặt chất lượng và trải nghiệm của khách hàng lên hàng đầu.</p>
+                    </div>
+
+                    <div class="info-list">
+                        <div class="info-item">
+                            <span class="info-label">Sản phẩm</span>
+                            <strong>Tươi mới mỗi ngày, nguồn gốc rõ ràng</strong>
+                        </div>
+                        <div class="info-item">
+                            <span class="info-label">Thanh toán</span>
+                            <strong>COD, chuyển khoản QR, thanh toán online</strong>
+                        </div>
+                        <div class="info-item">
+                            <span class="info-label">Hotline</span>
+                            <strong>1900 29 29 62</strong>
+                        </div>
+                        <div class="info-item">
+                            <span class="info-label">Địa chỉ</span>
+                            <strong>TP. Hồ Chí Minh, Việt Nam</strong>
+                        </div>
+                    </div>
+
+                    <div class="about-actions">
+                        <a href="{% url 'product_list' %}" class="about-btn">Xem sản phẩm</a>
+                        <a href="{% url 'contact_page' %}" class="about-btn outline">Liên hệ với chúng tôi</a>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+</div>
+{% endblock %}

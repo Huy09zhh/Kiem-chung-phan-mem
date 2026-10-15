@@ -1,3 +1,4 @@
+from django.conf import settings
 from django.urls import path
 from . import views
 from django.contrib.auth import views as auth_views
@@ -25,7 +26,8 @@ urlpatterns = [
     path(
         'password/reset/done/',
         auth_views.PasswordResetDoneView.as_view(
-            template_name='accounts/password_reset_done.html'
+            template_name='accounts/password_reset_done.html',
+            extra_context={'dev_mailbox_enabled': settings.DEV_MAILBOX_ENABLED},
         ),
         name='password_reset_done'
     ),

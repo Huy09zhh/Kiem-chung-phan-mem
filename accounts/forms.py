@@ -67,3 +67,11 @@ class CustomPasswordResetForm(PasswordResetForm):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.fields['email'].widget.attrs.update({'placeholder': 'Nhập email của bạn'})
+
+    def save(self, *args, **kwargs):
+        # Dùng domain người dùng đang truy cập thay cho Site mặc định ("example.com"),
+        # để liên kết đặt lại mật khẩu trong email mở được.
+        request = kwargs.get('request')
+        if request is not None and not kwargs.get('domain_override'):
+            kwargs['domain_override'] = request.get_host()
+        return super().save(*args, **kwargs)

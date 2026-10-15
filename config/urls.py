@@ -17,3 +17,11 @@ urlpatterns = [
 
 if settings.DEBUG:
     urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
+
+if settings.DEV_MAILBOX_ENABLED:
+    from core import dev_mailbox
+
+    urlpatterns += [
+        path('dev/mailbox/', dev_mailbox.mailbox_view, name='dev_mailbox'),
+        path('dev/mailbox/clear/', dev_mailbox.mailbox_clear_view, name='dev_mailbox_clear'),
+    ]
