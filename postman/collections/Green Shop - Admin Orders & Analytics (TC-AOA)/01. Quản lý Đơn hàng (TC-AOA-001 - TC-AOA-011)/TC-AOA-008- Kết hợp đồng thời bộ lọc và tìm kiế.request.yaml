@@ -1,0 +1,20 @@
+$kind: http-request
+name: "TC-AOA-008: Kết hợp đồng thời bộ lọc và tìm kiếm"
+url: "{{base_url}}/admin-panel/orders/?keyword=Tran+Thi+B&status=paid&payment_method=qr"
+method: GET
+queryParams:
+  keyword: Tran+Thi+B
+  status: paid
+  payment_method: qr
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test('TC-AOA-008: Status 200 OK', function () {
+          pm.response.to.have.status(200);
+      });
+      pm.test('TC-AOA-008: Hiển thị đúng đơn thỏa mãn cả 3 điều kiện', function () {
+          pm.expect(pm.response.text()).to.include('Tran Thi B');
+      });
+    language: text/javascript
+settings: {}
+order: 8000

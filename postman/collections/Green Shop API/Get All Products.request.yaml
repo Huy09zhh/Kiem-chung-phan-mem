@@ -1,0 +1,34 @@
+$kind: http-request
+url: http://127.0.0.1:8000/products/
+method: GET
+scripts:
+  - type: afterResponse
+    code: "// Test 1: Kiểm tra mã 200 OK\r
+
+      pm.test(\"[KT-SP-01] Kiểm tra mã phản hồi trả về là 200 OK\", function () {\r
+
+      \    pm.response.to.have.status(200);\r
+
+      });\r
+
+      \r
+
+      // Test 2: Kiểm tra hiệu năng (Performance)\r
+
+      pm.test(\"[KT-SP-02] Thời gian phản hồi cực nhanh (< 500ms)\", function () {\r
+
+      \    pm.expect(pm.response.responseTime).to.be.below(500);\r
+
+      });\r
+
+      \r
+
+      // Test 3: Kiểm tra nội dung trang có chữ 'Tất cả sản phẩm'\r
+
+      pm.test(\"[KT-SP-03] Trang hiển thị đúng tiêu đề 'Tất cả sản phẩm'\", function () {\r
+
+      \    pm.expect(pm.response.text()).to.include(\"Tất cả sản phẩm\");\r
+
+      });\r\n"
+    language: text/javascript
+order: 2000

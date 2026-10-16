@@ -1,0 +1,3 @@
+$kind: collection
+description: Các ca quản lý đơn hàng. Các request 020 và 021 đổi trạng thái đơn status_order_id rồi tự khôi phục.
+order: 2000

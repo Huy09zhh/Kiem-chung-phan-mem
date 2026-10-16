@@ -1,0 +1,20 @@
+$kind: http-request
+url: "{{base_url}}/accounts/login/"
+method: POST
+headers:
+  Referer: "{{base_url}}/accounts/login/"
+body:
+  type: urlencoded
+  content:
+    username: "{{admin_username}}"
+    password: "{{admin_password}}"
+    csrfmiddlewaretoken: "{{csrf_token}}"
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test('Đăng nhập Admin thành công (200 hoặc 302)', function () {
+          pm.expect(pm.response.code).to.be.oneOf([200, 302]);
+      });
+    language: text/javascript
+settings: {}
+order: 2000

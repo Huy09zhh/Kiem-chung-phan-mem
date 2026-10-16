@@ -1,0 +1,8 @@
+$kind: collection
+description: Bộ kiểm thử tự động Postman cho phân hệ Admin Orders & Analytics (Thành viên 6 - Nguyễn Lê Minh Quân)
+variables:
+  base_url: http://127.0.0.1:8000
+  admin_username: admin
+  admin_password: "123456"
+  csrf_token: ""
+  order_id: "1"

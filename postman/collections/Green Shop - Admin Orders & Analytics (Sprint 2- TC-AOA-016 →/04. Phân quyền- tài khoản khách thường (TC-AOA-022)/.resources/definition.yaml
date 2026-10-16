@@ -1,0 +1,4 @@
+$kind: collection
+name: "04. Phân quyền: tài khoản khách thường (TC-AOA-022)"
+description: Chạy cuối cùng vì đăng nhập khách sẽ thay phiên đăng nhập admin.
+order: 5000

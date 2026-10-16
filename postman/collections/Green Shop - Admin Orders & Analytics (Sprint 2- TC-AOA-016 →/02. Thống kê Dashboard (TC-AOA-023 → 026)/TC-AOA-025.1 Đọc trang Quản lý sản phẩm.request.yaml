@@ -1,0 +1,28 @@
+$kind: http-request
+url: "{{base_url}}/admin-panel/products/"
+method: GET
+scripts:
+  - type: afterResponse
+    code: |-
+      const html = pm.response.text();
+      const ok = (c, m) => { if (!c) { throw new Error(m); } };
+      const num = (s) => parseInt(String(s).replace(/[^\d]/g, ''), 10);
+      const grab = (re) => { const m = html.match(re); return m ? m[1] : null; };
+      const rowIds = () => Array.from(html.matchAll(/<td>#(\d+)<\/td>/g), (m) => parseInt(m[1], 10));
+      const loc = () => pm.response.headers.get('Location') || '';
+      const cv = (k) => pm.collectionVariables.get(k);
+      const setcv = (k, v) => pm.collectionVariables.set(k, v);
+      const selectedStatus = () => grab(/<option value="(\w+)"\s+selected>/);
+      const LABEL = { pending: 'Chờ xử lý', awaiting_transfer: 'Chờ chuyển khoản', paid: 'Đã thanh toán', failed: 'Thanh toán thất bại', confirmed: 'Đã xác nhận', shipping: 'Đang giao', completed: 'Hoàn thành', cancelled: 'Đã hủy' };
+
+      pm.test("TC-AOA-025 | Đếm sản phẩm, nổi bật, flash sale ở trang quản lý", function () {
+      ok(pm.response.code === 200, 'HTTP ' + pm.response.code);
+      const rows = Array.from(html.matchAll(/btn-edit"\s+data-id="(\d+)"/g)).length;
+      const boxes = Array.from(html.matchAll(/<input type="checkbox"\s+(checked\s+)?disabled>/g), (m) => !!m[1]);
+      ok(boxes.length === rows * 2, 'Số checkbox (' + boxes.length + ') khác 2 x số dòng (' + rows + ')');
+      let feat = 0, flash = 0;
+      boxes.forEach((b, i) => { if (b) { if (i % 2 === 0) { feat++; } else { flash++; } } });
+      setcv('prod_rows', rows); setcv('prod_featured', feat); setcv('prod_flash', flash);
+      });
+    language: text/javascript
+order: 8000

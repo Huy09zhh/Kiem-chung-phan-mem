@@ -1,0 +1,73 @@
+$kind: collection
+name: "Green Shop - Admin Orders & Analytics (Sprint 2: TC-AOA-016 → 030)"
+description: |-
+  Bộ kiểm thử tự động Sprint 2 cho phân hệ Admin Orders & Analytics (TC-AOA-016 đến 030), tương ứng file bo_ca_kiem_thu_sprint_2_TC_AOA.xlsx.
+
+  Cách chạy:
+  1. Chạy server: python manage.py runserver
+  2. Mở tab Variables của collection, điền admin_password và customer_password (và đổi các biến khác nếu dữ liệu của bạn khác).
+  3. Chọn Run collection, chạy theo thứ tự các folder 00 đến 04.
+
+  Lưu ý: các request đổi trạng thái đơn đều tự khôi phục. Folder 03 tạo dữ liệu thử rồi xóa. Folder 04 phải chạy cuối vì nó đăng nhập bằng tài khoản khách.
+variables:
+  base_url: http://127.0.0.1:8000
+  admin_username: adminquan
+  admin_password: ""
+  customer_username: nhan
+  customer_password: ""
+  search_order_id: "2"
+  detail_order_id: "2"
+  phone_known: "0912345678"
+  status_order_id: "2"
+  paid_order_id: "1"
+  expected_customers: ""
+  run_tag: ""
+  orig_status: ""
+  target_status: ""
+  phone_short: ""
+  phone_long: ""
+  rev_before: ""
+  paid_before: ""
+  cancelled_before: ""
+  order_total: ""
+  prod_rows: ""
+  prod_featured: ""
+  prod_flash: ""
+  all_order_count: ""
+  top6_ids: ""
+  n_pending: ""
+  n_paid: ""
+  n_cancelled: ""
+  first_recent_id: ""
+  contact_id: ""
+  feedback_id: ""
+  csrf_html: ""
+  csrf_token_val: ""
+  csrf_cookie: ""
+scripts:
+  - type: http:beforeRequest
+    code: |-
+      // Tự thêm CSRF cho các request ghi dữ liệu (Django bắt buộc).
+      const m = pm.request.method;
+      pm.request.headers.upsert({ key: 'Referer', value: pm.variables.replaceIn('{{base_url}}') + '/' });
+      if (m !== 'GET' && m !== 'HEAD') {
+          const token = pm.collectionVariables.get('csrf_cookie') || pm.cookies.get('csrftoken') || pm.collectionVariables.get('csrf_html');
+          if (token) {
+              pm.request.headers.upsert({ key: 'X-CSRFToken', value: token });
+              pm.collectionVariables.set('csrf_token_val', token);
+          }
+      }
+    language: text/javascript
+  - type: http:afterResponse
+    code: |-
+      // Sau mỗi response: nhớ lại cookie csrftoken mới nhất (Django đổi token sau khi đăng nhập).
+      let tk = null;
+      try { tk = pm.cookies.get('csrftoken'); } catch (e) {}
+      if (!tk) {
+          try {
+              const rc = pm.response.cookies.get('csrftoken');
+              tk = rc && typeof rc === 'object' ? rc.value : rc;
+          } catch (e) {}
+      }
+      if (tk) { pm.collectionVariables.set('csrf_cookie', tk); }
+    language: text/javascript

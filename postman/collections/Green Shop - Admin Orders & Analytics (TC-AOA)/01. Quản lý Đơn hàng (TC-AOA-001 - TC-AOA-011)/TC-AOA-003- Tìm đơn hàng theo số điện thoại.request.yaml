@@ -1,0 +1,18 @@
+$kind: http-request
+name: "TC-AOA-003: Tìm đơn hàng theo số điện thoại"
+url: "{{base_url}}/admin-panel/orders/?keyword=0912345678"
+method: GET
+queryParams:
+  keyword: "0912345678"
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test('TC-AOA-003: Status 200 OK', function () {
+          pm.response.to.have.status(200);
+      });
+      pm.test('TC-AOA-003: Hiển thị đơn có số điện thoại khớp', function () {
+          pm.expect(pm.response.text()).to.include('0912345678');
+      });
+    language: text/javascript
+settings: {}
+order: 3000

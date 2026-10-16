@@ -1,0 +1,13 @@
+$kind: http-request
+url: http://127.0.0.1:8000/products/api/
+method: GET
+scripts:
+  - type: afterResponse
+    code: "pm.test(\"[BUG-SP-01] API lấy sản phẩm phải trả về mã 200 OK\", function () {\r
+
+      \    pm.response.to.have.status(200);\r
+
+      });"
+    language: text/javascript
+settings: {}
+order: 10000
