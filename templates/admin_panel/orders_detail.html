@@ -75,7 +75,7 @@
                         <td>{{ item.product_name }}</td>
                         <td>{{ item.price|floatformat:0|intcomma }} đ</td>
                         <td>{{ item.quantity }}</td>
-                        <td>{{ item.price|floatformat:0|intcomma }} đ × {{ item.quantity }}</td>
+                        <td>{{ item.subtotal|floatformat:0|intcomma }} đ</td>
                     </tr>
                     {% empty %}
                     <tr>
