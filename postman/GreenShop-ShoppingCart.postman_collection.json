@@ -1,0 +1,1647 @@
+{
+  "info": {
+    "_postman_id": "5b961520-2620-5090-87c6-810b2ac73b55",
+    "name": "Green Shop - Shopping Cart (TC-CART-001 → 021)",
+    "description": "Bộ kiểm thử chức năng Giỏ hàng (cart app): yêu cầu đăng nhập, giỏ trống, thêm / thêm lại / tăng / giảm / xóa, tính tiền, badge navbar, trường hợp ngoại lệ, CSRF và tách giỏ theo tài khoản.\n\nChuẩn bị: python manage.py migrate, rồi tạo tài khoản test user1 / user2 (mật khẩu User@12345) bằng postman/seed_test_data.py: python manage.py shell -c \"exec(open('postman/seed_test_data.py', encoding='utf-8').read())\"\n\nbaseUrl và tài khoản test nằm trong tab Variables của collection (đổi ở đó nếu dữ liệu của bạn khác). Chạy CẢ collection theo thứ tự (Run collection hoặc: npx newman@6.2.1 run GreenShop-ShoppingCart.postman_collection.json). Collection tự dọn giỏ của user1/user2 trước và sau khi chạy, không tạo dữ liệu rác.\n\nMọi thao tác thay đổi giỏ đều gửi bằng POST + CSRF, nên vẫn chạy đúng sau khi sửa BUG-17. TC-CART-018 là test của BUG-17: FAIL cho tới khi bug được sửa.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "event": [
+    {
+      "listen": "prerequest",
+      "script": {
+        "type": "text/javascript",
+        "exec": [
+          "// Lấy CSRF token mới trước mỗi request POST và trước bước \"Dọn giỏ hàng\" (bước này gửi POST bằng pm.sendRequest).",
+          "if (pm.request.method === 'POST' || pm.info.requestName.includes('Dọn giỏ hàng')) {",
+          "    pm.sendRequest({ url: pm.variables.get('baseUrl') + '/contact/', method: 'GET' }, (err, res) => {",
+          "        if (err) { console.error('Không lấy được CSRF token', err); return; }",
+          "        const m = res.text().match(/name=\"csrfmiddlewaretoken\" value=\"([^\"]+)\"/);",
+          "        if (m) pm.variables.set('csrftoken', m[1]);",
+          "        else console.error('Không tìm thấy csrfmiddlewaretoken trong /contact/');",
+          "    });",
+          "}"
+        ]
+      }
+    }
+  ],
+  "item": [
+    {
+      "name": "00. Chuẩn bị",
+      "description": "Đăng xuất phiên cũ (nếu có) và lấy 2 sản phẩm để test.",
+      "item": [
+        {
+          "name": "[setup] Đăng xuất phiên cũ",
+          "protocolProfileBehavior": {
+            "followRedirects": false
+          },
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": "{{baseUrl}}/accounts/logout/",
+            "body": {
+              "mode": "urlencoded",
+              "urlencoded": [
+                {
+                  "key": "csrfmiddlewaretoken",
+                  "value": "{{csrftoken}}",
+                  "type": "text"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Đăng xuất (302)', () => pm.expect(pm.response.code).to.be.oneOf([200, 302]));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "[setup] Lấy 2 sản phẩm để test",
+          "protocolProfileBehavior": {
+            "followRedirects": false
+          },
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/products/"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Trang danh sách sản phẩm 200', () => pm.response.to.have.status(200));",
+                  "const ids = [...new Set(Array.from(pm.response.text().matchAll(/href=\"\\/products\\/(\\d+)\\/\"/g), (m) => m[1]))];",
+                  "pm.test('Có ít nhất 2 sản phẩm (chạy seed_test_data.py nếu fail)', () => pm.expect(ids.length).to.be.at.least(2));",
+                  "pm.collectionVariables.set('productA', ids[0]);",
+                  "pm.collectionVariables.set('productB', ids[1]);"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "01. Khách chưa đăng nhập (TC-CART-001 → 004)",
+      "description": "Mọi thao tác giỏ hàng đều phải yêu cầu đăng nhập.",
+      "item": [
+        {
+          "name": "TC-CART-001 Xem giỏ hàng khi chưa đăng nhập",
+          "protocolProfileBehavior": {
+            "followRedirects": false
+          },
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/cart/"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 302', () => pm.response.to.have.status(302));",
+                  "pm.test('Chuyển tới trang đăng nhập, next=/cart/', () => {",
+                  "    const loc = pm.response.headers.get('Location') || '';",
+                  "    pm.expect(loc).to.include('/accounts/login/');",
+                  "    pm.expect(loc).to.include('next=/cart/');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "TC-CART-002 Thêm sản phẩm khi chưa đăng nhập",
+          "protocolProfileBehavior": {
+            "followRedirects": false
+          },
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": "{{baseUrl}}/cart/add/{{productA}}/",
+            "body": {
+              "mode": "urlencoded",
+              "urlencoded": [
+                {
+                  "key": "csrfmiddlewaretoken",
+                  "value": "{{csrftoken}}",
+                  "type": "text"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 302', () => pm.response.to.have.status(302));",
+                  "pm.test('Chuyển tới trang đăng nhập, giữ lại next', () => {",
+                  "    const loc = pm.response.headers.get('Location') || '';",
+                  "    pm.expect(loc).to.include('/accounts/login/');",
+                  "    pm.expect(loc).to.include('next=/cart/add/' + pm.collectionVariables.get('productA') + '/');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "TC-CART-003 Tăng số lượng khi chưa đăng nhập",
+          "protocolProfileBehavior": {
+            "followRedirects": false
+          },
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": "{{baseUrl}}/cart/increase/{{productA}}/",
+            "body": {
+              "mode": "urlencoded",
+              "urlencoded": [
+                {
+                  "key": "csrfmiddlewaretoken",
+                  "value": "{{csrftoken}}",
+                  "type": "text"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 302 về trang đăng nhập', () => {",
+                  "    pm.response.to.have.status(302);",
+                  "    pm.expect(pm.response.headers.get('Location') || '').to.include('/accounts/login/');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "TC-CART-004 Xóa sản phẩm khi chưa đăng nhập",
+          "protocolProfileBehavior": {
+            "followRedirects": false
+          },
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": "{{baseUrl}}/cart/remove/{{productA}}/",
+            "body": {
+              "mode": "urlencoded",
+              "urlencoded": [
+                {
+                  "key": "csrfmiddlewaretoken",
+                  "value": "{{csrftoken}}",
+                  "type": "text"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 302 về trang đăng nhập', () => {",
+                  "    pm.response.to.have.status(302);",
+                  "    pm.expect(pm.response.headers.get('Location') || '').to.include('/accounts/login/');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "02. Giỏ hàng trống (TC-CART-005)",
+      "description": "Đăng nhập user1, dọn giỏ rồi kiểm tra giao diện giỏ trống.",
+      "item": [
+        {
+          "name": "[setup] Đăng nhập user1",
+          "protocolProfileBehavior": {
+            "followRedirects": false
+          },
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": "{{baseUrl}}/accounts/login/",
+            "body": {
+              "mode": "urlencoded",
+              "urlencoded": [
+                {
+                  "key": "username",
+                  "value": "{{userUsername}}",
+                  "type": "text"
+                },
+                {
+                  "key": "password",
+                  "value": "{{userPassword}}",
+                  "type": "text"
+                },
+                {
+                  "key": "csrfmiddlewaretoken",
+                  "value": "{{csrftoken}}",
+                  "type": "text"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Đăng nhập thành công (302)', () => pm.response.to.have.status(302));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "[setup] Dọn giỏ hàng user1",
+          "protocolProfileBehavior": {
+            "followRedirects": false
+          },
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/cart/"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const html = pm.response.text();",
+                  "const num = (s) => parseInt(String(s).replace(/[^\\d-]/g, ''), 10);",
+                  "const cv = (k) => pm.collectionVariables.get(k);",
+                  "const items = html.split('<div class=\"cart-item\">').slice(1).map((p) => ({",
+                  "    id: (p.match(/\\/cart\\/increase\\/(\\d+)\\//) || [])[1],",
+                  "    name: ((p.match(/<h3>([^<]*)<\\/h3>/) || [])[1] || '').trim(),",
+                  "    price: num((p.match(/Đơn giá<\\/span>\\s*<strong>([^<]*)</) || [])[1]),",
+                  "    qty: num((p.match(/class=\"qty-number\">(\\d+)</) || [])[1]),",
+                  "    sub: num((p.match(/class=\"item-subtotal\">([^<]*)</) || [])[1]),",
+                  "}));",
+                  "const find = (id) => items.find((i) => i.id === String(id));",
+                  "const totalM = html.match(/class=\"summary-total\">([^<]*)</);",
+                  "const total = totalM ? num(totalM[1]) : 0;",
+                  "const badgeM = html.match(/padding: 0 4px;\\s*\">\\s*(\\d+)\\s*<\\/span>/);",
+                  "const badge = badgeM ? parseInt(badgeM[1], 10) : null;",
+                  "",
+                  "pm.test('Mở được giỏ hàng (200)', () => pm.response.to.have.status(200));",
+                  "// Xóa mọi sản phẩm còn sót trong giỏ để các test sau bắt đầu từ giỏ trống.",
+                  "items.forEach((i) => pm.sendRequest({",
+                  "    url: pm.variables.get('baseUrl') + '/cart/remove/' + i.id + '/',",
+                  "    method: 'POST',",
+                  "    body: { mode: 'urlencoded', urlencoded: [{ key: 'csrfmiddlewaretoken', value: pm.variables.get('csrftoken') }] },",
+                  "}, (err, res) => pm.test('Xóa sản phẩm #' + i.id + ' còn sót', () => {",
+                  "    pm.expect(err).to.be.null;",
+                  "    pm.expect(res.code).to.be.oneOf([200, 302]); // sendRequest tự đi theo redirect về /cart/",
+                  "})));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "TC-CART-005 Giỏ hàng trống",
+          "protocolProfileBehavior": {
+            "followRedirects": false
+          },
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/cart/"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const html = pm.response.text();",
+                  "const num = (s) => parseInt(String(s).replace(/[^\\d-]/g, ''), 10);",
+                  "const cv = (k) => pm.collectionVariables.get(k);",
+                  "const items = html.split('<div class=\"cart-item\">').slice(1).map((p) => ({",
+                  "    id: (p.match(/\\/cart\\/increase\\/(\\d+)\\//) || [])[1],",
+                  "    name: ((p.match(/<h3>([^<]*)<\\/h3>/) || [])[1] || '').trim(),",
+                  "    price: num((p.match(/Đơn giá<\\/span>\\s*<strong>([^<]*)</) || [])[1]),",
+                  "    qty: num((p.match(/class=\"qty-number\">(\\d+)</) || [])[1]),",
+                  "    sub: num((p.match(/class=\"item-subtotal\">([^<]*)</) || [])[1]),",
+                  "}));",
+                  "const find = (id) => items.find((i) => i.id === String(id));",
+                  "const totalM = html.match(/class=\"summary-total\">([^<]*)</);",
+                  "const total = totalM ? num(totalM[1]) : 0;",
+                  "const badgeM = html.match(/padding: 0 4px;\\s*\">\\s*(\\d+)\\s*<\\/span>/);",
+                  "const badge = badgeM ? parseInt(badgeM[1], 10) : null;",
+                  "pm.test('Mở được giỏ hàng (200)', () => pm.response.to.have.status(200));",
+                  "",
+                  "pm.test('Hiển thị \"Giỏ hàng của bạn đang trống\"', () => pm.expect(html).to.include('Giỏ hàng của bạn đang trống'));",
+                  "pm.test('Không có dòng sản phẩm nào', () => pm.expect(items.length).to.equal(0));",
+                  "pm.test('Không có nút \"Tiếp tục thanh toán\"', () => pm.expect(html).to.not.include('href=\"/orders/checkout/\"'));",
+                  "pm.test('Badge giỏ hàng trên navbar = 0', () => pm.expect(badge).to.equal(0));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "03. Thêm và cập nhật số lượng (TC-CART-006 → 012)",
+      "description": "Luồng chính: thêm, thêm lại, thêm sản phẩm thứ hai, tăng, giảm, xóa.",
+      "item": [
+        {
+          "name": "TC-CART-006.1 Thêm sản phẩm A vào giỏ",
+          "protocolProfileBehavior": {
+            "followRedirects": false
+          },
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": "{{baseUrl}}/cart/add/{{productA}}/",
+            "body": {
+              "mode": "urlencoded",
+              "urlencoded": [
+                {
+                  "key": "csrfmiddlewaretoken",
+                  "value": "{{csrftoken}}",
+                  "type": "text"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 302', () => pm.response.to.have.status(302));",
+                  "pm.test('Chuyển về /cart/', () => pm.expect(pm.response.headers.get('Location') || '').to.include('/cart/'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "TC-CART-006.2 Giỏ có sản phẩm A, số lượng 1",
+          "protocolProfileBehavior": {
+            "followRedirects": false
+          },
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/cart/"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const html = pm.response.text();",
+                  "const num = (s) => parseInt(String(s).replace(/[^\\d-]/g, ''), 10);",
+                  "const cv = (k) => pm.collectionVariables.get(k);",
+                  "const items = html.split('<div class=\"cart-item\">').slice(1).map((p) => ({",
+                  "    id: (p.match(/\\/cart\\/increase\\/(\\d+)\\//) || [])[1],",
+                  "    name: ((p.match(/<h3>([^<]*)<\\/h3>/) || [])[1] || '').trim(),",
+                  "    price: num((p.match(/Đơn giá<\\/span>\\s*<strong>([^<]*)</) || [])[1]),",
+                  "    qty: num((p.match(/class=\"qty-number\">(\\d+)</) || [])[1]),",
+                  "    sub: num((p.match(/class=\"item-subtotal\">([^<]*)</) || [])[1]),",
+                  "}));",
+                  "const find = (id) => items.find((i) => i.id === String(id));",
+                  "const totalM = html.match(/class=\"summary-total\">([^<]*)</);",
+                  "const total = totalM ? num(totalM[1]) : 0;",
+                  "const badgeM = html.match(/padding: 0 4px;\\s*\">\\s*(\\d+)\\s*<\\/span>/);",
+                  "const badge = badgeM ? parseInt(badgeM[1], 10) : null;",
+                  "pm.test('Mở được giỏ hàng (200)', () => pm.response.to.have.status(200));",
+                  "",
+                  "const a = find(cv('productA'));",
+                  "pm.test('Có đúng 1 dòng sản phẩm', () => pm.expect(items.length).to.equal(1));",
+                  "pm.test('Dòng đó là sản phẩm A, số lượng 1', () => { pm.expect(a).to.exist; pm.expect(a.qty).to.equal(1); });",
+                  "pm.test('Thành tiền = đơn giá × 1', () => pm.expect(a.sub).to.equal(a.price));",
+                  "pm.test('Tổng thanh toán = thành tiền', () => pm.expect(total).to.equal(a.sub));",
+                  "pm.test('Hiển thị \"1 sản phẩm trong giỏ\"', () => pm.expect(html).to.include('1 sản phẩm trong giỏ'));",
+                  "pm.test('Badge giỏ hàng = 1', () => pm.expect(badge).to.equal(1));",
+                  "pm.test('Có nút \"Tiếp tục thanh toán\" tới /orders/checkout/', () => pm.expect(html).to.include('href=\"/orders/checkout/\"'));",
+                  "if (a) pm.collectionVariables.set('priceA', a.price);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "TC-CART-007.1 Thêm lại sản phẩm A",
+          "protocolProfileBehavior": {
+            "followRedirects": false
+          },
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": "{{baseUrl}}/cart/add/{{productA}}/",
+            "body": {
+              "mode": "urlencoded",
+              "urlencoded": [
+                {
+                  "key": "csrfmiddlewaretoken",
+                  "value": "{{csrftoken}}",
+                  "type": "text"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 302', () => pm.response.to.have.status(302));",
+                  "pm.test('Chuyển về /cart/', () => pm.expect(pm.response.headers.get('Location') || '').to.include('/cart/'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "TC-CART-007.2 Không tạo dòng mới, số lượng A tăng lên 2",
+          "protocolProfileBehavior": {
+            "followRedirects": false
+          },
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/cart/"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const html = pm.response.text();",
+                  "const num = (s) => parseInt(String(s).replace(/[^\\d-]/g, ''), 10);",
+                  "const cv = (k) => pm.collectionVariables.get(k);",
+                  "const items = html.split('<div class=\"cart-item\">').slice(1).map((p) => ({",
+                  "    id: (p.match(/\\/cart\\/increase\\/(\\d+)\\//) || [])[1],",
+                  "    name: ((p.match(/<h3>([^<]*)<\\/h3>/) || [])[1] || '').trim(),",
+                  "    price: num((p.match(/Đơn giá<\\/span>\\s*<strong>([^<]*)</) || [])[1]),",
+                  "    qty: num((p.match(/class=\"qty-number\">(\\d+)</) || [])[1]),",
+                  "    sub: num((p.match(/class=\"item-subtotal\">([^<]*)</) || [])[1]),",
+                  "}));",
+                  "const find = (id) => items.find((i) => i.id === String(id));",
+                  "const totalM = html.match(/class=\"summary-total\">([^<]*)</);",
+                  "const total = totalM ? num(totalM[1]) : 0;",
+                  "const badgeM = html.match(/padding: 0 4px;\\s*\">\\s*(\\d+)\\s*<\\/span>/);",
+                  "const badge = badgeM ? parseInt(badgeM[1], 10) : null;",
+                  "pm.test('Mở được giỏ hàng (200)', () => pm.response.to.have.status(200));",
+                  "",
+                  "const a = find(cv('productA'));",
+                  "pm.test('Vẫn chỉ 1 dòng sản phẩm', () => pm.expect(items.length).to.equal(1));",
+                  "pm.test('Số lượng A = 2', () => pm.expect(a.qty).to.equal(2));",
+                  "pm.test('Thành tiền = đơn giá × 2', () => pm.expect(a.sub).to.equal(Number(cv('priceA')) * 2));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "TC-CART-008.1 Thêm sản phẩm B",
+          "protocolProfileBehavior": {
+            "followRedirects": false
+          },
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": "{{baseUrl}}/cart/add/{{productB}}/",
+            "body": {
+              "mode": "urlencoded",
+              "urlencoded": [
+                {
+                  "key": "csrfmiddlewaretoken",
+                  "value": "{{csrftoken}}",
+                  "type": "text"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 302', () => pm.response.to.have.status(302));",
+                  "pm.test('Chuyển về /cart/', () => pm.expect(pm.response.headers.get('Location') || '').to.include('/cart/'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "TC-CART-008.2 Giỏ có 2 sản phẩm, tổng tiền đúng",
+          "protocolProfileBehavior": {
+            "followRedirects": false
+          },
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/cart/"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const html = pm.response.text();",
+                  "const num = (s) => parseInt(String(s).replace(/[^\\d-]/g, ''), 10);",
+                  "const cv = (k) => pm.collectionVariables.get(k);",
+                  "const items = html.split('<div class=\"cart-item\">').slice(1).map((p) => ({",
+                  "    id: (p.match(/\\/cart\\/increase\\/(\\d+)\\//) || [])[1],",
+                  "    name: ((p.match(/<h3>([^<]*)<\\/h3>/) || [])[1] || '').trim(),",
+                  "    price: num((p.match(/Đơn giá<\\/span>\\s*<strong>([^<]*)</) || [])[1]),",
+                  "    qty: num((p.match(/class=\"qty-number\">(\\d+)</) || [])[1]),",
+                  "    sub: num((p.match(/class=\"item-subtotal\">([^<]*)</) || [])[1]),",
+                  "}));",
+                  "const find = (id) => items.find((i) => i.id === String(id));",
+                  "const totalM = html.match(/class=\"summary-total\">([^<]*)</);",
+                  "const total = totalM ? num(totalM[1]) : 0;",
+                  "const badgeM = html.match(/padding: 0 4px;\\s*\">\\s*(\\d+)\\s*<\\/span>/);",
+                  "const badge = badgeM ? parseInt(badgeM[1], 10) : null;",
+                  "pm.test('Mở được giỏ hàng (200)', () => pm.response.to.have.status(200));",
+                  "",
+                  "const a = find(cv('productA')), b = find(cv('productB'));",
+                  "pm.test('Có 2 dòng sản phẩm (A và B)', () => { pm.expect(items.length).to.equal(2); pm.expect(a).to.exist; pm.expect(b).to.exist; });",
+                  "pm.test('Số lượng B = 1, thành tiền B = đơn giá B', () => { pm.expect(b.qty).to.equal(1); pm.expect(b.sub).to.equal(b.price); });",
+                  "pm.test('Tổng thanh toán = tổng các thành tiền', () => pm.expect(total).to.equal(a.sub + b.sub));",
+                  "pm.test('Hiển thị \"2 sản phẩm trong giỏ\"', () => pm.expect(html).to.include('2 sản phẩm trong giỏ'));",
+                  "pm.test('Badge giỏ hàng = tổng số lượng (3)', () => pm.expect(badge).to.equal(3));",
+                  "if (b) pm.collectionVariables.set('priceB', b.price);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "TC-CART-009.1 Tăng số lượng A",
+          "protocolProfileBehavior": {
+            "followRedirects": false
+          },
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": "{{baseUrl}}/cart/increase/{{productA}}/",
+            "body": {
+              "mode": "urlencoded",
+              "urlencoded": [
+                {
+                  "key": "csrfmiddlewaretoken",
+                  "value": "{{csrftoken}}",
+                  "type": "text"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 302', () => pm.response.to.have.status(302));",
+                  "pm.test('Chuyển về /cart/', () => pm.expect(pm.response.headers.get('Location') || '').to.include('/cart/'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "TC-CART-009.2 Số lượng A = 3, tổng tiền cập nhật",
+          "protocolProfileBehavior": {
+            "followRedirects": false
+          },
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/cart/"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const html = pm.response.text();",
+                  "const num = (s) => parseInt(String(s).replace(/[^\\d-]/g, ''), 10);",
+                  "const cv = (k) => pm.collectionVariables.get(k);",
+                  "const items = html.split('<div class=\"cart-item\">').slice(1).map((p) => ({",
+                  "    id: (p.match(/\\/cart\\/increase\\/(\\d+)\\//) || [])[1],",
+                  "    name: ((p.match(/<h3>([^<]*)<\\/h3>/) || [])[1] || '').trim(),",
+                  "    price: num((p.match(/Đơn giá<\\/span>\\s*<strong>([^<]*)</) || [])[1]),",
+                  "    qty: num((p.match(/class=\"qty-number\">(\\d+)</) || [])[1]),",
+                  "    sub: num((p.match(/class=\"item-subtotal\">([^<]*)</) || [])[1]),",
+                  "}));",
+                  "const find = (id) => items.find((i) => i.id === String(id));",
+                  "const totalM = html.match(/class=\"summary-total\">([^<]*)</);",
+                  "const total = totalM ? num(totalM[1]) : 0;",
+                  "const badgeM = html.match(/padding: 0 4px;\\s*\">\\s*(\\d+)\\s*<\\/span>/);",
+                  "const badge = badgeM ? parseInt(badgeM[1], 10) : null;",
+                  "pm.test('Mở được giỏ hàng (200)', () => pm.response.to.have.status(200));",
+                  "",
+                  "const a = find(cv('productA'));",
+                  "pm.test('Số lượng A = 3', () => pm.expect(a.qty).to.equal(3));",
+                  "pm.test('Thành tiền A = đơn giá × 3', () => pm.expect(a.sub).to.equal(Number(cv('priceA')) * 3));",
+                  "pm.test('Tổng = 3×A + 1×B', () => pm.expect(total).to.equal(Number(cv('priceA')) * 3 + Number(cv('priceB'))));",
+                  "pm.test('Badge giỏ hàng = 4', () => pm.expect(badge).to.equal(4));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "TC-CART-010.1 Giảm số lượng A",
+          "protocolProfileBehavior": {
+            "followRedirects": false
+          },
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": "{{baseUrl}}/cart/decrease/{{productA}}/",
+            "body": {
+              "mode": "urlencoded",
+              "urlencoded": [
+                {
+                  "key": "csrfmiddlewaretoken",
+                  "value": "{{csrftoken}}",
+                  "type": "text"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 302', () => pm.response.to.have.status(302));",
+                  "pm.test('Chuyển về /cart/', () => pm.expect(pm.response.headers.get('Location') || '').to.include('/cart/'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "TC-CART-010.2 Số lượng A = 2",
+          "protocolProfileBehavior": {
+            "followRedirects": false
+          },
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/cart/"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const html = pm.response.text();",
+                  "const num = (s) => parseInt(String(s).replace(/[^\\d-]/g, ''), 10);",
+                  "const cv = (k) => pm.collectionVariables.get(k);",
+                  "const items = html.split('<div class=\"cart-item\">').slice(1).map((p) => ({",
+                  "    id: (p.match(/\\/cart\\/increase\\/(\\d+)\\//) || [])[1],",
+                  "    name: ((p.match(/<h3>([^<]*)<\\/h3>/) || [])[1] || '').trim(),",
+                  "    price: num((p.match(/Đơn giá<\\/span>\\s*<strong>([^<]*)</) || [])[1]),",
+                  "    qty: num((p.match(/class=\"qty-number\">(\\d+)</) || [])[1]),",
+                  "    sub: num((p.match(/class=\"item-subtotal\">([^<]*)</) || [])[1]),",
+                  "}));",
+                  "const find = (id) => items.find((i) => i.id === String(id));",
+                  "const totalM = html.match(/class=\"summary-total\">([^<]*)</);",
+                  "const total = totalM ? num(totalM[1]) : 0;",
+                  "const badgeM = html.match(/padding: 0 4px;\\s*\">\\s*(\\d+)\\s*<\\/span>/);",
+                  "const badge = badgeM ? parseInt(badgeM[1], 10) : null;",
+                  "pm.test('Mở được giỏ hàng (200)', () => pm.response.to.have.status(200));",
+                  "",
+                  "const a = find(cv('productA'));",
+                  "pm.test('Số lượng A = 2', () => pm.expect(a.qty).to.equal(2));",
+                  "pm.test('Tổng = 2×A + 1×B', () => pm.expect(total).to.equal(Number(cv('priceA')) * 2 + Number(cv('priceB'))));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "TC-CART-011.1 Giảm B khi đang có số lượng 1",
+          "protocolProfileBehavior": {
+            "followRedirects": false
+          },
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": "{{baseUrl}}/cart/decrease/{{productB}}/",
+            "body": {
+              "mode": "urlencoded",
+              "urlencoded": [
+                {
+                  "key": "csrfmiddlewaretoken",
+                  "value": "{{csrftoken}}",
+                  "type": "text"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 302', () => pm.response.to.have.status(302));",
+                  "pm.test('Chuyển về /cart/', () => pm.expect(pm.response.headers.get('Location') || '').to.include('/cart/'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "TC-CART-011.2 B bị xóa khỏi giỏ, A giữ nguyên",
+          "protocolProfileBehavior": {
+            "followRedirects": false
+          },
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/cart/"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const html = pm.response.text();",
+                  "const num = (s) => parseInt(String(s).replace(/[^\\d-]/g, ''), 10);",
+                  "const cv = (k) => pm.collectionVariables.get(k);",
+                  "const items = html.split('<div class=\"cart-item\">').slice(1).map((p) => ({",
+                  "    id: (p.match(/\\/cart\\/increase\\/(\\d+)\\//) || [])[1],",
+                  "    name: ((p.match(/<h3>([^<]*)<\\/h3>/) || [])[1] || '').trim(),",
+                  "    price: num((p.match(/Đơn giá<\\/span>\\s*<strong>([^<]*)</) || [])[1]),",
+                  "    qty: num((p.match(/class=\"qty-number\">(\\d+)</) || [])[1]),",
+                  "    sub: num((p.match(/class=\"item-subtotal\">([^<]*)</) || [])[1]),",
+                  "}));",
+                  "const find = (id) => items.find((i) => i.id === String(id));",
+                  "const totalM = html.match(/class=\"summary-total\">([^<]*)</);",
+                  "const total = totalM ? num(totalM[1]) : 0;",
+                  "const badgeM = html.match(/padding: 0 4px;\\s*\">\\s*(\\d+)\\s*<\\/span>/);",
+                  "const badge = badgeM ? parseInt(badgeM[1], 10) : null;",
+                  "pm.test('Mở được giỏ hàng (200)', () => pm.response.to.have.status(200));",
+                  "",
+                  "pm.test('Không còn dòng sản phẩm B', () => pm.expect(find(cv('productB'))).to.be.undefined);",
+                  "pm.test('A vẫn còn với số lượng 2', () => pm.expect(find(cv('productA')).qty).to.equal(2));",
+                  "pm.test('Tổng = 2×A', () => pm.expect(total).to.equal(Number(cv('priceA')) * 2));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "TC-CART-012.1 Xóa sản phẩm A khỏi giỏ",
+          "protocolProfileBehavior": {
+            "followRedirects": false
+          },
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": "{{baseUrl}}/cart/remove/{{productA}}/",
+            "body": {
+              "mode": "urlencoded",
+              "urlencoded": [
+                {
+                  "key": "csrfmiddlewaretoken",
+                  "value": "{{csrftoken}}",
+                  "type": "text"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 302', () => pm.response.to.have.status(302));",
+                  "pm.test('Chuyển về /cart/', () => pm.expect(pm.response.headers.get('Location') || '').to.include('/cart/'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "TC-CART-012.2 Giỏ trống sau khi xóa",
+          "protocolProfileBehavior": {
+            "followRedirects": false
+          },
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/cart/"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const html = pm.response.text();",
+                  "const num = (s) => parseInt(String(s).replace(/[^\\d-]/g, ''), 10);",
+                  "const cv = (k) => pm.collectionVariables.get(k);",
+                  "const items = html.split('<div class=\"cart-item\">').slice(1).map((p) => ({",
+                  "    id: (p.match(/\\/cart\\/increase\\/(\\d+)\\//) || [])[1],",
+                  "    name: ((p.match(/<h3>([^<]*)<\\/h3>/) || [])[1] || '').trim(),",
+                  "    price: num((p.match(/Đơn giá<\\/span>\\s*<strong>([^<]*)</) || [])[1]),",
+                  "    qty: num((p.match(/class=\"qty-number\">(\\d+)</) || [])[1]),",
+                  "    sub: num((p.match(/class=\"item-subtotal\">([^<]*)</) || [])[1]),",
+                  "}));",
+                  "const find = (id) => items.find((i) => i.id === String(id));",
+                  "const totalM = html.match(/class=\"summary-total\">([^<]*)</);",
+                  "const total = totalM ? num(totalM[1]) : 0;",
+                  "const badgeM = html.match(/padding: 0 4px;\\s*\">\\s*(\\d+)\\s*<\\/span>/);",
+                  "const badge = badgeM ? parseInt(badgeM[1], 10) : null;",
+                  "pm.test('Mở được giỏ hàng (200)', () => pm.response.to.have.status(200));",
+                  "",
+                  "pm.test('Hiển thị \"Giỏ hàng của bạn đang trống\"', () => pm.expect(html).to.include('Giỏ hàng của bạn đang trống'));",
+                  "pm.test('Không có dòng sản phẩm nào', () => pm.expect(items.length).to.equal(0));",
+                  "pm.test('Không có nút \"Tiếp tục thanh toán\"', () => pm.expect(html).to.not.include('href=\"/orders/checkout/\"'));",
+                  "pm.test('Badge giỏ hàng trên navbar = 0', () => pm.expect(badge).to.equal(0));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "04. Trường hợp ngoại lệ (TC-CART-013 → 018)",
+      "description": "Dữ liệu không hợp lệ và bảo mật. TC-CART-018 sẽ FAIL cho tới khi sửa BUG-17.",
+      "item": [
+        {
+          "name": "TC-CART-013 Thêm sản phẩm không tồn tại",
+          "protocolProfileBehavior": {
+            "followRedirects": false
+          },
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": "{{baseUrl}}/cart/add/999999/",
+            "body": {
+              "mode": "urlencoded",
+              "urlencoded": [
+                {
+                  "key": "csrfmiddlewaretoken",
+                  "value": "{{csrftoken}}",
+                  "type": "text"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 404', () => pm.response.to.have.status(404));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "TC-CART-014 Tăng sản phẩm không có trong giỏ",
+          "protocolProfileBehavior": {
+            "followRedirects": false
+          },
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": "{{baseUrl}}/cart/increase/{{productA}}/",
+            "body": {
+              "mode": "urlencoded",
+              "urlencoded": [
+                {
+                  "key": "csrfmiddlewaretoken",
+                  "value": "{{csrftoken}}",
+                  "type": "text"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 404', () => pm.response.to.have.status(404));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "TC-CART-015 Giảm sản phẩm không có trong giỏ",
+          "protocolProfileBehavior": {
+            "followRedirects": false
+          },
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": "{{baseUrl}}/cart/decrease/{{productA}}/",
+            "body": {
+              "mode": "urlencoded",
+              "urlencoded": [
+                {
+                  "key": "csrfmiddlewaretoken",
+                  "value": "{{csrftoken}}",
+                  "type": "text"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 404', () => pm.response.to.have.status(404));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "TC-CART-016 Xóa sản phẩm không có trong giỏ (không lỗi)",
+          "protocolProfileBehavior": {
+            "followRedirects": false
+          },
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": "{{baseUrl}}/cart/remove/{{productA}}/",
+            "body": {
+              "mode": "urlencoded",
+              "urlencoded": [
+                {
+                  "key": "csrfmiddlewaretoken",
+                  "value": "{{csrftoken}}",
+                  "type": "text"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 302', () => pm.response.to.have.status(302));",
+                  "pm.test('Chuyển về /cart/', () => pm.expect(pm.response.headers.get('Location') || '').to.include('/cart/'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "TC-CART-017.1 Thêm vào giỏ thiếu CSRF token",
+          "protocolProfileBehavior": {
+            "followRedirects": false
+          },
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": "{{baseUrl}}/cart/add/{{productA}}/",
+            "body": {
+              "mode": "urlencoded",
+              "urlencoded": []
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 403', () => pm.response.to.have.status(403));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "TC-CART-017.2 Giỏ vẫn trống sau request thiếu CSRF",
+          "protocolProfileBehavior": {
+            "followRedirects": false
+          },
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/cart/"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const html = pm.response.text();",
+                  "const num = (s) => parseInt(String(s).replace(/[^\\d-]/g, ''), 10);",
+                  "const cv = (k) => pm.collectionVariables.get(k);",
+                  "const items = html.split('<div class=\"cart-item\">').slice(1).map((p) => ({",
+                  "    id: (p.match(/\\/cart\\/increase\\/(\\d+)\\//) || [])[1],",
+                  "    name: ((p.match(/<h3>([^<]*)<\\/h3>/) || [])[1] || '').trim(),",
+                  "    price: num((p.match(/Đơn giá<\\/span>\\s*<strong>([^<]*)</) || [])[1]),",
+                  "    qty: num((p.match(/class=\"qty-number\">(\\d+)</) || [])[1]),",
+                  "    sub: num((p.match(/class=\"item-subtotal\">([^<]*)</) || [])[1]),",
+                  "}));",
+                  "const find = (id) => items.find((i) => i.id === String(id));",
+                  "const totalM = html.match(/class=\"summary-total\">([^<]*)</);",
+                  "const total = totalM ? num(totalM[1]) : 0;",
+                  "const badgeM = html.match(/padding: 0 4px;\\s*\">\\s*(\\d+)\\s*<\\/span>/);",
+                  "const badge = badgeM ? parseInt(badgeM[1], 10) : null;",
+                  "pm.test('Mở được giỏ hàng (200)', () => pm.response.to.have.status(200));",
+                  "",
+                  "pm.test('Hiển thị \"Giỏ hàng của bạn đang trống\"', () => pm.expect(html).to.include('Giỏ hàng của bạn đang trống'));",
+                  "pm.test('Không có dòng sản phẩm nào', () => pm.expect(items.length).to.equal(0));",
+                  "pm.test('Không có nút \"Tiếp tục thanh toán\"', () => pm.expect(html).to.not.include('href=\"/orders/checkout/\"'));",
+                  "pm.test('Badge giỏ hàng trên navbar = 0', () => pm.expect(badge).to.equal(0));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "TC-CART-018.1 [BUG-17] Thêm vào giỏ bằng GET phải bị từ chối",
+          "protocolProfileBehavior": {
+            "followRedirects": false
+          },
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/cart/add/{{productA}}/",
+            "description": "Hiện tại FAIL vì cart_add chấp nhận GET (BUG-17). Sửa: @require_POST trong cart/views.py và đổi link thành form POST."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('BUG-17 Thay đổi giỏ hàng phải dùng POST, GET trả 405', () => pm.response.to.have.status(405));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "[setup] Dọn giỏ hàng user1 (sau TC-CART-018)",
+          "protocolProfileBehavior": {
+            "followRedirects": false
+          },
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/cart/"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const html = pm.response.text();",
+                  "const num = (s) => parseInt(String(s).replace(/[^\\d-]/g, ''), 10);",
+                  "const cv = (k) => pm.collectionVariables.get(k);",
+                  "const items = html.split('<div class=\"cart-item\">').slice(1).map((p) => ({",
+                  "    id: (p.match(/\\/cart\\/increase\\/(\\d+)\\//) || [])[1],",
+                  "    name: ((p.match(/<h3>([^<]*)<\\/h3>/) || [])[1] || '').trim(),",
+                  "    price: num((p.match(/Đơn giá<\\/span>\\s*<strong>([^<]*)</) || [])[1]),",
+                  "    qty: num((p.match(/class=\"qty-number\">(\\d+)</) || [])[1]),",
+                  "    sub: num((p.match(/class=\"item-subtotal\">([^<]*)</) || [])[1]),",
+                  "}));",
+                  "const find = (id) => items.find((i) => i.id === String(id));",
+                  "const totalM = html.match(/class=\"summary-total\">([^<]*)</);",
+                  "const total = totalM ? num(totalM[1]) : 0;",
+                  "const badgeM = html.match(/padding: 0 4px;\\s*\">\\s*(\\d+)\\s*<\\/span>/);",
+                  "const badge = badgeM ? parseInt(badgeM[1], 10) : null;",
+                  "",
+                  "pm.test('Mở được giỏ hàng (200)', () => pm.response.to.have.status(200));",
+                  "// Xóa mọi sản phẩm còn sót trong giỏ để các test sau bắt đầu từ giỏ trống.",
+                  "items.forEach((i) => pm.sendRequest({",
+                  "    url: pm.variables.get('baseUrl') + '/cart/remove/' + i.id + '/',",
+                  "    method: 'POST',",
+                  "    body: { mode: 'urlencoded', urlencoded: [{ key: 'csrfmiddlewaretoken', value: pm.variables.get('csrftoken') }] },",
+                  "}, (err, res) => pm.test('Xóa sản phẩm #' + i.id + ' còn sót', () => {",
+                  "    pm.expect(err).to.be.null;",
+                  "    pm.expect(res.code).to.be.oneOf([200, 302]); // sendRequest tự đi theo redirect về /cart/",
+                  "})));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "05. Giỏ hàng riêng theo tài khoản (TC-CART-019 → 021)",
+      "description": "user2 không thấy / không sửa được giỏ của user1; giỏ của user1 còn nguyên sau khi đăng nhập lại.",
+      "item": [
+        {
+          "name": "[setup] user1 thêm sản phẩm A",
+          "protocolProfileBehavior": {
+            "followRedirects": false
+          },
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": "{{baseUrl}}/cart/add/{{productA}}/",
+            "body": {
+              "mode": "urlencoded",
+              "urlencoded": [
+                {
+                  "key": "csrfmiddlewaretoken",
+                  "value": "{{csrftoken}}",
+                  "type": "text"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 302', () => pm.response.to.have.status(302));",
+                  "pm.test('Chuyển về /cart/', () => pm.expect(pm.response.headers.get('Location') || '').to.include('/cart/'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "[setup] Đăng xuất user1",
+          "protocolProfileBehavior": {
+            "followRedirects": false
+          },
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": "{{baseUrl}}/accounts/logout/",
+            "body": {
+              "mode": "urlencoded",
+              "urlencoded": [
+                {
+                  "key": "csrfmiddlewaretoken",
+                  "value": "{{csrftoken}}",
+                  "type": "text"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Đăng xuất (302)', () => pm.expect(pm.response.code).to.be.oneOf([200, 302]));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "[setup] Đăng nhập user2",
+          "protocolProfileBehavior": {
+            "followRedirects": false
+          },
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": "{{baseUrl}}/accounts/login/",
+            "body": {
+              "mode": "urlencoded",
+              "urlencoded": [
+                {
+                  "key": "username",
+                  "value": "{{user2Username}}",
+                  "type": "text"
+                },
+                {
+                  "key": "password",
+                  "value": "{{user2Password}}",
+                  "type": "text"
+                },
+                {
+                  "key": "csrfmiddlewaretoken",
+                  "value": "{{csrftoken}}",
+                  "type": "text"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Đăng nhập thành công (302)', () => pm.response.to.have.status(302));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "[setup] Dọn giỏ hàng user2",
+          "protocolProfileBehavior": {
+            "followRedirects": false
+          },
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/cart/"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const html = pm.response.text();",
+                  "const num = (s) => parseInt(String(s).replace(/[^\\d-]/g, ''), 10);",
+                  "const cv = (k) => pm.collectionVariables.get(k);",
+                  "const items = html.split('<div class=\"cart-item\">').slice(1).map((p) => ({",
+                  "    id: (p.match(/\\/cart\\/increase\\/(\\d+)\\//) || [])[1],",
+                  "    name: ((p.match(/<h3>([^<]*)<\\/h3>/) || [])[1] || '').trim(),",
+                  "    price: num((p.match(/Đơn giá<\\/span>\\s*<strong>([^<]*)</) || [])[1]),",
+                  "    qty: num((p.match(/class=\"qty-number\">(\\d+)</) || [])[1]),",
+                  "    sub: num((p.match(/class=\"item-subtotal\">([^<]*)</) || [])[1]),",
+                  "}));",
+                  "const find = (id) => items.find((i) => i.id === String(id));",
+                  "const totalM = html.match(/class=\"summary-total\">([^<]*)</);",
+                  "const total = totalM ? num(totalM[1]) : 0;",
+                  "const badgeM = html.match(/padding: 0 4px;\\s*\">\\s*(\\d+)\\s*<\\/span>/);",
+                  "const badge = badgeM ? parseInt(badgeM[1], 10) : null;",
+                  "",
+                  "pm.test('Mở được giỏ hàng (200)', () => pm.response.to.have.status(200));",
+                  "// Xóa mọi sản phẩm còn sót trong giỏ để các test sau bắt đầu từ giỏ trống.",
+                  "items.forEach((i) => pm.sendRequest({",
+                  "    url: pm.variables.get('baseUrl') + '/cart/remove/' + i.id + '/',",
+                  "    method: 'POST',",
+                  "    body: { mode: 'urlencoded', urlencoded: [{ key: 'csrfmiddlewaretoken', value: pm.variables.get('csrftoken') }] },",
+                  "}, (err, res) => pm.test('Xóa sản phẩm #' + i.id + ' còn sót', () => {",
+                  "    pm.expect(err).to.be.null;",
+                  "    pm.expect(res.code).to.be.oneOf([200, 302]); // sendRequest tự đi theo redirect về /cart/",
+                  "})));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "TC-CART-019 user2 không thấy sản phẩm trong giỏ của user1",
+          "protocolProfileBehavior": {
+            "followRedirects": false
+          },
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/cart/"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const html = pm.response.text();",
+                  "const num = (s) => parseInt(String(s).replace(/[^\\d-]/g, ''), 10);",
+                  "const cv = (k) => pm.collectionVariables.get(k);",
+                  "const items = html.split('<div class=\"cart-item\">').slice(1).map((p) => ({",
+                  "    id: (p.match(/\\/cart\\/increase\\/(\\d+)\\//) || [])[1],",
+                  "    name: ((p.match(/<h3>([^<]*)<\\/h3>/) || [])[1] || '').trim(),",
+                  "    price: num((p.match(/Đơn giá<\\/span>\\s*<strong>([^<]*)</) || [])[1]),",
+                  "    qty: num((p.match(/class=\"qty-number\">(\\d+)</) || [])[1]),",
+                  "    sub: num((p.match(/class=\"item-subtotal\">([^<]*)</) || [])[1]),",
+                  "}));",
+                  "const find = (id) => items.find((i) => i.id === String(id));",
+                  "const totalM = html.match(/class=\"summary-total\">([^<]*)</);",
+                  "const total = totalM ? num(totalM[1]) : 0;",
+                  "const badgeM = html.match(/padding: 0 4px;\\s*\">\\s*(\\d+)\\s*<\\/span>/);",
+                  "const badge = badgeM ? parseInt(badgeM[1], 10) : null;",
+                  "pm.test('Mở được giỏ hàng (200)', () => pm.response.to.have.status(200));",
+                  "",
+                  "pm.test('Hiển thị \"Giỏ hàng của bạn đang trống\"', () => pm.expect(html).to.include('Giỏ hàng của bạn đang trống'));",
+                  "pm.test('Không có dòng sản phẩm nào', () => pm.expect(items.length).to.equal(0));",
+                  "pm.test('Không có nút \"Tiếp tục thanh toán\"', () => pm.expect(html).to.not.include('href=\"/orders/checkout/\"'));",
+                  "pm.test('Badge giỏ hàng trên navbar = 0', () => pm.expect(badge).to.equal(0));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "TC-CART-020 user2 tăng sản phẩm chỉ có trong giỏ user1",
+          "protocolProfileBehavior": {
+            "followRedirects": false
+          },
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": "{{baseUrl}}/cart/increase/{{productA}}/",
+            "body": {
+              "mode": "urlencoded",
+              "urlencoded": [
+                {
+                  "key": "csrfmiddlewaretoken",
+                  "value": "{{csrftoken}}",
+                  "type": "text"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 404', () => pm.response.to.have.status(404));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "[setup] Đăng xuất user2",
+          "protocolProfileBehavior": {
+            "followRedirects": false
+          },
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": "{{baseUrl}}/accounts/logout/",
+            "body": {
+              "mode": "urlencoded",
+              "urlencoded": [
+                {
+                  "key": "csrfmiddlewaretoken",
+                  "value": "{{csrftoken}}",
+                  "type": "text"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Đăng xuất (302)', () => pm.expect(pm.response.code).to.be.oneOf([200, 302]));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "[setup] Đăng nhập user1",
+          "protocolProfileBehavior": {
+            "followRedirects": false
+          },
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": "{{baseUrl}}/accounts/login/",
+            "body": {
+              "mode": "urlencoded",
+              "urlencoded": [
+                {
+                  "key": "username",
+                  "value": "{{userUsername}}",
+                  "type": "text"
+                },
+                {
+                  "key": "password",
+                  "value": "{{userPassword}}",
+                  "type": "text"
+                },
+                {
+                  "key": "csrfmiddlewaretoken",
+                  "value": "{{csrftoken}}",
+                  "type": "text"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Đăng nhập thành công (302)', () => pm.response.to.have.status(302));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "TC-CART-021 Giỏ user1 còn nguyên sau khi đăng nhập lại",
+          "protocolProfileBehavior": {
+            "followRedirects": false
+          },
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/cart/"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const html = pm.response.text();",
+                  "const num = (s) => parseInt(String(s).replace(/[^\\d-]/g, ''), 10);",
+                  "const cv = (k) => pm.collectionVariables.get(k);",
+                  "const items = html.split('<div class=\"cart-item\">').slice(1).map((p) => ({",
+                  "    id: (p.match(/\\/cart\\/increase\\/(\\d+)\\//) || [])[1],",
+                  "    name: ((p.match(/<h3>([^<]*)<\\/h3>/) || [])[1] || '').trim(),",
+                  "    price: num((p.match(/Đơn giá<\\/span>\\s*<strong>([^<]*)</) || [])[1]),",
+                  "    qty: num((p.match(/class=\"qty-number\">(\\d+)</) || [])[1]),",
+                  "    sub: num((p.match(/class=\"item-subtotal\">([^<]*)</) || [])[1]),",
+                  "}));",
+                  "const find = (id) => items.find((i) => i.id === String(id));",
+                  "const totalM = html.match(/class=\"summary-total\">([^<]*)</);",
+                  "const total = totalM ? num(totalM[1]) : 0;",
+                  "const badgeM = html.match(/padding: 0 4px;\\s*\">\\s*(\\d+)\\s*<\\/span>/);",
+                  "const badge = badgeM ? parseInt(badgeM[1], 10) : null;",
+                  "pm.test('Mở được giỏ hàng (200)', () => pm.response.to.have.status(200));",
+                  "",
+                  "const a = find(cv('productA'));",
+                  "pm.test('Có đúng 1 dòng là sản phẩm A', () => { pm.expect(items.length).to.equal(1); pm.expect(a).to.exist; });",
+                  "pm.test('Số lượng A vẫn = 1 (user2 không sửa được)', () => pm.expect(a.qty).to.equal(1));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "[setup] Dọn giỏ hàng user1 (kết thúc)",
+          "protocolProfileBehavior": {
+            "followRedirects": false
+          },
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/cart/"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const html = pm.response.text();",
+                  "const num = (s) => parseInt(String(s).replace(/[^\\d-]/g, ''), 10);",
+                  "const cv = (k) => pm.collectionVariables.get(k);",
+                  "const items = html.split('<div class=\"cart-item\">').slice(1).map((p) => ({",
+                  "    id: (p.match(/\\/cart\\/increase\\/(\\d+)\\//) || [])[1],",
+                  "    name: ((p.match(/<h3>([^<]*)<\\/h3>/) || [])[1] || '').trim(),",
+                  "    price: num((p.match(/Đơn giá<\\/span>\\s*<strong>([^<]*)</) || [])[1]),",
+                  "    qty: num((p.match(/class=\"qty-number\">(\\d+)</) || [])[1]),",
+                  "    sub: num((p.match(/class=\"item-subtotal\">([^<]*)</) || [])[1]),",
+                  "}));",
+                  "const find = (id) => items.find((i) => i.id === String(id));",
+                  "const totalM = html.match(/class=\"summary-total\">([^<]*)</);",
+                  "const total = totalM ? num(totalM[1]) : 0;",
+                  "const badgeM = html.match(/padding: 0 4px;\\s*\">\\s*(\\d+)\\s*<\\/span>/);",
+                  "const badge = badgeM ? parseInt(badgeM[1], 10) : null;",
+                  "",
+                  "pm.test('Mở được giỏ hàng (200)', () => pm.response.to.have.status(200));",
+                  "// Xóa mọi sản phẩm còn sót trong giỏ để các test sau bắt đầu từ giỏ trống.",
+                  "items.forEach((i) => pm.sendRequest({",
+                  "    url: pm.variables.get('baseUrl') + '/cart/remove/' + i.id + '/',",
+                  "    method: 'POST',",
+                  "    body: { mode: 'urlencoded', urlencoded: [{ key: 'csrfmiddlewaretoken', value: pm.variables.get('csrftoken') }] },",
+                  "}, (err, res) => pm.test('Xóa sản phẩm #' + i.id + ' còn sót', () => {",
+                  "    pm.expect(err).to.be.null;",
+                  "    pm.expect(res.code).to.be.oneOf([200, 302]); // sendRequest tự đi theo redirect về /cart/",
+                  "})));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "[setup] Đăng xuất user1 (kết thúc)",
+          "protocolProfileBehavior": {
+            "followRedirects": false
+          },
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": "{{baseUrl}}/accounts/logout/",
+            "body": {
+              "mode": "urlencoded",
+              "urlencoded": [
+                {
+                  "key": "csrfmiddlewaretoken",
+                  "value": "{{csrftoken}}",
+                  "type": "text"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Đăng xuất (302)', () => pm.expect(pm.response.code).to.be.oneOf([200, 302]));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://127.0.0.1:8000"
+    },
+    {
+      "key": "userUsername",
+      "value": "user1"
+    },
+    {
+      "key": "userPassword",
+      "value": "User@12345"
+    },
+    {
+      "key": "user2Username",
+      "value": "user2"
+    },
+    {
+      "key": "user2Password",
+      "value": "User@12345"
+    },
+    {
+      "key": "productA",
+      "value": ""
+    },
+    {
+      "key": "productB",
+      "value": ""
+    },
+    {
+      "key": "priceA",
+      "value": ""
+    },
+    {
+      "key": "priceB",
+      "value": ""
+    }
+  ]
+}
