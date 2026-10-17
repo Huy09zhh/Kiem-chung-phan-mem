@@ -268,7 +268,7 @@ def admin_order_update_status(request, pk):
         value for value, label in Order.STATUS_CHOICES
     }
 
-    if new_status in valid_statuses:
+    if new_status in valid_statuses and not order.is_final:
         order.status = new_status
         order.save(update_fields=['status'])
 

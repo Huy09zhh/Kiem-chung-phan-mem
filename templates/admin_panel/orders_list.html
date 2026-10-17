@@ -1,3 +1,4 @@
+
 {% extends 'admin_panel/base.html' %}
 {% load humanize %}
 
@@ -87,12 +88,12 @@
                         <form method="post" action="{% url 'admin_order_update_status' order.id %}">
                             {% csrf_token %}
                             <div class="d-flex" style="gap: 8px;">
-                                <select name="status" class="form-control form-control-sm">
+                                <select name="status" class="form-control form-control-sm" {% if order.is_final %}disabled{% endif %}>
                                     {% for value, label in status_choices %}
                                         <option value="{{ value }}" {% if order.status == value %}selected{% endif %}>{{ label }}</option>
                                     {% endfor %}
                                 </select>
-                                <button type="submit" class="btn btn-sm btn-success">Lưu</button>
+                                <button type="submit" class="btn btn-sm btn-success" {% if order.is_final %}disabled{% endif %}>Lưu</button>
                             </div>
                         </form>
                     </td>

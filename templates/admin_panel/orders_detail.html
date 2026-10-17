@@ -1,3 +1,4 @@
+
 {% extends 'admin_panel/base.html' %}
 {% load humanize %}
 
@@ -41,14 +42,17 @@
 
                     <div class="form-group">
                         <label><strong>Cập nhật trạng thái</strong></label>
-                        <select name="status" class="form-control">
+                        <select name="status" class="form-control" {% if order.is_final %}disabled{% endif %}>
                             {% for value, label in status_choices %}
                                 <option value="{{ value }}" {% if order.status == value %}selected{% endif %}>{{ label }}</option>
                             {% endfor %}
                         </select>
+                        {% if order.is_final %}
+                            <small class="text-muted">Đơn đã ở trạng thái cuối, không thể thay đổi.</small>
+                        {% endif %}
                     </div>
 
-                    <button type="submit" class="btn btn-success">Lưu trạng thái</button>
+                    <button type="submit" class="btn btn-success" {% if order.is_final %}disabled{% endif %}>Lưu trạng thái</button>
                 </form>
             </div>
         </div>

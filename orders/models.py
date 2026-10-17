@@ -20,6 +20,12 @@ class Order(models.Model):
         ('cancelled', 'Đã hủy'),
     )
 
+    FINAL_STATUSES = ('completed', 'cancelled')
+
+    @property
+    def is_final(self):
+        return self.status in self.FINAL_STATUSES
+
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='orders')
 
     full_name = models.CharField(max_length=255)
