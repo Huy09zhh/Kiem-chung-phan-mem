@@ -17,4 +17,8 @@ urlpatterns = [
     path('orders/', views.admin_order_list, name='admin_order_list'),
     path('orders/<int:pk>/', views.admin_order_detail, name='admin_order_detail'),
     path('orders/<int:pk>/status/', views.admin_order_update_status, name='admin_order_update_status'),
+
+    path('users/', views.admin_user_list, name='admin_user_list'),
+    path('users/<int:pk>/edit/', views.admin_user_update, name='admin_user_update'),
+    path('settings/', views.admin_settings, name='admin_settings'),
 ]
