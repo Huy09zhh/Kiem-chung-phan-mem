@@ -342,3 +342,12 @@ def admin_settings(request):
         'saved': saved,
     })
  
+
+
+# =========================
+# HELP
+# =========================
+
+@admin_required
+def admin_help_view(request):
+    return render(request, 'admin_panel/help.html')

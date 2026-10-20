@@ -166,31 +166,34 @@
                     data-toggle="dropdown"
                 >
                     <span class="user-icon">
-                        <img src="vendors/images/photo1.jpg" alt="" />
+                        <img src="{% static 'admin_panel/vendors/images/photo1.jpg' %}" alt="" />
                     </span>
-                    <span class="user-name">Ross C. Lopez</span>
+                    <span class="user-name">{{ request.user.get_full_name|default:request.user.username }}</span>
                 </a>
                 <div
                     class="dropdown-menu dropdown-menu-right dropdown-menu-icon-list"
                 >
-                    <a class="dropdown-item" href="profile.html"
+                    <a class="dropdown-item" href="{% url 'profile' %}"
                         ><i class="dw dw-user1"></i> Profile</a
                     >
-                    <a class="dropdown-item" href="profile.html"
+                    <a class="dropdown-item" href="{% url 'admin_settings' %}"
                         ><i class="dw dw-settings2"></i> Setting</a
                     >
-                    <a class="dropdown-item" href="faq.html"
+                    <a class="dropdown-item" href="{% url 'admin_help' %}"
                         ><i class="dw dw-help"></i> Help</a
                     >
-                    <a class="dropdown-item" href="login.html"
-                        ><i class="dw dw-logout"></i> Log Out</a
-                    >
+                    <form method="post" action="{% url 'logout' %}" style="margin: 0;">
+                        {% csrf_token %}
+                        <button type="submit" class="dropdown-item"
+                            ><i class="dw dw-logout"></i> Log Out</button
+                        >
+                    </form>
                 </div>
             </div>
         </div>
         <div class="github-link">
             <a href="https://github.com/dropways/deskapp" target="_blank"
-                ><img src="vendors/images/github.svg" alt=""
+                ><img src="{% static 'admin_panel/vendors/images/github.svg' %}" alt=""
             /></a>
         </div>
     </div>

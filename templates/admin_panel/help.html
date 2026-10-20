@@ -1,0 +1,33 @@
+{% extends 'admin_panel/base.html' %}
+
+{% block title %}Trợ giúp quản trị{% endblock %}
+
+{% block content %}
+<div class="pd-20 card-box mb-30">
+    <div class="clearfix mb-20">
+        <div class="pull-left">
+            <h4 class="h4">Trợ giúp quản trị</h4>
+            <p>Hướng dẫn sử dụng nhanh các chức năng trong trang quản trị Green Shop</p>
+        </div>
+    </div>
+
+    <h5 class="h5 mb-10">Bảng điều khiển</h5>
+    <p>Xem tổng số đơn hàng, doanh thu và tình trạng đơn tại <a href="{% url 'admin_dashboard' %}">Dashboard</a>.</p>
+
+    <h5 class="h5 mb-10">Sản phẩm</h5>
+    <p>Thêm, sửa, xóa sản phẩm tại <a href="{% url 'admin_product_list' %}">Quản lý sản phẩm</a>.</p>
+
+    <h5 class="h5 mb-10">Danh mục</h5>
+    <p>Quản lý danh mục cửa hàng tại <a href="{% url 'admin_category_list' %}">Quản lý danh mục</a>.</p>
+
+    <h5 class="h5 mb-10">Đơn hàng</h5>
+    <p>Xem chi tiết và cập nhật trạng thái đơn hàng tại <a href="{% url 'admin_order_list' %}">Quản lý đơn hàng</a>.</p>
+
+    <h5 class="h5 mb-10">Tài khoản</h5>
+    <p>
+        Xem <a href="{% url 'profile' %}">hồ sơ</a>,
+        <a href="{% url 'profile_edit' %}">cập nhật hồ sơ</a> hoặc
+        <a href="{% url 'change_password' %}">đổi mật khẩu</a>.
+    </p>
+</div>
+{% endblock %}
