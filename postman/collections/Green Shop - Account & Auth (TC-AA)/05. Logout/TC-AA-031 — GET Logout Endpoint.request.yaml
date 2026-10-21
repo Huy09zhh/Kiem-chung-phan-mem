@@ -1,0 +1,10 @@
+$kind: http-request
+url: "{{base_url}}/accounts/logout/"
+method: GET
+scripts:
+  - type: afterResponse
+    code: pm.test('Logout rejects GET', () => pm.response.to.have.status(405));
+    language: text/javascript
+settings:
+  followRedirects: false
+order: 3000

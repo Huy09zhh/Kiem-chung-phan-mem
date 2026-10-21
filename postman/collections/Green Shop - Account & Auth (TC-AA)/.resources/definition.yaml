@@ -1,0 +1,12 @@
+$kind: collection
+variables:
+  base_url: ""
+  csrf_token: ""
+  aa_username: ""
+  aa_email: ""
+  aa_password: ""
+  new_password: ""
+  test_username: ""
+  test_email: ""
+  case_email: ""
+  case_username: ""

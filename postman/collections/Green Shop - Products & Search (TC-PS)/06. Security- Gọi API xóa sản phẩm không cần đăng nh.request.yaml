@@ -1,0 +1,14 @@
+$kind: http-request
+name: "06. Security: Gọi API xóa sản phẩm không cần đăng nhập (TC-PS-012)"
+url: "{{baseUrl}}/products/api/1/"
+method: DELETE
+scripts:
+  - type: afterResponse
+    code: |
+      // Kỳ vọng: Hệ thống phải từ chối (401 Unauthorized hoặc 403 Forbidden)
+      pm.test("[TC-PS-012] Yêu cầu quyền Admin khi xóa sản phẩm qua API", function () {
+          pm.expect(pm.response.code).to.be.oneOf([401, 403]);
+      });
+    language: text/javascript
+settings: {}
+order: 6000

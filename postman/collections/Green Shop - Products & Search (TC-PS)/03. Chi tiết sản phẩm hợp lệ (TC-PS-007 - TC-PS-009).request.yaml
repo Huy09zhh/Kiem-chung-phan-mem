@@ -1,0 +1,21 @@
+$kind: http-request
+name: 03. Chi tiết sản phẩm hợp lệ (TC-PS-007 -> TC-PS-009)
+url: "{{baseUrl}}/products/1/"
+method: GET
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test("[TC-PS-007] Xem chi tiết sản phẩm hợp lệ theo ID (Status 200 OK)", function () {
+          pm.response.to.have.status(200);
+      });
+
+      pm.test("[TC-PS-008] Thời gian tải chi tiết sản phẩm (< 500ms)", function () {
+          pm.expect(pm.response.responseTime).to.be.below(500);
+      });
+
+      pm.test("[TC-PS-009] Kiểm tra thông tin chi tiết sản phẩm (chứa 'Cây Sen Đá Mini')", function () {
+          pm.expect(pm.response.text()).to.include("Cây Sen Đá Mini");
+      });
+    language: text/javascript
+settings: {}
+order: 3000

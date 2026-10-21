@@ -1,0 +1,34 @@
+$kind: http-request
+name: "05. Boundary: Lọc danh mục sai định dạng (TC-PS-011)"
+url: http://127.0.0.1:8000/products/?category=abc
+method: GET
+queryParams:
+  - key: category
+    value: abc
+    $type: |-
+      {
+        "type": "",
+        "format": "",
+        "required": false,
+        "deprecated": false,
+        "default": "",
+        "enum": [],
+        "pattern": "",
+        "minLength": "",
+        "maxLength": "",
+        "minItems": "",
+        "maxItems": "",
+        "minimum": "",
+        "maximum": "",
+        "uniqueItems": false
+      }
+scripts:
+  - type: afterResponse
+    code: "pm.test(\"[TC-PS-011] Lọc danh mục với tham số chữ không bị sập lỗi 500\", function () {\r
+
+      \    pm.response.to.have.status(200);\r
+
+      });\r\n"
+    language: text/javascript
+settings: {}
+order: 5000

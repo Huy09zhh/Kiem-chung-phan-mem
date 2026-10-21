@@ -1,0 +1,17 @@
+$kind: http-request
+url: "{{baseUrl}}/products/api/"
+method: GET
+scripts:
+  - type: afterResponse
+    code: "pm.test(\"[TC-PS-020] API trả về danh sách sản phẩm định dạng JSON (200 OK)\", function () {\r
+
+      \    pm.response.to.have.status(200);\r
+
+      \    pm.response.to.be.json;\r
+
+      \    pm.expect(pm.response.json()).to.be.an('array');\r
+
+      });"
+    language: text/javascript
+settings: {}
+order: 14000

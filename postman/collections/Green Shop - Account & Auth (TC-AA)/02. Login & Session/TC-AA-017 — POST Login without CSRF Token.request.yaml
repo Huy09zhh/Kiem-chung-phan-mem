@@ -1,0 +1,17 @@
+$kind: http-request
+url: "{{base_url}}/accounts/login/"
+method: POST
+body:
+  type: urlencoded
+  content:
+    username: "{{aa_username}}"
+    password: "{{aa_password}}"
+scripts:
+  - type: afterResponse
+    code: "pm.test(\"Login without CSRF is forbidden\", () => { pm.response.to.have.status(403); });\r
+
+      pm.test(\"CSRF rejection is reported\", () => { pm.expect(pm.response.text()).to.match(/CSRF/i); });"
+    language: text/javascript
+settings:
+  followRedirects: false
+order: 5000

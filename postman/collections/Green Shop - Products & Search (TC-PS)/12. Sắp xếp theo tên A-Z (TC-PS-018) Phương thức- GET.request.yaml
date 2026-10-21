@@ -1,0 +1,36 @@
+$kind: http-request
+name: "12. Sắp xếp theo tên A-Z (TC-PS-018) Phương thức: GET"
+url: "{{baseUrl}}/products/?sort=name_asc"
+method: GET
+queryParams:
+  - key: sort
+    value: name_asc
+    $type: |-
+      {
+        "type": "",
+        "format": "",
+        "required": false,
+        "deprecated": false,
+        "default": "",
+        "enum": [],
+        "pattern": "",
+        "minLength": "",
+        "maxLength": "",
+        "minItems": "",
+        "maxItems": "",
+        "minimum": "",
+        "maximum": "",
+        "uniqueItems": false
+      }
+scripts:
+  - type: afterResponse
+    code: "pm.test(\"[TC-PS-018] Sắp xếp sản phẩm theo tên A-Z thành công (200 OK)\", function () {\r
+
+      \    pm.response.to.have.status(200);\r
+
+      \    pm.expect(pm.response.responseTime).to.be.below(500);\r
+
+      });"
+    language: text/javascript
+settings: {}
+order: 12000

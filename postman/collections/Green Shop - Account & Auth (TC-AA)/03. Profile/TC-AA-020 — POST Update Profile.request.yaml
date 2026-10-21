@@ -1,0 +1,20 @@
+$kind: http-request
+url: "{{base_url}}/accounts/profile/edit/"
+method: POST
+body:
+  type: urlencoded
+  content:
+    csrfmiddlewaretoken: "{{csrf_token}}"
+    username: "{{aa_username}}"
+    first_name: Test
+    last_name: Account
+    email: "{{aa_email}}"
+scripts:
+  - type: afterResponse
+    code: "pm.test('Valid profile update redirects', () => pm.response.to.have.status(302));\r
+
+      pm.test('Redirects to profile', () => pm.expect(pm.response.headers.get('Location') || '').to.include('/accounts/profile/'));"
+    language: text/javascript
+settings:
+  followRedirects: false
+order: 3000

@@ -1,0 +1,20 @@
+$kind: http-request
+url: "{{base_url}}/accounts/profile/edit/"
+method: POST
+body:
+  type: urlencoded
+  content:
+    csrfmiddlewaretoken: "{{csrf_token}}"
+    username: "{{aa_username}}"
+    first_name: Test
+    last_name: Account
+    email: not-an-email
+scripts:
+  - type: afterResponse
+    code: "pm.test('Invalid email stays on form', () => pm.response.to.have.status(200));\r
+
+      pm.test('Email validation error appears', () => pm.expect(pm.response.text()).to.include('Enter a valid email address.'));"
+    language: text/javascript
+settings:
+  followRedirects: false
+order: 4000

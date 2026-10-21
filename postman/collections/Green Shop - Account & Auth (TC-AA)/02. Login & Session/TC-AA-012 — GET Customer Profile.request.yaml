@@ -1,0 +1,15 @@
+$kind: http-request
+url: "{{base_url}}/accounts/profile/"
+method: GET
+scripts:
+  - type: afterResponse
+    code: "pm.test(\"Customer profile returns 200\", () => { pm.response.to.have.status(200); });\r
+
+      pm.test(\"Profile shows customer username\", () => { pm.expect(pm.response.text()).to.include(pm.collectionVariables.get(\"aa_username\")); });\r
+
+      const match = pm.response.text().match(/name=[\"']csrfmiddlewaretoken[\"'][^>]*value=[\"']([^\"']+)[\"']/);\r
+
+      if (match) pm.collectionVariables.set(\"csrf_token\", match[1]);"
+    language: text/javascript
+settings: {}
+order: 6000

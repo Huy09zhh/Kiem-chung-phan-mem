@@ -1,0 +1,24 @@
+$kind: http-request
+name: 02. Gợi ý tìm kiếm tức thì (TC-PS-004 -> TC-PS-006)
+url: "{{baseUrl}}/products/search-suggestions/?q=cây"
+method: GET
+queryParams:
+  q: cây
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test("[TC-PS-004] Tìm kiếm sản phẩm theo từ khóa 'cây' (Status 200 OK)", function () {
+          pm.response.to.have.status(200);
+      });
+
+      pm.test("[TC-PS-005] Tốc độ tìm kiếm gợi ý (< 500ms)", function () {
+          pm.expect(pm.response.responseTime).to.be.below(500);
+      });
+
+      pm.test("[TC-PS-006] Kiểm tra định dạng dữ liệu trả về (JSON chứa 'Cây Sen Đá Mini')", function () {
+          pm.response.to.be.json;
+          pm.expect(pm.response.text()).to.include("Cây Sen Đá Mini");
+      });
+    language: text/javascript
+settings: {}
+order: 2000

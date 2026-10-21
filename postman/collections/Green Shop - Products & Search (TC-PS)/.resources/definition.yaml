@@ -1,0 +1,7 @@
+$kind: collection
+description: |-
+  Bộ kiểm thử tự động API Phân hệ 2 - Products & Search (Đỗ Văn Huy).
+  Gồm 10 ca kiểm thử từ TC-PS-001 đến TC-PS-010.
+variables:
+  baseUrl: http://127.0.0.1:8000
+  base_url: http://127.0.0.1:8000

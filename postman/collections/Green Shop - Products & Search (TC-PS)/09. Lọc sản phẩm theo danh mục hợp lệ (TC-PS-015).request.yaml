@@ -1,0 +1,35 @@
+$kind: http-request
+url: "{{baseUrl}}/products/?category=1"
+method: GET
+queryParams:
+  - key: category
+    value: "1"
+    $type: |-
+      {
+        "type": "",
+        "format": "",
+        "required": false,
+        "deprecated": false,
+        "default": "",
+        "enum": [],
+        "pattern": "",
+        "minLength": "",
+        "maxLength": "",
+        "minItems": "",
+        "maxItems": "",
+        "minimum": "",
+        "maximum": "",
+        "uniqueItems": false
+      }
+scripts:
+  - type: afterResponse
+    code: "pm.test(\"[TC-PS-015] Lọc sản phẩm theo danh mục thành công (Status 200 OK)\", function () {\r
+
+      \    pm.response.to.have.status(200);\r
+
+      \    pm.expect(pm.response.responseTime).to.be.below(500);\r
+
+      });"
+    language: text/javascript
+settings: {}
+order: 9000

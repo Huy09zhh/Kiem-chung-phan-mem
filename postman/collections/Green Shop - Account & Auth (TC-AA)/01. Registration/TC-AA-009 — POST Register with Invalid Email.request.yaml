@@ -1,0 +1,24 @@
+$kind: http-request
+url: "{{base_url}}/accounts/register/"
+method: POST
+body:
+  type: urlencoded
+  content:
+    csrfmiddlewaretoken: "{{csrf_token}}"
+    username: "{{case_username}}"
+    email: not-an-email
+    password1: "{{aa_password}}"
+    password2: "{{aa_password}}"
+scripts:
+  - type: beforeRequest
+    code: "const id = Date.now();\r
+
+      pm.collectionVariables.set(\"case_username\", `invalid_email_${id}`);"
+    language: text/javascript
+  - type: afterResponse
+    code: "pm.test(\"Invalid email stays on registration form\", () => { pm.response.to.have.status(200); });\r
+
+      pm.test(\"Email validation error appears\", () => { pm.expect(pm.response.text()).to.include(\"Enter a valid email address.\"); });"
+    language: text/javascript
+settings: {}
+order: 9000
