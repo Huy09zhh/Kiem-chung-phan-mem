@@ -1,0 +1,12 @@
+$kind: http-request
+url: "{{base_url}}/products/999999/"
+method: GET
+scripts:
+  - type: afterResponse
+    code: "pm.test(\"[KT-SP-07] ID không tồn tại phải trả về mã 404 Not Found\", function () {\r
+
+      \    pm.response.to.have.status(404);\r
+
+      });\r\n"
+    language: text/javascript
+order: 4000

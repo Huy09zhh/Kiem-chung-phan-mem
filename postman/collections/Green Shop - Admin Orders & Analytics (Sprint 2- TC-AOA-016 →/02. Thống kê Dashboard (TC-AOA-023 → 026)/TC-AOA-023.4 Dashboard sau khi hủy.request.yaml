@@ -1,0 +1,43 @@
+$kind: http-request
+url: "{{base_url}}/admin-panel/dashboard/"
+method: GET
+scripts:
+  - type: afterResponse
+    code: |-
+      const html = pm.response.text();
+      const ok = (c, m) => { if (!c) { throw new Error(m); } };
+      const num = (s) => parseInt(String(s).replace(/[^\d]/g, ''), 10);
+      const grab = (re) => { const m = html.match(re); return m ? m[1] : null; };
+      const rowIds = () => Array.from(html.matchAll(/<td>#(\d+)<\/td>/g), (m) => parseInt(m[1], 10));
+      const loc = () => pm.response.headers.get('Location') || '';
+      const cv = (k) => pm.collectionVariables.get(k);
+      const setcv = (k, v) => pm.collectionVariables.set(k, v);
+      const selectedStatus = () => grab(/<option value="(\w+)"\s+selected>/);
+      const LABEL = { pending: 'Chờ xử lý', awaiting_transfer: 'Chờ chuyển khoản', paid: 'Đã thanh toán', failed: 'Thanh toán thất bại', confirmed: 'Đã xác nhận', shipping: 'Đang giao', completed: 'Hoàn thành', cancelled: 'Đã hủy' };
+
+      const card = (label, cls) => { const m = html.match(new RegExp(label + '</div>\\s*<div class="' + cls + '">([\\d,\\.]+)</div>')); return m ? num(m[1]) : null; };
+      const pctLine = (label) => { const m = html.match(new RegExp('<span>' + label + '</span>\\s*<span>(\\d+) đơn \\((\\d+)%\\)</span>')); return m ? { n: parseInt(m[1], 10), p: parseInt(m[2], 10) } : null; };
+      const D = {
+        total: card('Tổng số đơn hàng', 'h2 mb-0 mt-2'),
+        pending: card('Đơn chờ xử lý', 'h2 mb-0 mt-2 text-warning'),
+        paid: card('Đơn đã thanh toán', 'h2 mb-0 mt-2 text-success'),
+        cancelled: card('Đơn đã hủy', 'h2 mb-0 mt-2 text-danger'),
+        products: card('Sản phẩm', 'h3 mb-0 mt-2'),
+        customers: card('Khách hàng', 'h3 mb-0 mt-2'),
+        featured: card('Sản phẩm nổi bật', 'h3 mb-0 mt-2'),
+        flash: card('Đang flash sale', 'h3 mb-0 mt-2'),
+        revenue: num(grab(/Tổng doanh thu<\/h5>\s*<div class="h2 text-success mb-10">([\d,\.]+) đ<\/div>/)),
+        recent: rowIds()
+      };
+      ok(D.total !== null && D.pending !== null && D.paid !== null && D.cancelled !== null, 'Không đọc được các thẻ số đơn trên Dashboard (cấu trúc HTML đã đổi?)');
+
+      pm.test("TC-AOA-023 | Doanh thu giảm đúng bằng giá trị đơn bị hủy", function () {
+      ok(D.revenue === parseInt(cv('rev_before'), 10) - parseInt(cv('order_total'), 10), 'Doanh thu: trước ' + cv('rev_before') + ', đơn ' + cv('order_total') + ', sau ' + D.revenue);
+      });
+
+      pm.test("TC-AOA-023 | Đơn đã hủy +1 và Đơn đã thanh toán -1", function () {
+      ok(D.cancelled === parseInt(cv('cancelled_before'), 10) + 1, 'Đã hủy: trước ' + cv('cancelled_before') + ', sau ' + D.cancelled);
+      ok(D.paid === parseInt(cv('paid_before'), 10) - 1, 'Đã thanh toán: trước ' + cv('paid_before') + ', sau ' + D.paid);
+      });
+    language: text/javascript
+order: 4000

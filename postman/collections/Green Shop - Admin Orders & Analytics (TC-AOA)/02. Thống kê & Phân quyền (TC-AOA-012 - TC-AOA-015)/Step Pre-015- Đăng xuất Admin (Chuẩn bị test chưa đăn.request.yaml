@@ -1,0 +1,19 @@
+$kind: http-request
+name: "Step Pre-015: Đăng xuất Admin (Chuẩn bị test chưa đăng nhập)"
+url: "{{base_url}}/accounts/logout/"
+method: POST
+headers:
+  Referer: "{{base_url}}/admin-panel/dashboard/"
+body:
+  type: urlencoded
+  content:
+    csrfmiddlewaretoken: "{{csrf_token}}"
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test('Đăng xuất thành công', function () {
+          pm.expect(pm.response.code).to.be.oneOf([200, 302]);
+      });
+    language: text/javascript
+settings: {}
+order: 4000

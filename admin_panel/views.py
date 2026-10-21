@@ -8,6 +8,11 @@ from products.models import Product, Category
 from products.forms import ProductForm
 from accounts.decorators import admin_required
 from orders.models import Order
+from django.contrib.auth import get_user_model
+from django.db.models import Q
+from .forms import AdminProfileForm, AdminUserForm
+ 
+User = get_user_model()
 
 
 # =========================
@@ -268,7 +273,7 @@ def admin_order_update_status(request, pk):
         value for value, label in Order.STATUS_CHOICES
     }
 
-    if new_status in valid_statuses:
+    if new_status in valid_statuses and not order.is_final:
         order.status = new_status
         order.save(update_fields=['status'])
 
@@ -278,3 +283,71 @@ def admin_order_update_status(request, pk):
         return redirect('admin_order_detail', pk=order.pk)
 
     return redirect('admin_order_list')
+@admin_required
+def admin_user_list(request):
+    keyword = request.GET.get('keyword', '').strip()
+    role = request.GET.get('role', '').strip()
+ 
+    users = User.objects.all().order_by('-id')
+ 
+    if keyword:
+        users = users.filter(
+            Q(username__icontains=keyword)
+            | Q(email__icontains=keyword)
+            | Q(first_name__icontains=keyword)
+            | Q(last_name__icontains=keyword)
+        )
+ 
+    if role == 'staff':
+        users = users.filter(is_staff=True)
+    elif role == 'customer':
+        users = users.filter(is_staff=False)
+ 
+    return render(request, 'admin_panel/users_list.html', {
+        'users': users,
+        'keyword': keyword,
+        'role': role,
+    })
+ 
+ 
+@admin_required
+def admin_user_update(request, pk):
+    target = get_object_or_404(User, pk=pk)
+    form = AdminUserForm(request.POST or None, instance=target)
+ 
+    if request.method == 'POST' and form.is_valid():
+        if target.pk == request.user.pk and not form.cleaned_data.get('is_active'):
+            form.add_error('is_active', 'Không thể tự vô hiệu hóa tài khoản đang đăng nhập.')
+        else:
+            form.save()
+            return redirect('admin_user_list')
+ 
+    return render(request, 'admin_panel/user_form.html', {
+        'form': form,
+        'target': target,
+    })
+ 
+ 
+@admin_required
+def admin_settings(request):
+    form = AdminProfileForm(request.POST or None, instance=request.user)
+    saved = request.GET.get('saved') == '1'
+ 
+    if request.method == 'POST' and form.is_valid():
+        form.save()
+        return redirect(f"{request.path}?saved=1")
+ 
+    return render(request, 'admin_panel/settings.html', {
+        'form': form,
+        'saved': saved,
+    })
+ 
+
+
+# =========================
+# HELP
+# =========================
+
+@admin_required
+def admin_help_view(request):
+    return render(request, 'admin_panel/help.html')

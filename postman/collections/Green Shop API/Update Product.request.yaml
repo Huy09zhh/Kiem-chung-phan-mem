@@ -1,0 +1,21 @@
+$kind: http-request
+url: "{{base_url}}/products/api/3/"
+method: PUT
+body:
+  type: json
+  content: "{\r
+
+    \    \"name\": \"Updated Product\",\r
+
+    \    \"price\": \"350000\",\r
+
+    \    \"old_price\": \"400000\",\r
+
+    \    \"description\": \"Product updated from Postman\",\r
+
+    \    \"is_featured\": false,\r
+
+    \    \"is_flash_sale\": true\r
+
+    }"
+order: 6000

@@ -1,0 +1,4 @@
+$kind: collection
+name: "00. Chuẩn bị: lấy CSRF và đăng nhập admin"
+description: Chạy đầu tiên. Lấy cookie csrftoken rồi đăng nhập bằng tài khoản admin (is_staff=True).
+order: 1000

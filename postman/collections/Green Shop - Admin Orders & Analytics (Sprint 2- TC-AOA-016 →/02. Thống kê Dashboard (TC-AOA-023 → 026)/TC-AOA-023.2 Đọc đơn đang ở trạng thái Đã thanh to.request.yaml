@@ -1,0 +1,27 @@
+$kind: http-request
+name: TC-AOA-023.2 Đọc đơn đang ở trạng thái Đã thanh toán
+url: "{{base_url}}/admin-panel/orders/{{paid_order_id}}/"
+method: GET
+scripts:
+  - type: afterResponse
+    code: |-
+      const html = pm.response.text();
+      const ok = (c, m) => { if (!c) { throw new Error(m); } };
+      const num = (s) => parseInt(String(s).replace(/[^\d]/g, ''), 10);
+      const grab = (re) => { const m = html.match(re); return m ? m[1] : null; };
+      const rowIds = () => Array.from(html.matchAll(/<td>#(\d+)<\/td>/g), (m) => parseInt(m[1], 10));
+      const loc = () => pm.response.headers.get('Location') || '';
+      const cv = (k) => pm.collectionVariables.get(k);
+      const setcv = (k, v) => pm.collectionVariables.set(k, v);
+      const selectedStatus = () => grab(/<option value="(\w+)"\s+selected>/);
+      const LABEL = { pending: 'Chờ xử lý', awaiting_transfer: 'Chờ chuyển khoản', paid: 'Đã thanh toán', failed: 'Thanh toán thất bại', confirmed: 'Đã xác nhận', shipping: 'Đang giao', completed: 'Hoàn thành', cancelled: 'Đã hủy' };
+
+      pm.test("TC-AOA-023 | Đơn paid_order_id đang là \"Đã thanh toán\"", function () {
+      ok(pm.response.code === 200, 'HTTP ' + pm.response.code);
+      ok(selectedStatus() === 'paid', 'Đơn #' + cv('paid_order_id') + ' đang ở ' + selectedStatus() + ', cần đổi biến paid_order_id sang một đơn đang Đã thanh toán');
+      const total = num(grab(/Tổng tiền:<\/strong> ([\d,\.]+) đ/));
+      ok(total > 0, 'Không đọc được Tổng tiền');
+      setcv('order_total', total);
+      });
+    language: text/javascript
+order: 2000

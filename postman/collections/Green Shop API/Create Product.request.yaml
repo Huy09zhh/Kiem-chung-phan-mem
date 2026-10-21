@@ -1,0 +1,21 @@
+$kind: http-request
+url: "{{base_url}}/products/api/"
+method: POST
+body:
+  type: json
+  content: "{\r
+
+    \    \"name\": \"Update Test Product\",\r
+
+    \    \"price\": \"300000\",\r
+
+    \    \"old_price\": \"350000\",\r
+
+    \    \"description\": \"Product for update test\",\r
+
+    \    \"is_featured\": false,\r
+
+    \    \"is_flash_sale\": false\r
+
+    }"
+order: 5000

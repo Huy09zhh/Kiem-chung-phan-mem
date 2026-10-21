@@ -1,0 +1,26 @@
+$kind: http-request
+name: TC-AOA-026.4 Mở liên kết lọc "Đã hủy"
+url: "{{base_url}}/admin-panel/orders/?status=cancelled"
+method: GET
+queryParams:
+  status: cancelled
+scripts:
+  - type: afterResponse
+    code: |-
+      const html = pm.response.text();
+      const ok = (c, m) => { if (!c) { throw new Error(m); } };
+      const num = (s) => parseInt(String(s).replace(/[^\d]/g, ''), 10);
+      const grab = (re) => { const m = html.match(re); return m ? m[1] : null; };
+      const rowIds = () => Array.from(html.matchAll(/<td>#(\d+)<\/td>/g), (m) => parseInt(m[1], 10));
+      const loc = () => pm.response.headers.get('Location') || '';
+      const cv = (k) => pm.collectionVariables.get(k);
+      const setcv = (k, v) => pm.collectionVariables.set(k, v);
+      const selectedStatus = () => grab(/<option value="(\w+)"\s+selected>/);
+      const LABEL = { pending: 'Chờ xử lý', awaiting_transfer: 'Chờ chuyển khoản', paid: 'Đã thanh toán', failed: 'Thanh toán thất bại', confirmed: 'Đã xác nhận', shipping: 'Đang giao', completed: 'Hoàn thành', cancelled: 'Đã hủy' };
+
+      pm.test("TC-AOA-026 | Danh sách lọc cancelled có đúng số đơn như thẻ", function () {
+      ok(pm.response.code === 200, 'HTTP ' + pm.response.code);
+      ok(rowIds().length === parseInt(cv('n_cancelled'), 10), 'Thẻ ghi ' + cv('n_cancelled') + ', danh sách có ' + rowIds().length);
+      });
+    language: text/javascript
+order: 14000

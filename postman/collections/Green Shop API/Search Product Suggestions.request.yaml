@@ -1,0 +1,54 @@
+$kind: http-request
+url: "{{base_url}}/products/search-suggestions/?q=cây"
+method: GET
+queryParams:
+  - key: q
+    value: cây
+    $type: |-
+      {
+        "type": "",
+        "format": "",
+        "required": false,
+        "deprecated": false,
+        "default": "",
+        "enum": [],
+        "pattern": "",
+        "minLength": "",
+        "maxLength": "",
+        "minItems": "",
+        "maxItems": "",
+        "minimum": "",
+        "maximum": "",
+        "uniqueItems": false
+      }
+scripts:
+  - type: afterResponse
+    code: "// Test 1: Kiểm tra tìm kiếm thành công\r
+
+      pm.test(\"[KT-TK-01] Tìm kiếm thành công trả về mã 200 OK\", function () {\r
+
+      \    pm.response.to.have.status(200);\r
+
+      });\r
+
+      \r
+
+      // Test 2: Kiểm tra tốc độ tìm kiếm\r
+
+      pm.test(\"[KT-TK-02] Thời gian tìm kiếm phản hồi nhanh (< 500ms)\", function () {\r
+
+      \    pm.expect(pm.response.responseTime).to.be.below(500);\r
+
+      });\r
+
+      \r
+
+      // Test 3: Kiểm tra cấu trúc dữ liệu JSON\r
+
+      pm.test(\"[KT-TK-03] Kết quả tìm kiếm trả về đúng định dạng JSON\", function () {\r
+
+      \    pm.response.to.be.json;\r
+
+      });\r\n"
+    language: text/javascript
+order: 1000

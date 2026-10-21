@@ -1,0 +1,61 @@
+$kind: http-request
+description: Số khách hàng (is_staff=False) không đọc được qua HTTP. Điền biến expected_customers bằng kết quả lệnh shell để kiểm tra.
+url: "{{base_url}}/admin-panel/dashboard/"
+method: GET
+scripts:
+  - type: afterResponse
+    code: |-
+      const html = pm.response.text();
+      const ok = (c, m) => { if (!c) { throw new Error(m); } };
+      const num = (s) => parseInt(String(s).replace(/[^\d]/g, ''), 10);
+      const grab = (re) => { const m = html.match(re); return m ? m[1] : null; };
+      const rowIds = () => Array.from(html.matchAll(/<td>#(\d+)<\/td>/g), (m) => parseInt(m[1], 10));
+      const loc = () => pm.response.headers.get('Location') || '';
+      const cv = (k) => pm.collectionVariables.get(k);
+      const setcv = (k, v) => pm.collectionVariables.set(k, v);
+      const selectedStatus = () => grab(/<option value="(\w+)"\s+selected>/);
+      const LABEL = { pending: 'Chờ xử lý', awaiting_transfer: 'Chờ chuyển khoản', paid: 'Đã thanh toán', failed: 'Thanh toán thất bại', confirmed: 'Đã xác nhận', shipping: 'Đang giao', completed: 'Hoàn thành', cancelled: 'Đã hủy' };
+
+      const card = (label, cls) => { const m = html.match(new RegExp(label + '</div>\\s*<div class="' + cls + '">([\\d,\\.]+)</div>')); return m ? num(m[1]) : null; };
+      const pctLine = (label) => { const m = html.match(new RegExp('<span>' + label + '</span>\\s*<span>(\\d+) đơn \\((\\d+)%\\)</span>')); return m ? { n: parseInt(m[1], 10), p: parseInt(m[2], 10) } : null; };
+      const D = {
+        total: card('Tổng số đơn hàng', 'h2 mb-0 mt-2'),
+        pending: card('Đơn chờ xử lý', 'h2 mb-0 mt-2 text-warning'),
+        paid: card('Đơn đã thanh toán', 'h2 mb-0 mt-2 text-success'),
+        cancelled: card('Đơn đã hủy', 'h2 mb-0 mt-2 text-danger'),
+        products: card('Sản phẩm', 'h3 mb-0 mt-2'),
+        customers: card('Khách hàng', 'h3 mb-0 mt-2'),
+        featured: card('Sản phẩm nổi bật', 'h3 mb-0 mt-2'),
+        flash: card('Đang flash sale', 'h3 mb-0 mt-2'),
+        revenue: num(grab(/Tổng doanh thu<\/h5>\s*<div class="h2 text-success mb-10">([\d,\.]+) đ<\/div>/)),
+        recent: rowIds()
+      };
+      ok(D.total !== null && D.pending !== null && D.paid !== null && D.cancelled !== null, 'Không đọc được các thẻ số đơn trên Dashboard (cấu trúc HTML đã đổi?)');
+
+      pm.test("TC-AOA-025 | Thẻ Sản phẩm, Nổi bật, Flash sale khớp trang Quản lý sản phẩm", function () {
+      ok(D.products === parseInt(cv('prod_rows'), 10), 'Sản phẩm: thẻ ' + D.products + ', trang quản lý ' + cv('prod_rows'));
+      ok(D.featured === parseInt(cv('prod_featured'), 10), 'Nổi bật: thẻ ' + D.featured + ', trang quản lý ' + cv('prod_featured'));
+      ok(D.flash === parseInt(cv('prod_flash'), 10), 'Flash sale: thẻ ' + D.flash + ', trang quản lý ' + cv('prod_flash'));
+      });
+
+      pm.test("TC-AOA-025 | Tổng số đơn khớp danh sách đơn", function () {
+      ok(D.total === parseInt(cv('all_order_count'), 10), 'Thẻ ' + D.total + ' khác danh sách ' + cv('all_order_count'));
+      });
+
+      pm.test("TC-AOA-025 | Bảng đơn mới nhất: tối đa 6 dòng, ID giảm dần", function () {
+      const top6 = JSON.parse(cv('top6_ids'));
+      ok(D.recent.length <= 6, 'Bảng có ' + D.recent.length + ' dòng (> 6)');
+      ok(D.recent.length === Math.min(6, D.total), 'Mong đợi ' + Math.min(6, D.total) + ' dòng, thực tế ' + D.recent.length);
+      ok(JSON.stringify(D.recent) === JSON.stringify(top6), 'Thứ tự khác danh sách: [' + D.recent.join(', ') + '] so với [' + top6.join(', ') + ']');
+      });
+
+      const expCust = String(cv('expected_customers') || '').trim();
+      if (expCust === '') {
+          pm.test.skip('TC-AOA-025 | Thẻ Khách hàng chỉ đếm is_staff=False (bỏ qua: chưa điền expected_customers)', function () {});
+      } else {
+          pm.test('TC-AOA-025 | Thẻ Khách hàng chỉ đếm is_staff=False', function () {
+              ok(D.customers === parseInt(expCust, 10), 'Khách hàng: thẻ ' + D.customers + ', mong đợi ' + expCust);
+          });
+      }
+    language: text/javascript
+order: 10000

@@ -1,0 +1,34 @@
+$kind: http-request
+url: "{{base_url}}/products/1/"
+method: GET
+scripts:
+  - type: afterResponse
+    code: "// Test 1: Kiểm tra mở trang chi tiết thành công\r
+
+      pm.test(\"[KT-SP-04] Lấy chi tiết sản phẩm thành công (200 OK)\", function () {\r
+
+      \    pm.response.to.have.status(200);\r
+
+      });\r
+
+      \r
+
+      // Test 2: Kiểm tra tốc độ tải trang\r
+
+      pm.test(\"[KT-SP-05] Thời gian tải chi tiết sản phẩm nhanh (< 500ms)\", function () {\r
+
+      \    pm.expect(pm.response.responseTime).to.be.below(500);\r
+
+      });\r
+
+      \r
+
+      // Test 3: Kiểm tra nội dung chứa đúng tên sản phẩm\r
+
+      pm.test(\"[KT-SP-06] Trang chi tiết chứa đúng tên 'Cây Sen Đá Mini'\", function () {\r
+
+      \    pm.expect(pm.response.text()).to.include(\"Cây Sen Đá Mini\");\r
+
+      });\r\n"
+    language: text/javascript
+order: 3000
