@@ -1,6 +1,7 @@
 from django.shortcuts import render, get_object_or_404
 from django.urls import reverse
 from django.http import JsonResponse
+from django.db import connection
 from .models import Product, Category
 
 from rest_framework.decorators import api_view
@@ -19,7 +20,17 @@ def product_list(request):
         products = products.filter(name__icontains=q)
 
     if category_id:
-        products = products.filter(category_id=category_id)
+        try:
+            category_pk = int(category_id)
+        except ValueError:
+            category_pk = None
+
+        if category_pk is not None:
+            minimum, maximum = connection.ops.integer_field_range(
+                Category._meta.pk.get_internal_type()
+            )
+            if minimum <= category_pk <= maximum:
+                products = products.filter(category_id=category_pk)
 
     if sort == 'name_asc':
         products = products.order_by('name')
