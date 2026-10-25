@@ -1,10 +1,9 @@
 {
   "info": {
-    "_postman_id": "58340651-07b8-41a7-a551-9b95741991c8",
+    "_postman_id": "577dcbf7-b2cf-4da2-8695-3f55b7065195",
     "name": "Green Shop - Account & Auth (TC-AA)",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
-    "_exporter_id": "58627368",
-    "_collection_link": "https://go.postman.co/collection/58973177-58340651-07b8-41a7-a551-9b95741991c8?source=collection_link"
+    "_exporter_id": "58973177"
   },
   "item": [
     {
@@ -2241,6 +2240,18 @@
     },
     {
       "key": "case_username",
+      "value": ""
+    },
+    {
+      "key": "reset_uid",
+      "value": ""
+    },
+    {
+      "key": "reset_token",
+      "value": ""
+    },
+    {
+      "key": "reset_password",
       "value": ""
     }
   ]
