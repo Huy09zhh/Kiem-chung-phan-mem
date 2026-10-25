@@ -1,16 +1,29 @@
 from django.shortcuts import render, redirect
 from django.contrib.auth import login, logout, update_session_auth_hash
 from django.contrib.auth.decorators import login_required
+from django.utils.http import url_has_allowed_host_and_scheme
 from django.views.decorators.http import require_POST
 from .forms import RegisterForm, LoginForm, ProfileUpdateForm, CustomPasswordChangeForm
 from .decorators import admin_required
+
+
+def get_safe_next_url(request, default='home'):
+    """Chỉ chấp nhận next là đường dẫn nội bộ của Green Shop (chống Open Redirect)."""
+    next_url = request.POST.get('next') or request.GET.get('next') or ''
+    if next_url and url_has_allowed_host_and_scheme(
+        url=next_url,
+        allowed_hosts={request.get_host()},
+        require_https=request.is_secure(),
+    ):
+        return next_url
+    return default
 
 
 def register_view(request):
     if request.user.is_authenticated:
         return redirect('home')
 
-    next_url = request.GET.get('next') or request.POST.get('next') or 'home'
+    next_url = get_safe_next_url(request)
     form = RegisterForm(request.POST or None)
 
     if request.method == 'POST' and form.is_valid():
@@ -30,7 +43,7 @@ def login_view(request):
             return redirect('admin_dashboard')
         return redirect('home')
 
-    next_url = request.GET.get('next') or request.POST.get('next') or 'home'
+    next_url = get_safe_next_url(request)
     form = LoginForm(request, data=request.POST or None)
 
     if request.method == 'POST' and form.is_valid():
