@@ -1,0 +1,2247 @@
+{
+  "info": {
+    "_postman_id": "58340651-07b8-41a7-a551-9b95741991c8",
+    "name": "Green Shop - Account & Auth (TC-AA)",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "_exporter_id": "58627368",
+    "_collection_link": "https://go.postman.co/collection/58973177-58340651-07b8-41a7-a551-9b95741991c8?source=collection_link"
+  },
+  "item": [
+    {
+      "name": "01. Registration",
+      "item": [
+        {
+          "name": "TC-AA-001 - GET Login Page",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Login page returns 200\", () => pm.response.to.have.status(200));\r",
+                  "\r",
+                  "const match = pm.response.text().match(\r",
+                  "  /name=[\"']csrfmiddlewaretoken[\"'][^>]*value=[\"']([^\"']+)[\"']/\r",
+                  ");\r",
+                  "pm.test(\"CSRF token exists\", () => pm.expect(match).to.not.be.null);\r",
+                  "if (match) pm.collectionVariables.set(\"csrf_token\", match[1]);"
+                ],
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {}
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/accounts/login/",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "accounts",
+                "login",
+                ""
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "TC-AA-002 GET Register Page",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Registration page returns 200\", () => pm.response.to.have.status(200));\r",
+                  "\r",
+                  "const match = pm.response.text().match(\r",
+                  "  /name=[\"']csrfmiddlewaretoken[\"'][^>]*value=[\"']([^\"']+)[\"']/\r",
+                  ");\r",
+                  "pm.test(\"CSRF token exists\", () => pm.expect(match).to.not.be.null);\r",
+                  "if (match) pm.collectionVariables.set(\"csrf_token\", match[1]);"
+                ],
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {}
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/accounts/register/",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "accounts",
+                "register",
+                ""
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "TC-AA-003 POST Register New Account",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Valid registration redirects\", () => {\r",
+                  "  pm.response.to.have.status(302);\r",
+                  "});\r",
+                  "pm.test(\"Redirects to home\", () => {\r",
+                  "  pm.expect(pm.response.headers.get(\"Location\") || \"\").to.match(/\\/$/);\r",
+                  "});"
+                ],
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {}
+              }
+            },
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  "const id = Date.now();\r",
+                  "pm.collectionVariables.set(\"aa_username\", `aa_${id}`);\r",
+                  "pm.collectionVariables.set(\"aa_email\", `aa_${id}@example.test`);"
+                ],
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {}
+              }
+            }
+          ],
+          "protocolProfileBehavior": {
+            "followRedirects": false
+          },
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "urlencoded",
+              "urlencoded": [
+                {
+                  "key": "csrfmiddlewaretoken",
+                  "value": "{{csrf_token}}",
+                  "type": "text",
+                  "uuid": "e449d0e4-14c6-4ba8-bb18-c7f7989869ca"
+                },
+                {
+                  "key": "username",
+                  "value": "{{aa_username}}",
+                  "type": "text",
+                  "uuid": "589220a2-a665-4f33-b965-71984c0c2694"
+                },
+                {
+                  "key": "email",
+                  "value": "{{aa_email}}",
+                  "type": "text",
+                  "uuid": "0155d3af-558a-449f-a0b0-6352682fd0f3"
+                },
+                {
+                  "key": "password1",
+                  "value": "{{aa_password}}",
+                  "type": "text",
+                  "uuid": "ff8b9f6d-38a9-4267-8a08-050b46af7847"
+                },
+                {
+                  "key": "password2",
+                  "value": "{{aa_password}}",
+                  "type": "text",
+                  "uuid": "109a803f-79c5-4c8c-8811-9680aff42a6f"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{base_url}}/accounts/register/",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "accounts",
+                "register",
+                ""
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "TC-AA-004 View Profile After Registration",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Profile is accessible after registration\", () => {\r",
+                  "  pm.response.to.have.status(200);\r",
+                  "});\r",
+                  "pm.test(\"Registered username appears\", () => {\r",
+                  "  pm.expect(pm.response.text()).to.include(pm.collectionVariables.get(\"aa_username\"));\r",
+                  "});"
+                ],
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {}
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/accounts/profile/",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "accounts",
+                "profile",
+                ""
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "TC-AA-005 — POST Register with Duplicate Username",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  "const id = Date.now();\r",
+                  "pm.collectionVariables.set(\"case_email\", `duplicate_name_${id}@example.test`);"
+                ],
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {}
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Duplicate username stays on registration form\", () => {\r",
+                  "  pm.response.to.have.status(200);\r",
+                  "});\r",
+                  "pm.test(\"Username field is present\", () => {\r",
+                  "  pm.expect(pm.response.text()).to.include('name=\"username\"');\r",
+                  "});"
+                ],
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {}
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "urlencoded",
+              "urlencoded": [
+                {
+                  "key": "csrfmiddlewaretoken",
+                  "value": "{{csrf_token}}",
+                  "type": "text"
+                },
+                {
+                  "key": "username",
+                  "value": "{{aa_username}}",
+                  "type": "text"
+                },
+                {
+                  "key": "email",
+                  "value": "{{case_email}}",
+                  "type": "text"
+                },
+                {
+                  "key": "password1",
+                  "value": "{{aa_password}}",
+                  "type": "text"
+                },
+                {
+                  "key": "password2",
+                  "value": "{{aa_password}}",
+                  "type": "text"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{base_url}}/accounts/register/",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "accounts",
+                "register",
+                ""
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "TC-AA-006 — POST Register with Duplicate Email",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  "const id = Date.now();\r",
+                  "pm.collectionVariables.set(\"case_username\", `duplicate_email_${id}`);"
+                ],
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {}
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Duplicate email stays on registration form\", () => {\r",
+                  "  pm.response.to.have.status(200);\r",
+                  "});\r",
+                  "pm.test(\"Duplicate email error appears\", () => {\r",
+                  "  pm.expect(pm.response.text()).to.include(\"Email này đã được sử dụng\");\r",
+                  "});"
+                ],
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {}
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "urlencoded",
+              "urlencoded": [
+                {
+                  "key": "csrfmiddlewaretoken",
+                  "value": "{{csrf_token}}",
+                  "type": "text"
+                },
+                {
+                  "key": "username",
+                  "value": "{{case_username}}",
+                  "type": "text"
+                },
+                {
+                  "key": "email",
+                  "value": "{{aa_email}}",
+                  "type": "text"
+                },
+                {
+                  "key": "password1",
+                  "value": "{{aa_password}}",
+                  "type": "text"
+                },
+                {
+                  "key": "password2",
+                  "value": "{{aa_password}}",
+                  "type": "text"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{base_url}}/accounts/register/",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "accounts",
+                "register",
+                ""
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "TC-AA-007 — POST Register with Password Mismatch",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  "const id = Date.now();\r",
+                  "pm.collectionVariables.set(\"case_username\", `mismatch_${id}`);\r",
+                  "pm.collectionVariables.set(\"case_email\", `mismatch_${id}@example.test`);"
+                ],
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {}
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Password mismatch stays on registration form\", () => {\r",
+                  "  pm.response.to.have.status(200);\r",
+                  "});\r",
+                  "pm.test(\"Confirmation field is present\", () => {\r",
+                  "  pm.expect(pm.response.text()).to.include('name=\"password2\"');\r",
+                  "});"
+                ],
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {}
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "urlencoded",
+              "urlencoded": [
+                {
+                  "key": "csrfmiddlewaretoken",
+                  "value": "{{csrf_token}}",
+                  "type": "text"
+                },
+                {
+                  "key": "username",
+                  "value": "{{case_username}}",
+                  "type": "text"
+                },
+                {
+                  "key": "email",
+                  "value": "{{case_email}}",
+                  "type": "text"
+                },
+                {
+                  "key": "password1",
+                  "value": "{{aa_password}}",
+                  "type": "text"
+                },
+                {
+                  "key": "password2",
+                  "value": "DifferentPassword@2026",
+                  "type": "text"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{base_url}}/accounts/register/",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "accounts",
+                "register",
+                ""
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "TC-AA-008 — POST Register with Weak Password",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  "const id = Date.now();\r",
+                  "pm.collectionVariables.set(\"case_username\", `weak_${id}`);\r",
+                  "pm.collectionVariables.set(\"case_email\", `weak_${id}@example.test`);"
+                ],
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {}
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Weak password stays on registration form\", () => { pm.response.to.have.status(200); });\r",
+                  "pm.test(\"Password validation error appears\", () => { pm.expect(pm.response.text()).to.match(/mật khẩu|password/i); });"
+                ],
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {}
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "urlencoded",
+              "urlencoded": [
+                {
+                  "key": "csrfmiddlewaretoken",
+                  "value": "{{csrf_token}}",
+                  "type": "text"
+                },
+                {
+                  "key": "username",
+                  "value": "{{case_username}}",
+                  "type": "text"
+                },
+                {
+                  "key": "email",
+                  "value": "{{case_email}}",
+                  "type": "text"
+                },
+                {
+                  "key": "password1",
+                  "value": "123",
+                  "type": "text"
+                },
+                {
+                  "key": "password2",
+                  "value": "123",
+                  "type": "text"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{base_url}}/accounts/register/",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "accounts",
+                "register",
+                ""
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "TC-AA-009 — POST Register with Invalid Email",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  "const id = Date.now();\r",
+                  "pm.collectionVariables.set(\"case_username\", `invalid_email_${id}`);"
+                ],
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {}
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Invalid email stays on registration form\", () => { pm.response.to.have.status(200); });\r",
+                  "pm.test(\"Email validation error appears\", () => { pm.expect(pm.response.text()).to.include(\"Enter a valid email address.\"); });"
+                ],
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {}
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "urlencoded",
+              "urlencoded": [
+                {
+                  "key": "csrfmiddlewaretoken",
+                  "value": "{{csrf_token}}",
+                  "type": "text"
+                },
+                {
+                  "key": "username",
+                  "value": "{{case_username}}",
+                  "type": "text"
+                },
+                {
+                  "key": "email",
+                  "value": "not-an-email",
+                  "type": "text"
+                },
+                {
+                  "key": "password1",
+                  "value": "{{aa_password}}",
+                  "type": "text"
+                },
+                {
+                  "key": "password2",
+                  "value": "{{aa_password}}",
+                  "type": "text"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{base_url}}/accounts/register/",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "accounts",
+                "register",
+                ""
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "TC-AA-010 — POST Register without CSRF Token",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  "const id = Date.now();\r",
+                  "pm.collectionVariables.set('case_username', 'aa_csrf_' + id);\r",
+                  "pm.collectionVariables.set('case_email', 'aa_csrf_' + id + '@example.test');"
+                ],
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {}
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Registration without CSRF is forbidden\", () => { pm.response.to.have.status(403); });\r",
+                  "pm.test(\"CSRF rejection is reported\", () => { pm.expect(pm.response.text()).to.match(/CSRF/i); });"
+                ],
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {}
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "urlencoded",
+              "urlencoded": [
+                {
+                  "key": "username",
+                  "value": "{{case_username}}",
+                  "type": "text"
+                },
+                {
+                  "key": "email",
+                  "value": "{{case_email}}",
+                  "type": "text"
+                },
+                {
+                  "key": "password1",
+                  "value": "{{aa_password}}",
+                  "type": "text"
+                },
+                {
+                  "key": "password2",
+                  "value": "{{aa_password}}",
+                  "type": "text"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{base_url}}/accounts/register/",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "accounts",
+                "register",
+                ""
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "02. Login & Session",
+      "item": [
+        {
+          "name": "TC-AA-011 — POST Login as Customer",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Customer login redirects\", () => { pm.response.to.have.status(302); });\r",
+                  "pm.test(\"Redirects to home\", () => { pm.expect(pm.response.headers.get(\"Location\")).to.eql(\"/\"); });"
+                ],
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {}
+              }
+            }
+          ],
+          "protocolProfileBehavior": {
+            "followRedirects": false
+          },
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "urlencoded",
+              "urlencoded": [
+                {
+                  "key": "csrfmiddlewaretoken",
+                  "value": "{{csrf_token}}",
+                  "type": "text"
+                },
+                {
+                  "key": "username",
+                  "value": "{{aa_username}}",
+                  "type": "text"
+                },
+                {
+                  "key": "password",
+                  "value": "{{aa_password}}",
+                  "type": "text"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{base_url}}/accounts/login/",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "accounts",
+                "login",
+                ""
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "TC-AA-014 — POST Login with Wrong Password",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Wrong password does not authenticate\", () => { pm.response.to.have.status(200); });\r",
+                  "pm.test(\"Login form remains visible\", () => { pm.expect(pm.response.text()).to.include(\"<title>Đăng nhập</title>\"); });"
+                ],
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {}
+              }
+            }
+          ],
+          "protocolProfileBehavior": {
+            "followRedirects": false
+          },
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "urlencoded",
+              "urlencoded": [
+                {
+                  "key": "csrfmiddlewaretoken",
+                  "value": "{{csrf_token}}",
+                  "type": "text"
+                },
+                {
+                  "key": "username",
+                  "value": "{{aa_username}}",
+                  "type": "text"
+                },
+                {
+                  "key": "password",
+                  "value": "WrongPassword@2026",
+                  "type": "text"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{base_url}}/accounts/login/",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "accounts",
+                "login",
+                ""
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "TC-AA-015 — POST Login with Unknown Username",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Unknown username does not authenticate\", () => { pm.response.to.have.status(200); });\r",
+                  "pm.test(\"Login form remains visible\", () => { pm.expect(pm.response.text()).to.include(\"<title>Đăng nhập</title>\"); });"
+                ],
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {}
+              }
+            }
+          ],
+          "protocolProfileBehavior": {
+            "followRedirects": false
+          },
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "urlencoded",
+              "urlencoded": [
+                {
+                  "key": "csrfmiddlewaretoken",
+                  "value": "{{csrf_token}}",
+                  "type": "text"
+                },
+                {
+                  "key": "username",
+                  "value": "no_such_user_999999",
+                  "type": "text"
+                },
+                {
+                  "key": "password",
+                  "value": "{{aa_password}}",
+                  "type": "text"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{base_url}}/accounts/login/",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "accounts",
+                "login",
+                ""
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "TC-AA-016 — POST Login with Empty Credentials",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Empty credentials do not authenticate\", () => { pm.response.to.have.status(200); });\r",
+                  "pm.test(\"Login form remains visible\", () => { pm.expect(pm.response.text()).to.include(\"<title>Đăng nhập</title>\"); });"
+                ],
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {}
+              }
+            }
+          ],
+          "protocolProfileBehavior": {
+            "followRedirects": false
+          },
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "urlencoded",
+              "urlencoded": [
+                {
+                  "key": "csrfmiddlewaretoken",
+                  "value": "{{csrf_token}}",
+                  "type": "text"
+                },
+                {
+                  "key": "username",
+                  "value": "",
+                  "type": "text"
+                },
+                {
+                  "key": "password",
+                  "value": "",
+                  "type": "text"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{base_url}}/accounts/login/",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "accounts",
+                "login",
+                ""
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "TC-AA-017 — POST Login without CSRF Token",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Login without CSRF is forbidden\", () => { pm.response.to.have.status(403); });\r",
+                  "pm.test(\"CSRF rejection is reported\", () => { pm.expect(pm.response.text()).to.match(/CSRF/i); });"
+                ],
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {}
+              }
+            }
+          ],
+          "protocolProfileBehavior": {
+            "followRedirects": false
+          },
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "urlencoded",
+              "urlencoded": [
+                {
+                  "key": "username",
+                  "value": "{{aa_username}}",
+                  "type": "text"
+                },
+                {
+                  "key": "password",
+                  "value": "{{aa_password}}",
+                  "type": "text"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{base_url}}/accounts/login/",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "accounts",
+                "login",
+                ""
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "TC-AA-012 — GET Customer Profile",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Customer profile returns 200\", () => { pm.response.to.have.status(200); });\r",
+                  "pm.test(\"Profile shows customer username\", () => { pm.expect(pm.response.text()).to.include(pm.collectionVariables.get(\"aa_username\")); });\r",
+                  "const match = pm.response.text().match(/name=[\"']csrfmiddlewaretoken[\"'][^>]*value=[\"']([^\"']+)[\"']/);\r",
+                  "if (match) pm.collectionVariables.set(\"csrf_token\", match[1]);"
+                ],
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {}
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/accounts/profile/",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "accounts",
+                "profile",
+                ""
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "TC-AA-018 — GET Profile as Guest",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Guest is redirected from profile\", () => { pm.response.to.have.status(302); });\r",
+                  "pm.test(\"Redirect points to login\", () => { pm.expect(pm.response.headers.get(\"Location\") || \"\").to.include(\"/accounts/login/\"); });"
+                ],
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {}
+              }
+            }
+          ],
+          "protocolProfileBehavior": {
+            "followRedirects": false
+          },
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/accounts/profile/",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "accounts",
+                "profile",
+                ""
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "TC-AA-013 — GET Login Page while Authenticated",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Authenticated user is redirected from login\", () => { pm.response.to.have.status(302); });\r",
+                  "pm.test(\"Redirects to home\", () => { pm.expect(pm.response.headers.get(\"Location\")).to.eql(\"/\"); });"
+                ],
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {}
+              }
+            }
+          ],
+          "protocolProfileBehavior": {
+            "followRedirects": false
+          },
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/accounts/login/",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "accounts",
+                "login",
+                ""
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "03. Profile",
+      "item": [
+        {
+          "name": "TC-AA-019 — GET Profile Edit Page",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Profile edit page returns 200', () => pm.response.to.have.status(200));\r",
+                  "const html = pm.response.text();\r",
+                  "pm.test('Profile edit form is present', () => pm.expect(html).to.include('name=\"email\"'));\r",
+                  "const match = html.match(/name=\"csrfmiddlewaretoken\" value=\"([^\"]+)\"/);\r",
+                  "pm.test('CSRF token is present', () => pm.expect(match).to.not.be.null);\r",
+                  "if (match) pm.collectionVariables.set('csrf_token', match[1]);"
+                ],
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {}
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/accounts/profile/edit/",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "accounts",
+                "profile",
+                "edit",
+                ""
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "TC-AA-021 — GET Verify Updated Profile",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Profile returns 200', () => pm.response.to.have.status(200));\r",
+                  "const html = pm.response.text();\r",
+                  "pm.test('Updated first and last name are shown', () => { pm.expect(html).to.include('Test'); pm.expect(html).to.include('Account'); });\r",
+                  "pm.test('Customer username is shown', () => pm.expect(html).to.include(pm.collectionVariables.get('aa_username')));"
+                ],
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {}
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/accounts/profile/",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "accounts",
+                "profile",
+                ""
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "TC-AA-020 — POST Update Profile",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Valid profile update redirects', () => pm.response.to.have.status(302));\r",
+                  "pm.test('Redirects to profile', () => pm.expect(pm.response.headers.get('Location') || '').to.include('/accounts/profile/'));"
+                ],
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {}
+              }
+            }
+          ],
+          "protocolProfileBehavior": {
+            "followRedirects": false
+          },
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "urlencoded",
+              "urlencoded": [
+                {
+                  "key": "csrfmiddlewaretoken",
+                  "value": "{{csrf_token}}",
+                  "type": "text"
+                },
+                {
+                  "key": "username",
+                  "value": "{{aa_username}}",
+                  "type": "text"
+                },
+                {
+                  "key": "first_name",
+                  "value": "Test",
+                  "type": "text"
+                },
+                {
+                  "key": "last_name",
+                  "value": "Account",
+                  "type": "text"
+                },
+                {
+                  "key": "email",
+                  "value": "{{aa_email}}",
+                  "type": "text"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{base_url}}/accounts/profile/edit/",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "accounts",
+                "profile",
+                "edit",
+                ""
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "TC-AA-022 — POST Profile with Invalid Email",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Invalid email stays on form', () => pm.response.to.have.status(200));\r",
+                  "pm.test('Email validation error appears', () => pm.expect(pm.response.text()).to.include('Enter a valid email address.'));"
+                ],
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {}
+              }
+            }
+          ],
+          "protocolProfileBehavior": {
+            "followRedirects": false
+          },
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "urlencoded",
+              "urlencoded": [
+                {
+                  "key": "csrfmiddlewaretoken",
+                  "value": "{{csrf_token}}",
+                  "type": "text"
+                },
+                {
+                  "key": "username",
+                  "value": "{{aa_username}}",
+                  "type": "text"
+                },
+                {
+                  "key": "first_name",
+                  "value": "Test",
+                  "type": "text"
+                },
+                {
+                  "key": "last_name",
+                  "value": "Account",
+                  "type": "text"
+                },
+                {
+                  "key": "email",
+                  "value": "not-an-email",
+                  "type": "text"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{base_url}}/accounts/profile/edit/",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "accounts",
+                "profile",
+                "edit",
+                ""
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "04. Password Change",
+      "item": [
+        {
+          "name": "TC-AA-024 — GET Password Change Page",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Password change page returns 200', () => pm.response.to.have.status(200));\r",
+                  "const html = pm.response.text();\r",
+                  "pm.test('Password change form is present', () => pm.expect(html).to.include('name=\"old_password\"'));\r",
+                  "const match = html.match(/name=\"csrfmiddlewaretoken\" value=\"([^\"]+)\"/);\r",
+                  "if (match) pm.collectionVariables.set('csrf_token', match[1]);"
+                ],
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {}
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/accounts/password/change/",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "accounts",
+                "password",
+                "change",
+                ""
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "TC-AA-023 — GET Password Change as Guest",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Guest is redirected to login', () => pm.response.to.have.status(302));\r",
+                  "pm.test('Location points to login', () => pm.expect(pm.response.headers.get('Location') || '').to.include('/accounts/login/'));"
+                ],
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {}
+              }
+            }
+          ],
+          "protocolProfileBehavior": {
+            "followRedirects": false,
+            "disableCookies": true
+          },
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/accounts/password/change/",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "accounts",
+                "password",
+                "change",
+                ""
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "TC-AA-025 — POST Change Password Successfully",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Valid password change redirects to profile', () => pm.response.to.have.status(302));\r",
+                  "pm.test('Location points to profile', () => pm.expect(pm.response.headers.get('Location') || '').to.include('/accounts/profile/'));"
+                ],
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {}
+              }
+            }
+          ],
+          "protocolProfileBehavior": {
+            "followRedirects": false
+          },
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "urlencoded",
+              "urlencoded": [
+                {
+                  "key": "csrfmiddlewaretoken",
+                  "value": "{{csrf_token}}",
+                  "type": "text"
+                },
+                {
+                  "key": "old_password",
+                  "value": "{{reset_password}}",
+                  "type": "text"
+                },
+                {
+                  "key": "new_password1",
+                  "value": "{{new_password}}",
+                  "type": "text"
+                },
+                {
+                  "key": "new_password2",
+                  "value": "{{new_password}}",
+                  "type": "text"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{base_url}}/accounts/password/change/",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "accounts",
+                "password",
+                "change",
+                ""
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "TC-AA-026 — POST Change Password with Wrong Old Password",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Wrong old password stays on form', () => pm.response.to.have.status(200));\r",
+                  "pm.test('Password error is shown', () => pm.expect(pm.response.text()).to.include('old_password'));"
+                ],
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {}
+              }
+            }
+          ],
+          "protocolProfileBehavior": {
+            "followRedirects": false
+          },
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "urlencoded",
+              "urlencoded": [
+                {
+                  "key": "csrfmiddlewaretoken",
+                  "value": "{{csrf_token}}",
+                  "type": "text"
+                },
+                {
+                  "key": "old_password",
+                  "value": "wrong-old-password",
+                  "type": "text"
+                },
+                {
+                  "key": "new_password1",
+                  "value": "{{new_password}}",
+                  "type": "text"
+                },
+                {
+                  "key": "new_password2",
+                  "value": "{{new_password}}",
+                  "type": "text"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{base_url}}/accounts/password/change/",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "accounts",
+                "password",
+                "change",
+                ""
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "TC-AA-027 — POST Change Password with Mismatched Confirmation",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Mismatched passwords remain on form', () => pm.response.to.have.status(200));"
+                ],
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {}
+              }
+            }
+          ],
+          "protocolProfileBehavior": {
+            "followRedirects": false
+          },
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "urlencoded",
+              "urlencoded": [
+                {
+                  "key": "csrfmiddlewaretoken",
+                  "value": "{{csrf_token}}",
+                  "type": "text"
+                },
+                {
+                  "key": "old_password",
+                  "value": "wrong-old-password",
+                  "type": "text"
+                },
+                {
+                  "key": "new_password1",
+                  "value": "NewPass-For-Test-Only-1!",
+                  "type": "text"
+                },
+                {
+                  "key": "new_password2",
+                  "value": "DifferentPass-For-Test-Only-2!",
+                  "type": "text"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{base_url}}/accounts/password/change/",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "accounts",
+                "password",
+                "change",
+                ""
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "TC-AA-028 — POST Change Password without CSRF Token",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('POST without CSRF is rejected', () => pm.response.to.have.status(403));\r",
+                  "pm.test('CSRF failure is reported', () => pm.expect(pm.response.text()).to.include('CSRF'));"
+                ],
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {}
+              }
+            }
+          ],
+          "protocolProfileBehavior": {
+            "followRedirects": false
+          },
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "urlencoded",
+              "urlencoded": [
+                {
+                  "key": "old_password",
+                  "value": "wrong-old-password",
+                  "type": "text"
+                },
+                {
+                  "key": "new_password1",
+                  "value": "NewPass-For-Test-Only-1!",
+                  "type": "text"
+                },
+                {
+                  "key": "new_password2",
+                  "value": "NewPass-For-Test-Only-1!",
+                  "type": "text"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{base_url}}/accounts/password/change/",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "accounts",
+                "password",
+                "change",
+                ""
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "05. Logout",
+      "item": [
+        {
+          "name": "TC-AA-029 — POST Logout",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Logout redirects\", () => { pm.response.to.have.status(302); });"
+                ],
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {}
+              }
+            }
+          ],
+          "protocolProfileBehavior": {
+            "followRedirects": false
+          },
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "urlencoded",
+              "urlencoded": [
+                {
+                  "key": "csrfmiddlewaretoken",
+                  "value": "{{csrf_token}}",
+                  "type": "text"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{base_url}}/accounts/logout/",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "accounts",
+                "logout",
+                ""
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "TC-AA-030 — GET Profile After Logout",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Guest is redirected from profile\", () => { pm.response.to.have.status(302); });\r",
+                  "pm.test(\"Redirect points to login\", () => { pm.expect(pm.response.headers.get(\"Location\") || \"\").to.include(\"/accounts/login/\"); });"
+                ],
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {}
+              }
+            }
+          ],
+          "protocolProfileBehavior": {
+            "followRedirects": false
+          },
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/accounts/profile/",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "accounts",
+                "profile",
+                ""
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "TC-AA-031 — GET Logout Endpoint",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Logout rejects GET', () => pm.response.to.have.status(405));"
+                ],
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {}
+              }
+            }
+          ],
+          "protocolProfileBehavior": {
+            "followRedirects": false
+          },
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/accounts/logout/",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "accounts",
+                "logout",
+                ""
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "06. Authorization",
+      "item": [
+        {
+          "name": "TC-AA-032 — GET Admin Dashboard as Customer",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Customer cannot access admin dashboard', () => pm.expect([302, 403]).to.include(pm.response.code));\r",
+                  "if (pm.response.code === 302) pm.test('Redirect target is provided', () => pm.expect(pm.response.headers.get('Location') || '').to.not.equal(''));"
+                ],
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {}
+              }
+            }
+          ],
+          "protocolProfileBehavior": {
+            "followRedirects": false
+          },
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/admin-panel/dashboard/",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "admin-panel",
+                "dashboard",
+                ""
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "TC-AA-033 — GET Admin Dashboard as Guest",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Guest is redirected to login', () => pm.response.to.have.status(302));\r",
+                  "pm.test('Location points to login', () => pm.expect(pm.response.headers.get('Location') || '').to.include('/accounts/login/'));"
+                ],
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {}
+              }
+            }
+          ],
+          "protocolProfileBehavior": {
+            "followRedirects": false,
+            "disableCookies": true
+          },
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/accounts/admin-dashboard/",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "accounts",
+                "admin-dashboard",
+                ""
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "TC-AA-034 — GET Admin Dashboard as Admin",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Admin dashboard returns 200 for admin', () => pm.response.to.have.status(200));"
+                ],
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {}
+              }
+            }
+          ],
+          "protocolProfileBehavior": {
+            "followRedirects": false
+          },
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/accounts/admin-dashboard/",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "accounts",
+                "admin-dashboard",
+                ""
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "07. Password Reset",
+      "item": [
+        {
+          "name": "TC-AA-035 — GET Password Reset Page",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Password reset page returns 200', () => pm.response.to.have.status(200));\r",
+                  "const html = pm.response.text();\r",
+                  "pm.test('Email form is present', () => pm.expect(html).to.include('name=\"email\"'));\r",
+                  "const match = html.match(/name=\"csrfmiddlewaretoken\" value=\"([^\"]+)\"/);\r",
+                  "if (match) pm.collectionVariables.set('csrf_token', match[1]);"
+                ],
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {}
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/accounts/password/reset/",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "accounts",
+                "password",
+                "reset",
+                ""
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "TC-AA-036 — POST Request Password Reset",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Reset request redirects', () => pm.response.to.have.status(302));\r",
+                  "pm.test('Redirects to reset confirmation', () => pm.expect(pm.response.headers.get('Location') || '').to.include('/accounts/password/reset/done/'));"
+                ],
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {}
+              }
+            }
+          ],
+          "protocolProfileBehavior": {
+            "followRedirects": false
+          },
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "urlencoded",
+              "urlencoded": [
+                {
+                  "key": "csrfmiddlewaretoken",
+                  "value": "{{csrf_token}}",
+                  "type": "text"
+                },
+                {
+                  "key": "email",
+                  "value": "{{aa_email}}",
+                  "type": "text"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{base_url}}/accounts/password/reset/",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "accounts",
+                "password",
+                "reset",
+                ""
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "TC-AA-037 — GET Development Mailbox",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Development mailbox returns 200', () => pm.response.to.have.status(200));\r",
+                  "pm.test('Reset email is visible', () => pm.expect(pm.response.text()).to.include(pm.collectionVariables.get('aa_email')));"
+                ],
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {}
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/dev/mailbox/",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "dev",
+                "mailbox",
+                ""
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "TC-AA-041 — GET Password Reset Complete",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Reset complete page returns 200', () => pm.response.to.have.status(200));\r",
+                  "pm.test('Success message is displayed', () => pm.expect(pm.response.text()).to.include('Mật khẩu đã được cập nhật'));"
+                ],
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {}
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/accounts/password/reset/complete/",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "accounts",
+                "password",
+                "reset",
+                "complete",
+                ""
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "TC-AA-042 — POST Login with Reset Password",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Login with reset password redirects', () => pm.response.to.have.status(302));\r",
+                  "pm.test('Redirects to home', () => pm.expect(pm.response.headers.get('Location') || '').to.match(/^\\/$/));"
+                ],
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {}
+              }
+            }
+          ],
+          "protocolProfileBehavior": {
+            "followRedirects": false
+          },
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "urlencoded",
+              "urlencoded": [
+                {
+                  "key": "csrfmiddlewaretoken",
+                  "value": "{{csrf_token}}",
+                  "type": "text"
+                },
+                {
+                  "key": "username",
+                  "value": "{{aa_username}}",
+                  "type": "text"
+                },
+                {
+                  "key": "password",
+                  "value": "{{reset_password}}",
+                  "type": "text"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{base_url}}/accounts/login/",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "accounts",
+                "login",
+                ""
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "TC-AA-038 — GET Password Reset Confirmation Link",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Reset confirmation page returns 200', () => pm.response.to.have.status(200));\r",
+                  "pm.test('New password form is available', () => pm.expect(pm.response.text()).to.include('new_password1'));"
+                ],
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {}
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/accounts/password/reset/{{reset_uid}}/{{reset_token}}/",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "accounts",
+                "password",
+                "reset",
+                "{{reset_uid}}",
+                "{{reset_token}}",
+                ""
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "TC-AA-039 — POST Confirm New Password",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Password reset redirects to completion', () => pm.response.to.have.status(302));\r",
+                  "pm.test('Location points to reset completion', () => pm.expect(pm.response.headers.get('Location') || '').to.include('/accounts/password/reset/complete/'));"
+                ],
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {}
+              }
+            }
+          ],
+          "protocolProfileBehavior": {
+            "followRedirects": false
+          },
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "urlencoded",
+              "urlencoded": [
+                {
+                  "key": "csrfmiddlewaretoken",
+                  "value": "{{csrf_token}}",
+                  "type": "text"
+                },
+                {
+                  "key": "new_password1",
+                  "value": "{{new_password}}",
+                  "type": "text"
+                },
+                {
+                  "key": "new_password2",
+                  "value": "{{new_password}}",
+                  "type": "text"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{base_url}}/accounts/password/reset/{{reset_uid}}/set-password/",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "accounts",
+                "password",
+                "reset",
+                "{{reset_uid}}",
+                "set-password",
+                ""
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "TC-AA-040 — GET Used Password Reset Link",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Used reset link returns a page', () => pm.response.to.have.status(200));\r",
+                  "pm.test('Link is rejected as invalid', () => pm.expect(pm.response.text()).to.include('không hợp lệ hoặc đã hết hạn'));"
+                ],
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {}
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/accounts/password/reset/{{reset_uid}}/{{reset_token}}/",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "accounts",
+                "password",
+                "reset",
+                "{{reset_uid}}",
+                "{{reset_token}}",
+                ""
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    }
+  ],
+  "event": [
+    {
+      "listen": "prerequest",
+      "script": {
+        "type": "text/javascript",
+        "packages": {},
+        "requests": {},
+        "exec": [
+          ""
+        ]
+      }
+    },
+    {
+      "listen": "test",
+      "script": {
+        "type": "text/javascript",
+        "packages": {},
+        "requests": {},
+        "exec": [
+          ""
+        ]
+      }
+    }
+  ],
+  "variable": [
+    {
+      "key": "base_url",
+      "value": ""
+    },
+    {
+      "key": "csrf_token",
+      "value": ""
+    },
+    {
+      "key": "aa_username",
+      "value": ""
+    },
+    {
+      "key": "aa_email",
+      "value": ""
+    },
+    {
+      "key": "aa_password",
+      "value": ""
+    },
+    {
+      "key": "new_password",
+      "value": ""
+    },
+    {
+      "key": "test_username",
+      "value": ""
+    },
+    {
+      "key": "test_email",
+      "value": ""
+    },
+    {
+      "key": "case_email",
+      "value": ""
+    },
+    {
+      "key": "case_username",
+      "value": ""
+    }
+  ]
+}
