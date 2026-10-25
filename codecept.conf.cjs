@@ -5,7 +5,7 @@ exports.config = {
     Playwright: {
       browser: 'chromium',
       url: 'http://127.0.0.1:8000',
-      show: true,
+      show: !process.env.CI,
     },
   },
   include: {
