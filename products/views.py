@@ -93,6 +93,19 @@ def product_api_list(request):
         serializer = ProductSerializer(products, many=True)
         return Response(serializer.data)
 
+    # Chỉ Admin mới được phép tạo mới sản phẩm qua API
+    if not request.user.is_authenticated:
+        return Response(
+            {'detail': 'Authentication credentials were not provided.'},
+            status=401
+        )
+
+    if not request.user.is_staff:
+        return Response(
+            {'detail': 'You do not have permission to perform this action.'},
+            status=403
+        )
+
     serializer = ProductSerializer(data=request.data)
 
     if serializer.is_valid():
@@ -104,6 +117,20 @@ def product_api_list(request):
 
 @api_view(['GET', 'PUT', 'PATCH', 'DELETE'])
 def product_api_detail(request, pk):
+    # Chỉ Admin mới được sửa/xóa sản phẩm qua API
+    if request.method in ['PUT', 'PATCH', 'DELETE']:
+        if not request.user.is_authenticated:
+            return Response(
+                {'detail': 'Authentication credentials were not provided.'},
+                status=401
+            )
+
+        if not request.user.is_staff:
+            return Response(
+                {'detail': 'You do not have permission to perform this action.'},
+                status=403
+            )
+
     product = get_object_or_404(Product, pk=pk)
 
     if request.method == 'GET':
