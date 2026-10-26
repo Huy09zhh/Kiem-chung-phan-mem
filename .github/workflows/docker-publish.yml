@@ -4,11 +4,18 @@ name: Build and Push Docker Image
 on:
   push:
     branches:
+      - main
+      - tuan-2
+      - tuan-3
       - tuan-4
   workflow_dispatch:
 
+permissions:
+  contents: read
+
 jobs:
   build-and-push:
+    name: Build and Push Image
     runs-on: ubuntu-latest
 
     steps:
@@ -24,9 +31,20 @@ jobs:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
-      - name: Build and push image
+      - name: Generate image tags
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: quannhan123/green-shop
+          tags: |
+            type=ref,event=branch
+            type=sha,prefix=sha-,format=short
+            type=raw,value=latest,enable=${{ github.ref == 'refs/heads/main' }}
+
+      - name: Build and Push Docker Image
         uses: docker/build-push-action@v6
         with:
           context: .
           push: true
-          tags: quannhan123/green-shop:latest
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}

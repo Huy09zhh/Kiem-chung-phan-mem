@@ -1,11 +1,12 @@
-
 name: Green Shop CI
 
 on:
   push:
-    branches: [ "tuan-4", "main" ]
+    branches: ["tuan-2", "tuan-3", "tuan-4", "main"]
+
   pull_request:
-    branches: [ "tuan-4", "main" ]
+    branches: ["tuan-2", "tuan-3", "tuan-4", "main"]
+
   workflow_dispatch:
 
 permissions:
