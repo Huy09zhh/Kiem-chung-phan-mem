@@ -1,11 +1,18 @@
 $kind: http-request
-url: "{{base_url}}/admin-panel/orders/?keyword={{bva_kw}}"
-method: GET
-queryParams:
-  keyword: "{{bva_kw}}"
+url: "{{base_url}}/contact/"
+method: POST
+body:
+  type: urlencoded
+  content:
+    form_type: contact
+    name: "{{bva_cname}}"
+    email: bva@example.com
+    phone: "{{bva_cphone}}"
+    subject: tu_van
+    message: Kiểm thử giá trị biên
 scripts:
   - type: beforeRequest
-    code: pm.collectionVariables.set('bva_kw', pm.collectionVariables.get('phone_known').substring(0,7));
+    code: pm.collectionVariables.set('bva_cname', 'Nguyen Van A'); pm.collectionVariables.set('bva_cphone', '1'.repeat(20));
     language: text/javascript
   - type: afterResponse
     code: |-
@@ -20,11 +27,11 @@ scripts:
       const selectedStatus = () => grab(/<option value="(\w+)"\s+selected>/);
       const LABEL = { pending: 'Chờ xử lý', awaiting_transfer: 'Chờ chuyển khoản', paid: 'Đã thanh toán', failed: 'Thanh toán thất bại', confirmed: 'Đã xác nhận', shipping: 'Đang giao', completed: 'Hoàn thành', cancelled: 'Đã hủy' };
 
-      pm.test("TC-BVA-016 | SĐT 7 ký tự (min+1)", function () {
+      pm.test("TC-BVA-010 | SĐT 20 ký tự (max)", function () {
       ok(pm.response.code < 500, 'Server lỗi ' + pm.response.code);
-      ok(rowIds().length >= 1, 'Mong đợi tìm thấy ít nhất 1 đơn');
+      ok(pm.response.code === 302 && loc().indexOf('contact_success=1') >= 0, 'Mong đợi 302 về ?contact_success=1, nhận ' + pm.response.code);
       });
     language: text/javascript
 settings:
   followRedirects: false
-order: 3000
+order: 4000

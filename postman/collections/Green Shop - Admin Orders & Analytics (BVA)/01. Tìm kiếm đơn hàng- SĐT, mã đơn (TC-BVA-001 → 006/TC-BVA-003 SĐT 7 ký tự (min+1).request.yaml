@@ -1,7 +1,12 @@
 $kind: http-request
-url: "{{base_url}}/accounts/logout/"
-method: POST
+url: "{{base_url}}/admin-panel/orders/?keyword={{bva_kw}}"
+method: GET
+queryParams:
+  keyword: "{{bva_kw}}"
 scripts:
+  - type: beforeRequest
+    code: pm.collectionVariables.set('bva_kw', pm.collectionVariables.get('phone_known').substring(0,7));
+    language: text/javascript
   - type: afterResponse
     code: |-
       const html = pm.response.text();
@@ -14,8 +19,12 @@ scripts:
       const setcv = (k, v) => pm.collectionVariables.set(k, v);
       const selectedStatus = () => grab(/<option value="(\w+)"\s+selected>/);
       const LABEL = { pending: 'Chờ xử lý', awaiting_transfer: 'Chờ chuyển khoản', paid: 'Đã thanh toán', failed: 'Thanh toán thất bại', confirmed: 'Đã xác nhận', shipping: 'Đang giao', completed: 'Hoàn thành', cancelled: 'Đã hủy' };
-      pm.test('Đăng xuất', function(){ ok(pm.response.code < 500, 'Lỗi ' + pm.response.code); });
+
+      pm.test("TC-BVA-003 | SĐT 7 ký tự (min+1)", function () {
+      ok(pm.response.code < 500, 'Server lỗi ' + pm.response.code);
+      ok(rowIds().length >= 1, 'Mong đợi tìm thấy ít nhất 1 đơn');
+      });
     language: text/javascript
 settings:
   followRedirects: false
-order: 1000
+order: 3000

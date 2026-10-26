@@ -1,18 +1,9 @@
 $kind: http-request
-url: "{{base_url}}/admin-panel/products/create/"
-method: POST
-body:
-  type: urlencoded
-  content:
-    name: "{{bva_name}}"
-    price: "9999999998"
-    old_price: ""
-    description: Sản phẩm kiểm thử BVA
-    category: ""
+url: "{{base_url}}/admin-panel/orders/?keyword=1"
+method: GET
+queryParams:
+  keyword: "1"
 scripts:
-  - type: beforeRequest
-    code: const base = 'BVA' + Date.now(); let nm = 'BVA ' + Date.now(); pm.collectionVariables.set('bva_name', nm);
-    language: text/javascript
   - type: afterResponse
     code: |-
       const html = pm.response.text();
@@ -26,10 +17,11 @@ scripts:
       const selectedStatus = () => grab(/<option value="(\w+)"\s+selected>/);
       const LABEL = { pending: 'Chờ xử lý', awaiting_transfer: 'Chờ chuyển khoản', paid: 'Đã thanh toán', failed: 'Thanh toán thất bại', confirmed: 'Đã xác nhận', shipping: 'Đang giao', completed: 'Hoàn thành', cancelled: 'Đã hủy' };
 
-      pm.test("TC-BVA-004 | Giá bán = 9999999998 (max-1)", function () {
-      ok(pm.response.code === 302, 'Mong đợi 302 (lưu thành công) nhưng nhận ' + pm.response.code);
+      pm.test("TC-BVA-005 | Mã đơn 1 (min)", function () {
+      ok(pm.response.code < 500, 'Server lỗi ' + pm.response.code);
+      const ids = rowIds(); ok(ids.length === 1 && ids[0] === 1, 'Mong đợi chỉ đơn #1, nhận: ' + ids.join(','));
       });
     language: text/javascript
 settings:
   followRedirects: false
-order: 4000
+order: 5000

@@ -3,8 +3,8 @@ description: |-
   Kiểm thử giá trị biên (BVA) tự động.
   1. Chạy server: python manage.py runserver
   2. Điền admin_password trong tab Variables.
-  3. Chạy Collection Runner theo thứ tự folder 00 → 04 (folder 04 cuối cùng vì tạo tài khoản mới và đăng xuất).
-  Lưu ý: các sản phẩm tạo ra có tên BVA... / NNN...; các TC-BVA Dashboard (0 đơn, 5/6/7 đơn) cần dữ liệu riêng nên kiểm thử thủ công.
+  3. Chạy Collection Runner theo thứ tự folder 00 → 02.
+  TC-BVA-012 và 013 (Dashboard: 0 đơn, 5/6/7 đơn) cần dữ liệu riêng nên kiểm thử thủ công.
 variables:
   base_url: http://127.0.0.1:8000
   admin_username: adminquan
@@ -14,12 +14,9 @@ variables:
   csrf_html: ""
   csrf_token_val: ""
   csrf_cookie: ""
-  bva_name: ""
   bva_kw: ""
   bva_cname: ""
   bva_cphone: ""
-  bva_user: ""
-  bva_email: ""
 scripts:
   - type: http:beforeRequest
     code: |-

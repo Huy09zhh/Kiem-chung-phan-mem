@@ -12,7 +12,7 @@ body:
     message: Kiểm thử giá trị biên
 scripts:
   - type: beforeRequest
-    code: pm.collectionVariables.set('bva_cname', 'Nguyen Van A'); pm.collectionVariables.set('bva_cphone', '1'.repeat(21));
+    code: pm.collectionVariables.set('bva_cname', 'A'.repeat(121)); pm.collectionVariables.set('bva_cphone', '0912345678');
     language: text/javascript
   - type: afterResponse
     code: |-
@@ -27,11 +27,11 @@ scripts:
       const selectedStatus = () => grab(/<option value="(\w+)"\s+selected>/);
       const LABEL = { pending: 'Chờ xử lý', awaiting_transfer: 'Chờ chuyển khoản', paid: 'Đã thanh toán', failed: 'Thanh toán thất bại', confirmed: 'Đã xác nhận', shipping: 'Đang giao', completed: 'Hoàn thành', cancelled: 'Đã hủy' };
 
-      pm.test("TC-BVA-024 | SĐT 21 ký tự (max+1)", function () {
+      pm.test("TC-BVA-009 | Họ tên 121 ký tự (max+1)", function () {
       ok(pm.response.code < 500, 'Server lỗi ' + pm.response.code);
       ok(pm.response.code === 200, 'Mong đợi 200 (báo lỗi, không lưu), nhận ' + pm.response.code);
       });
     language: text/javascript
 settings:
   followRedirects: false
-order: 5000
+order: 3000

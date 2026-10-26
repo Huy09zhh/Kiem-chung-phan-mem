@@ -1,18 +1,9 @@
 $kind: http-request
-url: "{{base_url}}/accounts/register/"
-method: POST
-body:
-  type: urlencoded
-  content:
-    username: "{{bva_user}}"
-    email: "{{bva_email}}"
-    password1: Xk7#mQ2pL
-    password2: Xk7#mQ2pL
-    csrfmiddlewaretoken: "{{csrf_token_val}}"
+url: "{{base_url}}/admin-panel/orders/?keyword=0"
+method: GET
+queryParams:
+  keyword: "0"
 scripts:
-  - type: beforeRequest
-    code: const t = Date.now(); let u = 'bva' + t; pm.collectionVariables.set('bva_user', u); pm.collectionVariables.set('bva_email', 'bva' + t + '@example.com');
-    language: text/javascript
   - type: afterResponse
     code: |-
       const html = pm.response.text();
@@ -26,11 +17,11 @@ scripts:
       const selectedStatus = () => grab(/<option value="(\w+)"\s+selected>/);
       const LABEL = { pending: 'Chờ xử lý', awaiting_transfer: 'Chờ chuyển khoản', paid: 'Đã thanh toán', failed: 'Thanh toán thất bại', confirmed: 'Đã xác nhận', shipping: 'Đang giao', completed: 'Hoàn thành', cancelled: 'Đã hủy' };
 
-      pm.test("TC-BVA-027 | Mật khẩu 9 ký tự (min+1)", function () {
+      pm.test("TC-BVA-004 | Mã đơn 0 (min-1)", function () {
       ok(pm.response.code < 500, 'Server lỗi ' + pm.response.code);
-      ok(pm.response.code === 302, 'Mong đợi 302 (tạo tài khoản), nhận ' + pm.response.code);
+      ok(rowIds().length === 0, 'Mong đợi danh sách rỗng nhưng có ' + rowIds().length + ' đơn');
       });
     language: text/javascript
 settings:
   followRedirects: false
-order: 6000
+order: 4000
