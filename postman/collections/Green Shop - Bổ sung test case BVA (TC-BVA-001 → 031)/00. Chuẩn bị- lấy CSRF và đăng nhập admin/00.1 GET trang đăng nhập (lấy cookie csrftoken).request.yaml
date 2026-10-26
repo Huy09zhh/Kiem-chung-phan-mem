@@ -1,0 +1,31 @@
+$kind: http-request
+url: "{{base_url}}/accounts/login/"
+method: GET
+scripts:
+  - type: beforeRequest
+    code: pm.collectionVariables.set('run_tag', 'PM' + Date.now());
+    language: text/javascript
+  - type: afterResponse
+    code: |-
+      const html = pm.response.text();
+      const ok = (c, m) => { if (!c) { throw new Error(m); } };
+      const num = (s) => parseInt(String(s).replace(/[^\d]/g, ''), 10);
+      const grab = (re) => { const m = html.match(re); return m ? m[1] : null; };
+      const rowIds = () => Array.from(html.matchAll(/<td>#(\d+)<\/td>/g), (m) => parseInt(m[1], 10));
+      const loc = () => pm.response.headers.get('Location') || '';
+      const cv = (k) => pm.collectionVariables.get(k);
+      const setcv = (k, v) => pm.collectionVariables.set(k, v);
+      const selectedStatus = () => grab(/<option value="(\w+)"\s+selected>/);
+      const LABEL = { pending: 'Chờ xử lý', awaiting_transfer: 'Chờ chuyển khoản', paid: 'Đã thanh toán', failed: 'Thanh toán thất bại', confirmed: 'Đã xác nhận', shipping: 'Đang giao', completed: 'Hoàn thành', cancelled: 'Đã hủy' };
+
+      pm.test("PRE | Trang đăng nhập mở được", function () {
+      ok(pm.response.code === 200, 'Trang /accounts/login/ trả ' + pm.response.code);
+      const mm = html.match(/name=["']csrfmiddlewaretoken["'][^>]*value=["']([^"']+)["']/) || html.match(/value=["']([^"']+)["'][^>]*name=["']csrfmiddlewaretoken["']/);
+      if (mm) { setcv('csrf_html', mm[1]); }
+      });
+
+      pm.test("PRE | Có cookie csrftoken", function () {
+      ok(pm.cookies.has('csrftoken'), 'Chưa có cookie csrftoken; kiểm tra lại server đang chạy ở base_url');
+      });
+    language: text/javascript
+order: 1000
