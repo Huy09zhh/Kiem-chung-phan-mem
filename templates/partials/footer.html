@@ -45,12 +45,22 @@
 
             <!-- Cột 4 -->
             <div class="footer-col">
-                <h4>Đăng ký nhận tin</h4>
+                <h4 id="newsletter">Đăng ký nhận tin</h4>
 
-                <form class="footer-form">
-                    <input type="email" placeholder="Nhập email">
-                    <button>Gửi</button>
+                <form class="footer-form" method="post" action="{% url 'newsletter_subscribe' %}">
+                    {% csrf_token %}
+                    <input type="hidden" name="next" value="{{ request.path }}">
+                    <input type="email" name="email" placeholder="Nhập email" required>
+                    <button type="submit">Gửi</button>
                 </form>
+
+                {% if request.GET.newsletter == 'success' %}
+                    <p style="color:#2e7d32; margin-top:8px; font-size:14px;">Đăng ký nhận tin thành công. Cảm ơn bạn!</p>
+                {% elif request.GET.newsletter == 'exists' %}
+                    <p style="color:#b26a00; margin-top:8px; font-size:14px;">Email này đã đăng ký nhận tin trước đó.</p>
+                {% elif request.GET.newsletter == 'invalid' %}
+                    <p style="color:#c62828; margin-top:8px; font-size:14px;">Email không hợp lệ, vui lòng kiểm tra lại.</p>
+                {% endif %}
 
                 <div class="footer-social">
                     <a href="#"><i class="icon-facebook"></i></a>

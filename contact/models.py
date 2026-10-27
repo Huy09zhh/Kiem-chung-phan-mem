@@ -59,3 +59,15 @@ class Feedback(models.Model):
 
     def __str__(self):
         return f"{self.name} - {self.get_category_display()}"
+
+class NewsletterSubscriber(models.Model):
+    email = models.EmailField(unique=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-created_at']
+        verbose_name = 'Đăng ký nhận tin'
+        verbose_name_plural = 'Đăng ký nhận tin'
+
+    def __str__(self):
+        return self.email
