@@ -1,8 +1,9 @@
 $kind: http-request
-url: "{{base_url}}/admin-panel/orders/?keyword=1"
+name: "TC-BVA-025 Tìm đơn: Mã đơn đang tồn tại (search_order_id)"
+url: "{{base_url}}/admin-panel/orders/?keyword={{search_order_id}}"
 method: GET
 queryParams:
-  keyword: "1"
+  keyword: "{{search_order_id}}"
 scripts:
   - type: afterResponse
     code: |-
@@ -17,9 +18,9 @@ scripts:
       const selectedStatus = () => grab(/<option value="(\w+)"\s+selected>/);
       const LABEL = { pending: 'Chờ xử lý', awaiting_transfer: 'Chờ chuyển khoản', paid: 'Đã thanh toán', failed: 'Thanh toán thất bại', confirmed: 'Đã xác nhận', shipping: 'Đang giao', completed: 'Hoàn thành', cancelled: 'Đã hủy' };
 
-      pm.test("TC-BVA-005 | Mã đơn 1 (min)", function () {
+      pm.test("TC-BVA-025 | V11", function () {
       ok(pm.response.code < 500, 'Server lỗi ' + pm.response.code);
-      const ids = rowIds(); ok(ids.length === 1 && ids[0] === 1, 'Mong đợi chỉ đơn #1, nhận: ' + ids.join(','));
+      const ids = rowIds(); ok(ids.length === 1 && String(ids[0]) === pm.collectionVariables.get('search_order_id'), 'Mong đợi đúng 1 đơn, nhận: ' + ids.join(','));
       });
     language: text/javascript
 settings:

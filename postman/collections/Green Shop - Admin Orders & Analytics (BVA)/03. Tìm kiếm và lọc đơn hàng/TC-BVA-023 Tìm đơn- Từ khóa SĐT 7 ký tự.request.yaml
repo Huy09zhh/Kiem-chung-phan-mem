@@ -1,18 +1,12 @@
 $kind: http-request
-url: "{{base_url}}/contact/"
-method: POST
-body:
-  type: urlencoded
-  content:
-    form_type: contact
-    name: "{{bva_cname}}"
-    email: bva@example.com
-    phone: "{{bva_cphone}}"
-    subject: tu_van
-    message: Kiểm thử giá trị biên
+name: "TC-BVA-023 Tìm đơn: Từ khóa SĐT 7 ký tự"
+url: "{{base_url}}/admin-panel/orders/?keyword={{bva_kw}}"
+method: GET
+queryParams:
+  keyword: "{{bva_kw}}"
 scripts:
   - type: beforeRequest
-    code: pm.collectionVariables.set('bva_cname', 'A'.repeat(121)); pm.collectionVariables.set('bva_cphone', '0912345678');
+    code: pm.collectionVariables.set('bva_kw', pm.collectionVariables.get('phone_known').substring(0,7));
     language: text/javascript
   - type: afterResponse
     code: |-
@@ -27,9 +21,9 @@ scripts:
       const selectedStatus = () => grab(/<option value="(\w+)"\s+selected>/);
       const LABEL = { pending: 'Chờ xử lý', awaiting_transfer: 'Chờ chuyển khoản', paid: 'Đã thanh toán', failed: 'Thanh toán thất bại', confirmed: 'Đã xác nhận', shipping: 'Đang giao', completed: 'Hoàn thành', cancelled: 'Đã hủy' };
 
-      pm.test("TC-BVA-009 | Họ tên 121 ký tự (max+1)", function () {
+      pm.test("TC-BVA-023 | B15", function () {
       ok(pm.response.code < 500, 'Server lỗi ' + pm.response.code);
-      ok(pm.response.code === 200, 'Mong đợi 200 (báo lỗi, không lưu), nhận ' + pm.response.code);
+      ok(rowIds().length >= 1, 'Mong đợi tìm thấy ít nhất 1 đơn');
       });
     language: text/javascript
 settings:
