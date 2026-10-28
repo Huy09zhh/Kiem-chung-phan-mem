@@ -1,0 +1,4 @@
+$kind: collection
+name: "02. Giá trị biên (TC-CART-BVA-01 → 13)"
+description: "Biên của product_id (0, min, max, max+1, 2^63-1, 2^63), quantity khi tăng/giảm (1, 2, 3) và số SP trong giỏ (0, 1, 2)."
+order: 3000

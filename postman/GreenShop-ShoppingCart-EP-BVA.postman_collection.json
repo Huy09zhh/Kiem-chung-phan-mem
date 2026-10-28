@@ -1,0 +1,2685 @@
+{
+  "info": {
+    "_postman_id": "b925daa8-3c02-5c23-84d3-faeb63954ed2",
+    "name": "Green Shop - Shopping Cart (EP-BVA)",
+    "description": "Kiểm thử hộp đen phân hệ FR3 - Giỏ hàng: Phân hoạch tương đương (TC-CART-EP-01 → 15) và Giá trị biên (TC-CART-BVA-01 → 13).\nTài liệu: docs/TestCase_FR3_Cart_EP_BVA.md\n1. Chạy server: python manage.py runserver\n2. Tạo dữ liệu (1 lần): python manage.py shell -c \"exec(open('postman/seed_test_data.py', encoding='utf-8').read())\"\n3. Kiểm tra user1 / user2 trong tab Variables, rồi chạy Collection Runner theo thứ tự folder 00 → 02.\nRequest [setup] chỉ chuẩn bị dữ liệu; request TC-xx.1 thực hiện thao tác, TC-xx.2 mở giỏ hàng để kiểm tra.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "event": [
+    {
+      "listen": "prerequest",
+      "script": {
+        "type": "text/javascript",
+        "exec": [
+          "// Tự thêm CSRF cho các request ghi dữ liệu (Django bắt buộc).",
+          "const m = pm.request.method;",
+          "pm.request.headers.upsert({ key: 'Referer', value: pm.variables.replaceIn('{{base_url}}') + '/' });",
+          "if (m !== 'GET' && m !== 'HEAD') {",
+          "    const token = pm.collectionVariables.get('csrf_cookie') || pm.cookies.get('csrftoken') || pm.collectionVariables.get('csrf_html');",
+          "    if (token) {",
+          "        pm.request.headers.upsert({ key: 'X-CSRFToken', value: token });",
+          "        pm.collectionVariables.set('csrf_token_val', token);",
+          "    }",
+          "}"
+        ]
+      }
+    },
+    {
+      "listen": "test",
+      "script": {
+        "type": "text/javascript",
+        "exec": [
+          "// Sau mỗi response: nhớ lại cookie csrftoken mới nhất (Django đổi token sau khi đăng nhập).",
+          "let tk = null;",
+          "try { tk = pm.cookies.get('csrftoken'); } catch (e) {}",
+          "if (!tk) {",
+          "    try {",
+          "        const rc = pm.response.cookies.get('csrftoken');",
+          "        tk = rc && typeof rc === 'object' ? rc.value : rc;",
+          "    } catch (e) {}",
+          "}",
+          "if (tk) { pm.collectionVariables.set('csrf_cookie', tk); }"
+        ]
+      }
+    }
+  ],
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "http://127.0.0.1:8000"
+    },
+    {
+      "key": "user_username",
+      "value": "user1"
+    },
+    {
+      "key": "user_password",
+      "value": "User@12345"
+    },
+    {
+      "key": "user2_username",
+      "value": "user2"
+    },
+    {
+      "key": "user2_password",
+      "value": "User@12345"
+    },
+    {
+      "key": "product_a",
+      "value": ""
+    },
+    {
+      "key": "product_b",
+      "value": ""
+    },
+    {
+      "key": "price_a",
+      "value": ""
+    },
+    {
+      "key": "price_b",
+      "value": ""
+    },
+    {
+      "key": "min_id",
+      "value": ""
+    },
+    {
+      "key": "max_id",
+      "value": ""
+    },
+    {
+      "key": "csrf_html",
+      "value": ""
+    },
+    {
+      "key": "csrf_token_val",
+      "value": ""
+    },
+    {
+      "key": "csrf_cookie",
+      "value": ""
+    },
+    {
+      "key": "max_id_plus_1",
+      "value": ""
+    },
+    {
+      "key": "max_id_plus_100",
+      "value": ""
+    }
+  ],
+  "item": [
+    {
+      "name": "00. Chuẩn bị - lấy CSRF, đăng xuất, lấy dữ liệu sản phẩm",
+      "description": "Chạy đầu tiên. Lấy cookie csrftoken, đăng xuất phiên cũ và lấy id/giá sản phẩm từ /products/api/.",
+      "item": [
+        {
+          "name": "00.1 GET trang liên hệ (lấy cookie csrftoken)",
+          "protocolProfileBehavior": {
+            "followRedirects": false
+          },
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{base_url}}/contact/"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const html = pm.response.text();",
+                  "const ok = (c, m) => { if (!c) { throw new Error(m); } };",
+                  "const cv = (k) => pm.collectionVariables.get(k);",
+                  "const loc = () => pm.response.headers.get('Location') || '';",
+                  "const inCart = (id) => html.includes('/cart/remove/' + id + '/');",
+                  "const rows = (id) => html.split('/cart/remove/' + id + '/').length - 1;",
+                  "const qtyOf = (id) => { const m = html.match(new RegExp('/cart/decrease/' + id + '/\"[^>]*>[^<]*</a>\\\\s*<span class=\"qty-number\">(\\\\d+)</span>')); return m ? parseInt(m[1], 10) : null; };",
+                  "const total = () => { const m = html.match(/<div class=\"summary-total\">([^<]+)<\\/div>/); return m ? parseInt(m[1].replace(/[^\\d]/g, ''), 10) : null; };",
+                  "",
+                  "pm.test(\"PRE | Trang /contact/ mở được (200)\", function () {",
+                  "ok(pm.response.code === 200, 'Mong đợi HTTP 200, thực tế ' + pm.response.code);",
+                  "const mm = html.match(/name=[\"']csrfmiddlewaretoken[\"'][^>]*value=[\"']([^\"']+)[\"']/);",
+                  "if (mm) { pm.collectionVariables.set('csrf_html', mm[1]); }",
+                  "});",
+                  "",
+                  "pm.test(\"PRE | Có cookie csrftoken\", function () {",
+                  "ok(pm.cookies.has('csrftoken'), 'Chưa có cookie csrftoken; kiểm tra server đang chạy ở base_url');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "[setup] Đăng xuất phiên cũ",
+          "protocolProfileBehavior": {
+            "followRedirects": false
+          },
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": "{{base_url}}/accounts/logout/",
+            "body": {
+              "mode": "urlencoded",
+              "urlencoded": [
+                {
+                  "key": "csrfmiddlewaretoken",
+                  "value": "{{csrf_token_val}}",
+                  "type": "text"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const html = pm.response.text();",
+                  "const ok = (c, m) => { if (!c) { throw new Error(m); } };",
+                  "const cv = (k) => pm.collectionVariables.get(k);",
+                  "const loc = () => pm.response.headers.get('Location') || '';",
+                  "const inCart = (id) => html.includes('/cart/remove/' + id + '/');",
+                  "const rows = (id) => html.split('/cart/remove/' + id + '/').length - 1;",
+                  "const qtyOf = (id) => { const m = html.match(new RegExp('/cart/decrease/' + id + '/\"[^>]*>[^<]*</a>\\\\s*<span class=\"qty-number\">(\\\\d+)</span>')); return m ? parseInt(m[1], 10) : null; };",
+                  "const total = () => { const m = html.match(/<div class=\"summary-total\">([^<]+)<\\/div>/); return m ? parseInt(m[1].replace(/[^\\d]/g, ''), 10) : null; };",
+                  "",
+                  "pm.test(\"SETUP | Đăng xuất phiên cũ\", function () {",
+                  "ok(pm.response.code === 302 || pm.response.code === 200, 'HTTP ' + pm.response.code);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "00.3 GET danh sách sản phẩm (API)",
+          "protocolProfileBehavior": {
+            "followRedirects": false
+          },
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{base_url}}/products/api/"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const html = pm.response.text();",
+                  "const ok = (c, m) => { if (!c) { throw new Error(m); } };",
+                  "const cv = (k) => pm.collectionVariables.get(k);",
+                  "const loc = () => pm.response.headers.get('Location') || '';",
+                  "const inCart = (id) => html.includes('/cart/remove/' + id + '/');",
+                  "const rows = (id) => html.split('/cart/remove/' + id + '/').length - 1;",
+                  "const qtyOf = (id) => { const m = html.match(new RegExp('/cart/decrease/' + id + '/\"[^>]*>[^<]*</a>\\\\s*<span class=\"qty-number\">(\\\\d+)</span>')); return m ? parseInt(m[1], 10) : null; };",
+                  "const total = () => { const m = html.match(/<div class=\"summary-total\">([^<]+)<\\/div>/); return m ? parseInt(m[1].replace(/[^\\d]/g, ''), 10) : null; };",
+                  "",
+                  "pm.test(\"PRE | API sản phẩm trả 200 và có ít nhất 2 sản phẩm (chạy seed_test_data.py nếu fail)\", function () {",
+                  "ok(pm.response.code === 200, 'Mong đợi HTTP 200, thực tế ' + pm.response.code);",
+                  "const list = pm.response.json().slice().sort((a, b) => a.id - b.id);",
+                  "ok(list.length >= 2, 'Cần ít nhất 2 sản phẩm, đang có ' + list.length);",
+                  "const setcv = (k, v) => pm.collectionVariables.set(k, String(v));",
+                  "setcv('min_id', list[0].id);",
+                  "setcv('max_id', list[list.length - 1].id);",
+                  "setcv('product_a', list[0].id);",
+                  "setcv('price_a', parseInt(list[0].price, 10));",
+                  "setcv('product_b', list[1].id);",
+                  "setcv('price_b', parseInt(list[1].price, 10));",
+                  "setcv('max_id_plus_1', list[list.length - 1].id + 1);",
+                  "setcv('max_id_plus_100', list[list.length - 1].id + 100);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "01. Phân hoạch tương đương (TC-CART-EP-01 → 15)",
+      "description": "Mỗi lớp tương đương (V = hợp lệ, I = không hợp lệ) có 1 test case đại diện.",
+      "item": [
+        {
+          "name": "TC-CART-EP-01 [I1] Khách thêm SP - chuyển login kèm next",
+          "protocolProfileBehavior": {
+            "followRedirects": false
+          },
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{base_url}}/cart/add/{{product_a}}/"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const html = pm.response.text();",
+                  "const ok = (c, m) => { if (!c) { throw new Error(m); } };",
+                  "const cv = (k) => pm.collectionVariables.get(k);",
+                  "const loc = () => pm.response.headers.get('Location') || '';",
+                  "const inCart = (id) => html.includes('/cart/remove/' + id + '/');",
+                  "const rows = (id) => html.split('/cart/remove/' + id + '/').length - 1;",
+                  "const qtyOf = (id) => { const m = html.match(new RegExp('/cart/decrease/' + id + '/\"[^>]*>[^<]*</a>\\\\s*<span class=\"qty-number\">(\\\\d+)</span>')); return m ? parseInt(m[1], 10) : null; };",
+                  "const total = () => { const m = html.match(/<div class=\"summary-total\">([^<]+)<\\/div>/); return m ? parseInt(m[1].replace(/[^\\d]/g, ''), 10) : null; };",
+                  "",
+                  "pm.test(\"TC-CART-EP-01 | Khách chưa đăng nhập thêm SP → 302 về login kèm next=/cart/add/{id}/\", function () {",
+                  "ok(pm.response.code === 302, 'Mong đợi HTTP 302, thực tế ' + pm.response.code);",
+                  "const exp = '/accounts/login/?next=/cart/add/' + cv('product_a') + '/';",
+                  "ok(loc() === exp, 'Location mong đợi ' + exp + ', thực tế ' + loc());",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "TC-CART-EP-02 [I1] Khách xem giỏ - chuyển login",
+          "protocolProfileBehavior": {
+            "followRedirects": false
+          },
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{base_url}}/cart/"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const html = pm.response.text();",
+                  "const ok = (c, m) => { if (!c) { throw new Error(m); } };",
+                  "const cv = (k) => pm.collectionVariables.get(k);",
+                  "const loc = () => pm.response.headers.get('Location') || '';",
+                  "const inCart = (id) => html.includes('/cart/remove/' + id + '/');",
+                  "const rows = (id) => html.split('/cart/remove/' + id + '/').length - 1;",
+                  "const qtyOf = (id) => { const m = html.match(new RegExp('/cart/decrease/' + id + '/\"[^>]*>[^<]*</a>\\\\s*<span class=\"qty-number\">(\\\\d+)</span>')); return m ? parseInt(m[1], 10) : null; };",
+                  "const total = () => { const m = html.match(/<div class=\"summary-total\">([^<]+)<\\/div>/); return m ? parseInt(m[1].replace(/[^\\d]/g, ''), 10) : null; };",
+                  "",
+                  "pm.test(\"TC-CART-EP-02 | Khách chưa đăng nhập xem giỏ → 302 về login\", function () {",
+                  "ok(pm.response.code === 302, 'Mong đợi HTTP 302, thực tế ' + pm.response.code);",
+                  "ok(loc().includes('/accounts/login/'), 'Không chuyển về trang đăng nhập: ' + loc());",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "TC-CART-EP-03 [I1] Khách tăng số lượng - chuyển login",
+          "protocolProfileBehavior": {
+            "followRedirects": false
+          },
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{base_url}}/cart/increase/{{product_a}}/"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const html = pm.response.text();",
+                  "const ok = (c, m) => { if (!c) { throw new Error(m); } };",
+                  "const cv = (k) => pm.collectionVariables.get(k);",
+                  "const loc = () => pm.response.headers.get('Location') || '';",
+                  "const inCart = (id) => html.includes('/cart/remove/' + id + '/');",
+                  "const rows = (id) => html.split('/cart/remove/' + id + '/').length - 1;",
+                  "const qtyOf = (id) => { const m = html.match(new RegExp('/cart/decrease/' + id + '/\"[^>]*>[^<]*</a>\\\\s*<span class=\"qty-number\">(\\\\d+)</span>')); return m ? parseInt(m[1], 10) : null; };",
+                  "const total = () => { const m = html.match(/<div class=\"summary-total\">([^<]+)<\\/div>/); return m ? parseInt(m[1].replace(/[^\\d]/g, ''), 10) : null; };",
+                  "",
+                  "pm.test(\"TC-CART-EP-03 | Khách chưa đăng nhập tăng số lượng → 302 về login\", function () {",
+                  "ok(pm.response.code === 302, 'Mong đợi HTTP 302, thực tế ' + pm.response.code);",
+                  "ok(loc().includes('/accounts/login/'), 'Không chuyển về trang đăng nhập: ' + loc());",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "[setup] Đăng nhập user1",
+          "protocolProfileBehavior": {
+            "followRedirects": false
+          },
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": "{{base_url}}/accounts/login/",
+            "body": {
+              "mode": "urlencoded",
+              "urlencoded": [
+                {
+                  "key": "username",
+                  "value": "{{user_username}}",
+                  "type": "text"
+                },
+                {
+                  "key": "password",
+                  "value": "{{user_password}}",
+                  "type": "text"
+                },
+                {
+                  "key": "csrfmiddlewaretoken",
+                  "value": "{{csrf_token_val}}",
+                  "type": "text"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const html = pm.response.text();",
+                  "const ok = (c, m) => { if (!c) { throw new Error(m); } };",
+                  "const cv = (k) => pm.collectionVariables.get(k);",
+                  "const loc = () => pm.response.headers.get('Location') || '';",
+                  "const inCart = (id) => html.includes('/cart/remove/' + id + '/');",
+                  "const rows = (id) => html.split('/cart/remove/' + id + '/').length - 1;",
+                  "const qtyOf = (id) => { const m = html.match(new RegExp('/cart/decrease/' + id + '/\"[^>]*>[^<]*</a>\\\\s*<span class=\"qty-number\">(\\\\d+)</span>')); return m ? parseInt(m[1], 10) : null; };",
+                  "const total = () => { const m = html.match(/<div class=\"summary-total\">([^<]+)<\\/div>/); return m ? parseInt(m[1].replace(/[^\\d]/g, ''), 10) : null; };",
+                  "",
+                  "pm.test(\"SETUP | Đăng nhập user1 thành công (302)\", function () {",
+                  "ok(pm.response.code === 302, 'Mong đợi HTTP 302, thực tế ' + pm.response.code); // sai mật khẩu thì kiểm tra user_username / user_password trong tab Variables",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "[setup] Dọn giỏ hàng user1",
+          "protocolProfileBehavior": {
+            "followRedirects": false
+          },
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{base_url}}/cart/"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const html = pm.response.text();",
+                  "const ok = (c, m) => { if (!c) { throw new Error(m); } };",
+                  "const cv = (k) => pm.collectionVariables.get(k);",
+                  "const loc = () => pm.response.headers.get('Location') || '';",
+                  "const inCart = (id) => html.includes('/cart/remove/' + id + '/');",
+                  "const rows = (id) => html.split('/cart/remove/' + id + '/').length - 1;",
+                  "const qtyOf = (id) => { const m = html.match(new RegExp('/cart/decrease/' + id + '/\"[^>]*>[^<]*</a>\\\\s*<span class=\"qty-number\">(\\\\d+)</span>')); return m ? parseInt(m[1], 10) : null; };",
+                  "const total = () => { const m = html.match(/<div class=\"summary-total\">([^<]+)<\\/div>/); return m ? parseInt(m[1].replace(/[^\\d]/g, ''), 10) : null; };",
+                  "",
+                  "pm.test(\"SETUP | Mở giỏ hàng user1 (200)\", function () {",
+                  "ok(pm.response.code === 200, 'Mong đợi HTTP 200, thực tế ' + pm.response.code);",
+                  "});",
+                  "",
+                  "// Xóa mọi sản phẩm đang có trong giỏ bằng pm.sendRequest",
+                  "const base = pm.variables.replaceIn('{{base_url}}');",
+                  "const ids = [...new Set(Array.from(html.matchAll(/\\/cart\\/remove\\/(\\d+)\\//g), (x) => x[1]))];",
+                  "ids.forEach((id) => pm.sendRequest(base + '/cart/remove/' + id + '/', () => {}));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "TC-CART-EP-14 [V8] Giỏ rỗng - hiện thông báo trống",
+          "protocolProfileBehavior": {
+            "followRedirects": false
+          },
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{base_url}}/cart/"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const html = pm.response.text();",
+                  "const ok = (c, m) => { if (!c) { throw new Error(m); } };",
+                  "const cv = (k) => pm.collectionVariables.get(k);",
+                  "const loc = () => pm.response.headers.get('Location') || '';",
+                  "const inCart = (id) => html.includes('/cart/remove/' + id + '/');",
+                  "const rows = (id) => html.split('/cart/remove/' + id + '/').length - 1;",
+                  "const qtyOf = (id) => { const m = html.match(new RegExp('/cart/decrease/' + id + '/\"[^>]*>[^<]*</a>\\\\s*<span class=\"qty-number\">(\\\\d+)</span>')); return m ? parseInt(m[1], 10) : null; };",
+                  "const total = () => { const m = html.match(/<div class=\"summary-total\">([^<]+)<\\/div>/); return m ? parseInt(m[1].replace(/[^\\d]/g, ''), 10) : null; };",
+                  "",
+                  "pm.test(\"TC-CART-EP-14 | Giỏ 0 SP → 200, có \\\"Giỏ hàng của bạn đang trống\\\", không có nút đặt hàng\", function () {",
+                  "ok(pm.response.code === 200, 'Mong đợi HTTP 200, thực tế ' + pm.response.code);",
+                  "ok(html.includes('Giỏ hàng của bạn đang trống'), 'Không thấy thông báo giỏ trống');",
+                  "ok(!html.includes('/orders/checkout/'), 'Giỏ trống nhưng vẫn có nút đặt hàng');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "TC-CART-EP-04.1 [V1 V2 V3] Thêm SP A chưa có trong giỏ",
+          "protocolProfileBehavior": {
+            "followRedirects": false
+          },
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{base_url}}/cart/add/{{product_a}}/"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const html = pm.response.text();",
+                  "const ok = (c, m) => { if (!c) { throw new Error(m); } };",
+                  "const cv = (k) => pm.collectionVariables.get(k);",
+                  "const loc = () => pm.response.headers.get('Location') || '';",
+                  "const inCart = (id) => html.includes('/cart/remove/' + id + '/');",
+                  "const rows = (id) => html.split('/cart/remove/' + id + '/').length - 1;",
+                  "const qtyOf = (id) => { const m = html.match(new RegExp('/cart/decrease/' + id + '/\"[^>]*>[^<]*</a>\\\\s*<span class=\"qty-number\">(\\\\d+)</span>')); return m ? parseInt(m[1], 10) : null; };",
+                  "const total = () => { const m = html.match(/<div class=\"summary-total\">([^<]+)<\\/div>/); return m ? parseInt(m[1].replace(/[^\\d]/g, ''), 10) : null; };",
+                  "",
+                  "pm.test(\"TC-CART-EP-04 | Thêm SP hợp lệ → 302 về /cart/\", function () {",
+                  "ok(pm.response.code === 302, 'Mong đợi HTTP 302, thực tế ' + pm.response.code);",
+                  "const exp = '/cart/';",
+                  "ok(loc() === exp, 'Location mong đợi ' + exp + ', thực tế ' + loc());",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "TC-CART-EP-04.2 Kiểm tra A có quantity = 1",
+          "protocolProfileBehavior": {
+            "followRedirects": false
+          },
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{base_url}}/cart/"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const html = pm.response.text();",
+                  "const ok = (c, m) => { if (!c) { throw new Error(m); } };",
+                  "const cv = (k) => pm.collectionVariables.get(k);",
+                  "const loc = () => pm.response.headers.get('Location') || '';",
+                  "const inCart = (id) => html.includes('/cart/remove/' + id + '/');",
+                  "const rows = (id) => html.split('/cart/remove/' + id + '/').length - 1;",
+                  "const qtyOf = (id) => { const m = html.match(new RegExp('/cart/decrease/' + id + '/\"[^>]*>[^<]*</a>\\\\s*<span class=\"qty-number\">(\\\\d+)</span>')); return m ? parseInt(m[1], 10) : null; };",
+                  "const total = () => { const m = html.match(/<div class=\"summary-total\">([^<]+)<\\/div>/); return m ? parseInt(m[1].replace(/[^\\d]/g, ''), 10) : null; };",
+                  "",
+                  "pm.test(\"TC-CART-EP-04 | SP A được tạo mới với quantity = 1\", function () {",
+                  "ok(pm.response.code === 200, 'Mong đợi HTTP 200, thực tế ' + pm.response.code);",
+                  "const q = qtyOf(cv('product_a'));",
+                  "ok(q === 1, 'Số lượng mong đợi 1, thực tế ' + q);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "TC-CART-EP-05.1 [V4] Thêm lại SP A đã có trong giỏ",
+          "protocolProfileBehavior": {
+            "followRedirects": false
+          },
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{base_url}}/cart/add/{{product_a}}/"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const html = pm.response.text();",
+                  "const ok = (c, m) => { if (!c) { throw new Error(m); } };",
+                  "const cv = (k) => pm.collectionVariables.get(k);",
+                  "const loc = () => pm.response.headers.get('Location') || '';",
+                  "const inCart = (id) => html.includes('/cart/remove/' + id + '/');",
+                  "const rows = (id) => html.split('/cart/remove/' + id + '/').length - 1;",
+                  "const qtyOf = (id) => { const m = html.match(new RegExp('/cart/decrease/' + id + '/\"[^>]*>[^<]*</a>\\\\s*<span class=\"qty-number\">(\\\\d+)</span>')); return m ? parseInt(m[1], 10) : null; };",
+                  "const total = () => { const m = html.match(/<div class=\"summary-total\">([^<]+)<\\/div>/); return m ? parseInt(m[1].replace(/[^\\d]/g, ''), 10) : null; };",
+                  "",
+                  "pm.test(\"TC-CART-EP-05 | Thêm SP đã có → 302 về /cart/\", function () {",
+                  "ok(pm.response.code === 302, 'Mong đợi HTTP 302, thực tế ' + pm.response.code);",
+                  "const exp = '/cart/';",
+                  "ok(loc() === exp, 'Location mong đợi ' + exp + ', thực tế ' + loc());",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "TC-CART-EP-05.2 Kiểm tra A quantity = 2, không tạo dòng mới",
+          "protocolProfileBehavior": {
+            "followRedirects": false
+          },
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{base_url}}/cart/"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const html = pm.response.text();",
+                  "const ok = (c, m) => { if (!c) { throw new Error(m); } };",
+                  "const cv = (k) => pm.collectionVariables.get(k);",
+                  "const loc = () => pm.response.headers.get('Location') || '';",
+                  "const inCart = (id) => html.includes('/cart/remove/' + id + '/');",
+                  "const rows = (id) => html.split('/cart/remove/' + id + '/').length - 1;",
+                  "const qtyOf = (id) => { const m = html.match(new RegExp('/cart/decrease/' + id + '/\"[^>]*>[^<]*</a>\\\\s*<span class=\"qty-number\">(\\\\d+)</span>')); return m ? parseInt(m[1], 10) : null; };",
+                  "const total = () => { const m = html.match(/<div class=\"summary-total\">([^<]+)<\\/div>/); return m ? parseInt(m[1].replace(/[^\\d]/g, ''), 10) : null; };",
+                  "",
+                  "pm.test(\"TC-CART-EP-05 | A có quantity = 2 và chỉ 1 dòng trong giỏ\", function () {",
+                  "ok(pm.response.code === 200, 'Mong đợi HTTP 200, thực tế ' + pm.response.code);",
+                  "const q = qtyOf(cv('product_a'));",
+                  "ok(q === 2, 'Số lượng mong đợi 2, thực tế ' + q);",
+                  "ok(rows(cv('product_a')) === 1, 'Có ' + rows(cv('product_a')) + ' dòng cho SP A');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "TC-CART-EP-09.1 [V5] Tăng SP A đang có trong giỏ",
+          "protocolProfileBehavior": {
+            "followRedirects": false
+          },
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{base_url}}/cart/increase/{{product_a}}/"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const html = pm.response.text();",
+                  "const ok = (c, m) => { if (!c) { throw new Error(m); } };",
+                  "const cv = (k) => pm.collectionVariables.get(k);",
+                  "const loc = () => pm.response.headers.get('Location') || '';",
+                  "const inCart = (id) => html.includes('/cart/remove/' + id + '/');",
+                  "const rows = (id) => html.split('/cart/remove/' + id + '/').length - 1;",
+                  "const qtyOf = (id) => { const m = html.match(new RegExp('/cart/decrease/' + id + '/\"[^>]*>[^<]*</a>\\\\s*<span class=\"qty-number\">(\\\\d+)</span>')); return m ? parseInt(m[1], 10) : null; };",
+                  "const total = () => { const m = html.match(/<div class=\"summary-total\">([^<]+)<\\/div>/); return m ? parseInt(m[1].replace(/[^\\d]/g, ''), 10) : null; };",
+                  "",
+                  "pm.test(\"TC-CART-EP-09 | Tăng SP có trong giỏ → 302 về /cart/\", function () {",
+                  "ok(pm.response.code === 302, 'Mong đợi HTTP 302, thực tế ' + pm.response.code);",
+                  "const exp = '/cart/';",
+                  "ok(loc() === exp, 'Location mong đợi ' + exp + ', thực tế ' + loc());",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "TC-CART-EP-09.2 Kiểm tra A quantity = 3",
+          "protocolProfileBehavior": {
+            "followRedirects": false
+          },
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{base_url}}/cart/"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const html = pm.response.text();",
+                  "const ok = (c, m) => { if (!c) { throw new Error(m); } };",
+                  "const cv = (k) => pm.collectionVariables.get(k);",
+                  "const loc = () => pm.response.headers.get('Location') || '';",
+                  "const inCart = (id) => html.includes('/cart/remove/' + id + '/');",
+                  "const rows = (id) => html.split('/cart/remove/' + id + '/').length - 1;",
+                  "const qtyOf = (id) => { const m = html.match(new RegExp('/cart/decrease/' + id + '/\"[^>]*>[^<]*</a>\\\\s*<span class=\"qty-number\">(\\\\d+)</span>')); return m ? parseInt(m[1], 10) : null; };",
+                  "const total = () => { const m = html.match(/<div class=\"summary-total\">([^<]+)<\\/div>/); return m ? parseInt(m[1].replace(/[^\\d]/g, ''), 10) : null; };",
+                  "",
+                  "pm.test(\"TC-CART-EP-09 | A có quantity = 3\", function () {",
+                  "ok(pm.response.code === 200, 'Mong đợi HTTP 200, thực tế ' + pm.response.code);",
+                  "const q = qtyOf(cv('product_a'));",
+                  "ok(q === 3, 'Số lượng mong đợi 3, thực tế ' + q);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "[setup] Tăng A lên 4",
+          "protocolProfileBehavior": {
+            "followRedirects": false
+          },
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{base_url}}/cart/increase/{{product_a}}/"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const html = pm.response.text();",
+                  "const ok = (c, m) => { if (!c) { throw new Error(m); } };",
+                  "const cv = (k) => pm.collectionVariables.get(k);",
+                  "const loc = () => pm.response.headers.get('Location') || '';",
+                  "const inCart = (id) => html.includes('/cart/remove/' + id + '/');",
+                  "const rows = (id) => html.split('/cart/remove/' + id + '/').length - 1;",
+                  "const qtyOf = (id) => { const m = html.match(new RegExp('/cart/decrease/' + id + '/\"[^>]*>[^<]*</a>\\\\s*<span class=\"qty-number\">(\\\\d+)</span>')); return m ? parseInt(m[1], 10) : null; };",
+                  "const total = () => { const m = html.match(/<div class=\"summary-total\">([^<]+)<\\/div>/); return m ? parseInt(m[1].replace(/[^\\d]/g, ''), 10) : null; };",
+                  "",
+                  "pm.test(\"SETUP | Tăng A lên 4\", function () {",
+                  "ok(pm.response.code === 302 || pm.response.code === 200, 'HTTP ' + pm.response.code);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "[setup] Tăng A lên 5",
+          "protocolProfileBehavior": {
+            "followRedirects": false
+          },
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{base_url}}/cart/increase/{{product_a}}/"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const html = pm.response.text();",
+                  "const ok = (c, m) => { if (!c) { throw new Error(m); } };",
+                  "const cv = (k) => pm.collectionVariables.get(k);",
+                  "const loc = () => pm.response.headers.get('Location') || '';",
+                  "const inCart = (id) => html.includes('/cart/remove/' + id + '/');",
+                  "const rows = (id) => html.split('/cart/remove/' + id + '/').length - 1;",
+                  "const qtyOf = (id) => { const m = html.match(new RegExp('/cart/decrease/' + id + '/\"[^>]*>[^<]*</a>\\\\s*<span class=\"qty-number\">(\\\\d+)</span>')); return m ? parseInt(m[1], 10) : null; };",
+                  "const total = () => { const m = html.match(/<div class=\"summary-total\">([^<]+)<\\/div>/); return m ? parseInt(m[1].replace(/[^\\d]/g, ''), 10) : null; };",
+                  "",
+                  "pm.test(\"SETUP | Tăng A lên 5\", function () {",
+                  "ok(pm.response.code === 302 || pm.response.code === 200, 'HTTP ' + pm.response.code);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "TC-CART-EP-12.1 [V6] Xóa SP A (quantity = 5)",
+          "protocolProfileBehavior": {
+            "followRedirects": false
+          },
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{base_url}}/cart/remove/{{product_a}}/"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const html = pm.response.text();",
+                  "const ok = (c, m) => { if (!c) { throw new Error(m); } };",
+                  "const cv = (k) => pm.collectionVariables.get(k);",
+                  "const loc = () => pm.response.headers.get('Location') || '';",
+                  "const inCart = (id) => html.includes('/cart/remove/' + id + '/');",
+                  "const rows = (id) => html.split('/cart/remove/' + id + '/').length - 1;",
+                  "const qtyOf = (id) => { const m = html.match(new RegExp('/cart/decrease/' + id + '/\"[^>]*>[^<]*</a>\\\\s*<span class=\"qty-number\">(\\\\d+)</span>')); return m ? parseInt(m[1], 10) : null; };",
+                  "const total = () => { const m = html.match(/<div class=\"summary-total\">([^<]+)<\\/div>/); return m ? parseInt(m[1].replace(/[^\\d]/g, ''), 10) : null; };",
+                  "",
+                  "pm.test(\"TC-CART-EP-12 | Xóa SP có trong giỏ → 302 về /cart/\", function () {",
+                  "ok(pm.response.code === 302, 'Mong đợi HTTP 302, thực tế ' + pm.response.code);",
+                  "const exp = '/cart/';",
+                  "ok(loc() === exp, 'Location mong đợi ' + exp + ', thực tế ' + loc());",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "TC-CART-EP-12.2 Kiểm tra A bị xóa hẳn",
+          "protocolProfileBehavior": {
+            "followRedirects": false
+          },
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{base_url}}/cart/"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const html = pm.response.text();",
+                  "const ok = (c, m) => { if (!c) { throw new Error(m); } };",
+                  "const cv = (k) => pm.collectionVariables.get(k);",
+                  "const loc = () => pm.response.headers.get('Location') || '';",
+                  "const inCart = (id) => html.includes('/cart/remove/' + id + '/');",
+                  "const rows = (id) => html.split('/cart/remove/' + id + '/').length - 1;",
+                  "const qtyOf = (id) => { const m = html.match(new RegExp('/cart/decrease/' + id + '/\"[^>]*>[^<]*</a>\\\\s*<span class=\"qty-number\">(\\\\d+)</span>')); return m ? parseInt(m[1], 10) : null; };",
+                  "const total = () => { const m = html.match(/<div class=\"summary-total\">([^<]+)<\\/div>/); return m ? parseInt(m[1].replace(/[^\\d]/g, ''), 10) : null; };",
+                  "",
+                  "pm.test(\"TC-CART-EP-12 | A bị xóa hẳn, không phụ thuộc số lượng\", function () {",
+                  "ok(pm.response.code === 200, 'Mong đợi HTTP 200, thực tế ' + pm.response.code);",
+                  "ok(!inCart(cv('product_a')), 'Sản phẩm ' + cv('product_a') + ' vẫn còn trong giỏ');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "TC-CART-EP-10 [I5] Tăng SP A không có trong giỏ",
+          "protocolProfileBehavior": {
+            "followRedirects": false
+          },
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{base_url}}/cart/increase/{{product_a}}/"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const html = pm.response.text();",
+                  "const ok = (c, m) => { if (!c) { throw new Error(m); } };",
+                  "const cv = (k) => pm.collectionVariables.get(k);",
+                  "const loc = () => pm.response.headers.get('Location') || '';",
+                  "const inCart = (id) => html.includes('/cart/remove/' + id + '/');",
+                  "const rows = (id) => html.split('/cart/remove/' + id + '/').length - 1;",
+                  "const qtyOf = (id) => { const m = html.match(new RegExp('/cart/decrease/' + id + '/\"[^>]*>[^<]*</a>\\\\s*<span class=\"qty-number\">(\\\\d+)</span>')); return m ? parseInt(m[1], 10) : null; };",
+                  "const total = () => { const m = html.match(/<div class=\"summary-total\">([^<]+)<\\/div>/); return m ? parseInt(m[1].replace(/[^\\d]/g, ''), 10) : null; };",
+                  "",
+                  "pm.test(\"TC-CART-EP-10 | Tăng SP không có trong giỏ → 404\", function () {",
+                  "ok(pm.response.code === 404, 'Mong đợi HTTP 404, thực tế ' + pm.response.code);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "TC-CART-EP-11 [I5] Giảm SP A không có trong giỏ",
+          "protocolProfileBehavior": {
+            "followRedirects": false
+          },
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{base_url}}/cart/decrease/{{product_a}}/"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const html = pm.response.text();",
+                  "const ok = (c, m) => { if (!c) { throw new Error(m); } };",
+                  "const cv = (k) => pm.collectionVariables.get(k);",
+                  "const loc = () => pm.response.headers.get('Location') || '';",
+                  "const inCart = (id) => html.includes('/cart/remove/' + id + '/');",
+                  "const rows = (id) => html.split('/cart/remove/' + id + '/').length - 1;",
+                  "const qtyOf = (id) => { const m = html.match(new RegExp('/cart/decrease/' + id + '/\"[^>]*>[^<]*</a>\\\\s*<span class=\"qty-number\">(\\\\d+)</span>')); return m ? parseInt(m[1], 10) : null; };",
+                  "const total = () => { const m = html.match(/<div class=\"summary-total\">([^<]+)<\\/div>/); return m ? parseInt(m[1].replace(/[^\\d]/g, ''), 10) : null; };",
+                  "",
+                  "pm.test(\"TC-CART-EP-11 | Giảm SP không có trong giỏ → 404\", function () {",
+                  "ok(pm.response.code === 404, 'Mong đợi HTTP 404, thực tế ' + pm.response.code);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "TC-CART-EP-13 [V7] Xóa SP A không có trong giỏ",
+          "protocolProfileBehavior": {
+            "followRedirects": false
+          },
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{base_url}}/cart/remove/{{product_a}}/"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const html = pm.response.text();",
+                  "const ok = (c, m) => { if (!c) { throw new Error(m); } };",
+                  "const cv = (k) => pm.collectionVariables.get(k);",
+                  "const loc = () => pm.response.headers.get('Location') || '';",
+                  "const inCart = (id) => html.includes('/cart/remove/' + id + '/');",
+                  "const rows = (id) => html.split('/cart/remove/' + id + '/').length - 1;",
+                  "const qtyOf = (id) => { const m = html.match(new RegExp('/cart/decrease/' + id + '/\"[^>]*>[^<]*</a>\\\\s*<span class=\"qty-number\">(\\\\d+)</span>')); return m ? parseInt(m[1], 10) : null; };",
+                  "const total = () => { const m = html.match(/<div class=\"summary-total\">([^<]+)<\\/div>/); return m ? parseInt(m[1].replace(/[^\\d]/g, ''), 10) : null; };",
+                  "",
+                  "pm.test(\"TC-CART-EP-13 | Xóa SP không có trong giỏ → 302 về /cart/, không lỗi\", function () {",
+                  "ok(pm.response.code === 302, 'Mong đợi HTTP 302, thực tế ' + pm.response.code);",
+                  "const exp = '/cart/';",
+                  "ok(loc() === exp, 'Location mong đợi ' + exp + ', thực tế ' + loc());",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "TC-CART-EP-06 [I2] Thêm SP không tồn tại (max_id + 100)",
+          "protocolProfileBehavior": {
+            "followRedirects": false
+          },
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{base_url}}/cart/add/{{max_id_plus_100}}/"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const html = pm.response.text();",
+                  "const ok = (c, m) => { if (!c) { throw new Error(m); } };",
+                  "const cv = (k) => pm.collectionVariables.get(k);",
+                  "const loc = () => pm.response.headers.get('Location') || '';",
+                  "const inCart = (id) => html.includes('/cart/remove/' + id + '/');",
+                  "const rows = (id) => html.split('/cart/remove/' + id + '/').length - 1;",
+                  "const qtyOf = (id) => { const m = html.match(new RegExp('/cart/decrease/' + id + '/\"[^>]*>[^<]*</a>\\\\s*<span class=\"qty-number\">(\\\\d+)</span>')); return m ? parseInt(m[1], 10) : null; };",
+                  "const total = () => { const m = html.match(/<div class=\"summary-total\">([^<]+)<\\/div>/); return m ? parseInt(m[1].replace(/[^\\d]/g, ''), 10) : null; };",
+                  "",
+                  "pm.test(\"TC-CART-EP-06 | product_id nguyên dương không tồn tại → 404\", function () {",
+                  "ok(pm.response.code === 404, 'Mong đợi HTTP 404, thực tế ' + pm.response.code);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "TC-CART-EP-07 [I3] Thêm SP id âm (-1)",
+          "protocolProfileBehavior": {
+            "followRedirects": false
+          },
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{base_url}}/cart/add/-1/"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const html = pm.response.text();",
+                  "const ok = (c, m) => { if (!c) { throw new Error(m); } };",
+                  "const cv = (k) => pm.collectionVariables.get(k);",
+                  "const loc = () => pm.response.headers.get('Location') || '';",
+                  "const inCart = (id) => html.includes('/cart/remove/' + id + '/');",
+                  "const rows = (id) => html.split('/cart/remove/' + id + '/').length - 1;",
+                  "const qtyOf = (id) => { const m = html.match(new RegExp('/cart/decrease/' + id + '/\"[^>]*>[^<]*</a>\\\\s*<span class=\"qty-number\">(\\\\d+)</span>')); return m ? parseInt(m[1], 10) : null; };",
+                  "const total = () => { const m = html.match(/<div class=\"summary-total\">([^<]+)<\\/div>/); return m ? parseInt(m[1].replace(/[^\\d]/g, ''), 10) : null; };",
+                  "",
+                  "pm.test(\"TC-CART-EP-07 | product_id = -1 → 404\", function () {",
+                  "ok(pm.response.code === 404, 'Mong đợi HTTP 404, thực tế ' + pm.response.code);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "TC-CART-EP-08 [I4] Thêm SP id không phải số (abc)",
+          "protocolProfileBehavior": {
+            "followRedirects": false
+          },
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{base_url}}/cart/add/abc/"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const html = pm.response.text();",
+                  "const ok = (c, m) => { if (!c) { throw new Error(m); } };",
+                  "const cv = (k) => pm.collectionVariables.get(k);",
+                  "const loc = () => pm.response.headers.get('Location') || '';",
+                  "const inCart = (id) => html.includes('/cart/remove/' + id + '/');",
+                  "const rows = (id) => html.split('/cart/remove/' + id + '/').length - 1;",
+                  "const qtyOf = (id) => { const m = html.match(new RegExp('/cart/decrease/' + id + '/\"[^>]*>[^<]*</a>\\\\s*<span class=\"qty-number\">(\\\\d+)</span>')); return m ? parseInt(m[1], 10) : null; };",
+                  "const total = () => { const m = html.match(/<div class=\"summary-total\">([^<]+)<\\/div>/); return m ? parseInt(m[1].replace(/[^\\d]/g, ''), 10) : null; };",
+                  "",
+                  "pm.test(\"TC-CART-EP-08 | product_id = abc → 404\", function () {",
+                  "ok(pm.response.code === 404, 'Mong đợi HTTP 404, thực tế ' + pm.response.code);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "[setup] user1 thêm SP A",
+          "protocolProfileBehavior": {
+            "followRedirects": false
+          },
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{base_url}}/cart/add/{{product_a}}/"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const html = pm.response.text();",
+                  "const ok = (c, m) => { if (!c) { throw new Error(m); } };",
+                  "const cv = (k) => pm.collectionVariables.get(k);",
+                  "const loc = () => pm.response.headers.get('Location') || '';",
+                  "const inCart = (id) => html.includes('/cart/remove/' + id + '/');",
+                  "const rows = (id) => html.split('/cart/remove/' + id + '/').length - 1;",
+                  "const qtyOf = (id) => { const m = html.match(new RegExp('/cart/decrease/' + id + '/\"[^>]*>[^<]*</a>\\\\s*<span class=\"qty-number\">(\\\\d+)</span>')); return m ? parseInt(m[1], 10) : null; };",
+                  "const total = () => { const m = html.match(/<div class=\"summary-total\">([^<]+)<\\/div>/); return m ? parseInt(m[1].replace(/[^\\d]/g, ''), 10) : null; };",
+                  "",
+                  "pm.test(\"SETUP | user1 thêm SP A\", function () {",
+                  "ok(pm.response.code === 302 || pm.response.code === 200, 'HTTP ' + pm.response.code);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "[setup] Đăng xuất user1",
+          "protocolProfileBehavior": {
+            "followRedirects": false
+          },
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": "{{base_url}}/accounts/logout/",
+            "body": {
+              "mode": "urlencoded",
+              "urlencoded": [
+                {
+                  "key": "csrfmiddlewaretoken",
+                  "value": "{{csrf_token_val}}",
+                  "type": "text"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const html = pm.response.text();",
+                  "const ok = (c, m) => { if (!c) { throw new Error(m); } };",
+                  "const cv = (k) => pm.collectionVariables.get(k);",
+                  "const loc = () => pm.response.headers.get('Location') || '';",
+                  "const inCart = (id) => html.includes('/cart/remove/' + id + '/');",
+                  "const rows = (id) => html.split('/cart/remove/' + id + '/').length - 1;",
+                  "const qtyOf = (id) => { const m = html.match(new RegExp('/cart/decrease/' + id + '/\"[^>]*>[^<]*</a>\\\\s*<span class=\"qty-number\">(\\\\d+)</span>')); return m ? parseInt(m[1], 10) : null; };",
+                  "const total = () => { const m = html.match(/<div class=\"summary-total\">([^<]+)<\\/div>/); return m ? parseInt(m[1].replace(/[^\\d]/g, ''), 10) : null; };",
+                  "",
+                  "pm.test(\"SETUP | Đăng xuất user1\", function () {",
+                  "ok(pm.response.code === 302 || pm.response.code === 200, 'HTTP ' + pm.response.code);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "[setup] Đăng nhập user2",
+          "protocolProfileBehavior": {
+            "followRedirects": false
+          },
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": "{{base_url}}/accounts/login/",
+            "body": {
+              "mode": "urlencoded",
+              "urlencoded": [
+                {
+                  "key": "username",
+                  "value": "{{user2_username}}",
+                  "type": "text"
+                },
+                {
+                  "key": "password",
+                  "value": "{{user2_password}}",
+                  "type": "text"
+                },
+                {
+                  "key": "csrfmiddlewaretoken",
+                  "value": "{{csrf_token_val}}",
+                  "type": "text"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const html = pm.response.text();",
+                  "const ok = (c, m) => { if (!c) { throw new Error(m); } };",
+                  "const cv = (k) => pm.collectionVariables.get(k);",
+                  "const loc = () => pm.response.headers.get('Location') || '';",
+                  "const inCart = (id) => html.includes('/cart/remove/' + id + '/');",
+                  "const rows = (id) => html.split('/cart/remove/' + id + '/').length - 1;",
+                  "const qtyOf = (id) => { const m = html.match(new RegExp('/cart/decrease/' + id + '/\"[^>]*>[^<]*</a>\\\\s*<span class=\"qty-number\">(\\\\d+)</span>')); return m ? parseInt(m[1], 10) : null; };",
+                  "const total = () => { const m = html.match(/<div class=\"summary-total\">([^<]+)<\\/div>/); return m ? parseInt(m[1].replace(/[^\\d]/g, ''), 10) : null; };",
+                  "",
+                  "pm.test(\"SETUP | Đăng nhập user2 thành công (302)\", function () {",
+                  "ok(pm.response.code === 302, 'Mong đợi HTTP 302, thực tế ' + pm.response.code); // sai mật khẩu thì kiểm tra user2_username / user2_password trong tab Variables",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "[setup] Dọn giỏ hàng user2",
+          "protocolProfileBehavior": {
+            "followRedirects": false
+          },
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{base_url}}/cart/"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const html = pm.response.text();",
+                  "const ok = (c, m) => { if (!c) { throw new Error(m); } };",
+                  "const cv = (k) => pm.collectionVariables.get(k);",
+                  "const loc = () => pm.response.headers.get('Location') || '';",
+                  "const inCart = (id) => html.includes('/cart/remove/' + id + '/');",
+                  "const rows = (id) => html.split('/cart/remove/' + id + '/').length - 1;",
+                  "const qtyOf = (id) => { const m = html.match(new RegExp('/cart/decrease/' + id + '/\"[^>]*>[^<]*</a>\\\\s*<span class=\"qty-number\">(\\\\d+)</span>')); return m ? parseInt(m[1], 10) : null; };",
+                  "const total = () => { const m = html.match(/<div class=\"summary-total\">([^<]+)<\\/div>/); return m ? parseInt(m[1].replace(/[^\\d]/g, ''), 10) : null; };",
+                  "",
+                  "pm.test(\"SETUP | Mở giỏ hàng user2 (200)\", function () {",
+                  "ok(pm.response.code === 200, 'Mong đợi HTTP 200, thực tế ' + pm.response.code);",
+                  "});",
+                  "",
+                  "// Xóa mọi sản phẩm đang có trong giỏ bằng pm.sendRequest",
+                  "const base = pm.variables.replaceIn('{{base_url}}');",
+                  "const ids = [...new Set(Array.from(html.matchAll(/\\/cart\\/remove\\/(\\d+)\\//g), (x) => x[1]))];",
+                  "ids.forEach((id) => pm.sendRequest(base + '/cart/remove/' + id + '/', () => {}));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "TC-CART-EP-15.1 [I6] user2 không thấy SP A của user1",
+          "protocolProfileBehavior": {
+            "followRedirects": false
+          },
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{base_url}}/cart/"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const html = pm.response.text();",
+                  "const ok = (c, m) => { if (!c) { throw new Error(m); } };",
+                  "const cv = (k) => pm.collectionVariables.get(k);",
+                  "const loc = () => pm.response.headers.get('Location') || '';",
+                  "const inCart = (id) => html.includes('/cart/remove/' + id + '/');",
+                  "const rows = (id) => html.split('/cart/remove/' + id + '/').length - 1;",
+                  "const qtyOf = (id) => { const m = html.match(new RegExp('/cart/decrease/' + id + '/\"[^>]*>[^<]*</a>\\\\s*<span class=\"qty-number\">(\\\\d+)</span>')); return m ? parseInt(m[1], 10) : null; };",
+                  "const total = () => { const m = html.match(/<div class=\"summary-total\">([^<]+)<\\/div>/); return m ? parseInt(m[1].replace(/[^\\d]/g, ''), 10) : null; };",
+                  "",
+                  "pm.test(\"TC-CART-EP-15 | Giỏ user2 không chứa SP A của user1\", function () {",
+                  "ok(pm.response.code === 200, 'Mong đợi HTTP 200, thực tế ' + pm.response.code);",
+                  "ok(!inCart(cv('product_a')), 'Sản phẩm ' + cv('product_a') + ' vẫn còn trong giỏ');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "TC-CART-EP-15.2 [I6] user2 tăng SP A chỉ có trong giỏ user1",
+          "protocolProfileBehavior": {
+            "followRedirects": false
+          },
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{base_url}}/cart/increase/{{product_a}}/"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const html = pm.response.text();",
+                  "const ok = (c, m) => { if (!c) { throw new Error(m); } };",
+                  "const cv = (k) => pm.collectionVariables.get(k);",
+                  "const loc = () => pm.response.headers.get('Location') || '';",
+                  "const inCart = (id) => html.includes('/cart/remove/' + id + '/');",
+                  "const rows = (id) => html.split('/cart/remove/' + id + '/').length - 1;",
+                  "const qtyOf = (id) => { const m = html.match(new RegExp('/cart/decrease/' + id + '/\"[^>]*>[^<]*</a>\\\\s*<span class=\"qty-number\">(\\\\d+)</span>')); return m ? parseInt(m[1], 10) : null; };",
+                  "const total = () => { const m = html.match(/<div class=\"summary-total\">([^<]+)<\\/div>/); return m ? parseInt(m[1].replace(/[^\\d]/g, ''), 10) : null; };",
+                  "",
+                  "pm.test(\"TC-CART-EP-15 | user2 tăng SP của user1 → 404\", function () {",
+                  "ok(pm.response.code === 404, 'Mong đợi HTTP 404, thực tế ' + pm.response.code);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "[setup] Đăng xuất user2",
+          "protocolProfileBehavior": {
+            "followRedirects": false
+          },
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": "{{base_url}}/accounts/logout/",
+            "body": {
+              "mode": "urlencoded",
+              "urlencoded": [
+                {
+                  "key": "csrfmiddlewaretoken",
+                  "value": "{{csrf_token_val}}",
+                  "type": "text"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const html = pm.response.text();",
+                  "const ok = (c, m) => { if (!c) { throw new Error(m); } };",
+                  "const cv = (k) => pm.collectionVariables.get(k);",
+                  "const loc = () => pm.response.headers.get('Location') || '';",
+                  "const inCart = (id) => html.includes('/cart/remove/' + id + '/');",
+                  "const rows = (id) => html.split('/cart/remove/' + id + '/').length - 1;",
+                  "const qtyOf = (id) => { const m = html.match(new RegExp('/cart/decrease/' + id + '/\"[^>]*>[^<]*</a>\\\\s*<span class=\"qty-number\">(\\\\d+)</span>')); return m ? parseInt(m[1], 10) : null; };",
+                  "const total = () => { const m = html.match(/<div class=\"summary-total\">([^<]+)<\\/div>/); return m ? parseInt(m[1].replace(/[^\\d]/g, ''), 10) : null; };",
+                  "",
+                  "pm.test(\"SETUP | Đăng xuất user2\", function () {",
+                  "ok(pm.response.code === 302 || pm.response.code === 200, 'HTTP ' + pm.response.code);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "[setup] Đăng nhập user1 (2)",
+          "protocolProfileBehavior": {
+            "followRedirects": false
+          },
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": "{{base_url}}/accounts/login/",
+            "body": {
+              "mode": "urlencoded",
+              "urlencoded": [
+                {
+                  "key": "username",
+                  "value": "{{user_username}}",
+                  "type": "text"
+                },
+                {
+                  "key": "password",
+                  "value": "{{user_password}}",
+                  "type": "text"
+                },
+                {
+                  "key": "csrfmiddlewaretoken",
+                  "value": "{{csrf_token_val}}",
+                  "type": "text"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const html = pm.response.text();",
+                  "const ok = (c, m) => { if (!c) { throw new Error(m); } };",
+                  "const cv = (k) => pm.collectionVariables.get(k);",
+                  "const loc = () => pm.response.headers.get('Location') || '';",
+                  "const inCart = (id) => html.includes('/cart/remove/' + id + '/');",
+                  "const rows = (id) => html.split('/cart/remove/' + id + '/').length - 1;",
+                  "const qtyOf = (id) => { const m = html.match(new RegExp('/cart/decrease/' + id + '/\"[^>]*>[^<]*</a>\\\\s*<span class=\"qty-number\">(\\\\d+)</span>')); return m ? parseInt(m[1], 10) : null; };",
+                  "const total = () => { const m = html.match(/<div class=\"summary-total\">([^<]+)<\\/div>/); return m ? parseInt(m[1].replace(/[^\\d]/g, ''), 10) : null; };",
+                  "",
+                  "pm.test(\"SETUP | Đăng nhập user1 thành công (302)\", function () {",
+                  "ok(pm.response.code === 302, 'Mong đợi HTTP 302, thực tế ' + pm.response.code); // sai mật khẩu thì kiểm tra user_username / user_password trong tab Variables",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "TC-CART-EP-15.3 Giỏ user1 còn nguyên A quantity = 1",
+          "protocolProfileBehavior": {
+            "followRedirects": false
+          },
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{base_url}}/cart/"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const html = pm.response.text();",
+                  "const ok = (c, m) => { if (!c) { throw new Error(m); } };",
+                  "const cv = (k) => pm.collectionVariables.get(k);",
+                  "const loc = () => pm.response.headers.get('Location') || '';",
+                  "const inCart = (id) => html.includes('/cart/remove/' + id + '/');",
+                  "const rows = (id) => html.split('/cart/remove/' + id + '/').length - 1;",
+                  "const qtyOf = (id) => { const m = html.match(new RegExp('/cart/decrease/' + id + '/\"[^>]*>[^<]*</a>\\\\s*<span class=\"qty-number\">(\\\\d+)</span>')); return m ? parseInt(m[1], 10) : null; };",
+                  "const total = () => { const m = html.match(/<div class=\"summary-total\">([^<]+)<\\/div>/); return m ? parseInt(m[1].replace(/[^\\d]/g, ''), 10) : null; };",
+                  "",
+                  "pm.test(\"TC-CART-EP-15 | Giỏ user1 không bị user2 thay đổi (A = 1)\", function () {",
+                  "ok(pm.response.code === 200, 'Mong đợi HTTP 200, thực tế ' + pm.response.code);",
+                  "const q = qtyOf(cv('product_a'));",
+                  "ok(q === 1, 'Số lượng mong đợi 1, thực tế ' + q);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "02. Giá trị biên (TC-CART-BVA-01 → 13)",
+      "description": "Biên của product_id (0, min, max, max+1, 2^63-1, 2^63), quantity khi tăng/giảm (1, 2, 3) và số SP trong giỏ (0, 1, 2).",
+      "item": [
+        {
+          "name": "[setup] Dọn giỏ hàng user1",
+          "protocolProfileBehavior": {
+            "followRedirects": false
+          },
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{base_url}}/cart/"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const html = pm.response.text();",
+                  "const ok = (c, m) => { if (!c) { throw new Error(m); } };",
+                  "const cv = (k) => pm.collectionVariables.get(k);",
+                  "const loc = () => pm.response.headers.get('Location') || '';",
+                  "const inCart = (id) => html.includes('/cart/remove/' + id + '/');",
+                  "const rows = (id) => html.split('/cart/remove/' + id + '/').length - 1;",
+                  "const qtyOf = (id) => { const m = html.match(new RegExp('/cart/decrease/' + id + '/\"[^>]*>[^<]*</a>\\\\s*<span class=\"qty-number\">(\\\\d+)</span>')); return m ? parseInt(m[1], 10) : null; };",
+                  "const total = () => { const m = html.match(/<div class=\"summary-total\">([^<]+)<\\/div>/); return m ? parseInt(m[1].replace(/[^\\d]/g, ''), 10) : null; };",
+                  "",
+                  "pm.test(\"SETUP | Mở giỏ hàng user1 (200)\", function () {",
+                  "ok(pm.response.code === 200, 'Mong đợi HTTP 200, thực tế ' + pm.response.code);",
+                  "});",
+                  "",
+                  "// Xóa mọi sản phẩm đang có trong giỏ bằng pm.sendRequest",
+                  "const base = pm.variables.replaceIn('{{base_url}}');",
+                  "const ids = [...new Set(Array.from(html.matchAll(/\\/cart\\/remove\\/(\\d+)\\//g), (x) => x[1]))];",
+                  "ids.forEach((id) => pm.sendRequest(base + '/cart/remove/' + id + '/', () => {}));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "TC-CART-BVA-01 product_id = 0",
+          "protocolProfileBehavior": {
+            "followRedirects": false
+          },
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{base_url}}/cart/add/0/"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const html = pm.response.text();",
+                  "const ok = (c, m) => { if (!c) { throw new Error(m); } };",
+                  "const cv = (k) => pm.collectionVariables.get(k);",
+                  "const loc = () => pm.response.headers.get('Location') || '';",
+                  "const inCart = (id) => html.includes('/cart/remove/' + id + '/');",
+                  "const rows = (id) => html.split('/cart/remove/' + id + '/').length - 1;",
+                  "const qtyOf = (id) => { const m = html.match(new RegExp('/cart/decrease/' + id + '/\"[^>]*>[^<]*</a>\\\\s*<span class=\"qty-number\">(\\\\d+)</span>')); return m ? parseInt(m[1], 10) : null; };",
+                  "const total = () => { const m = html.match(/<div class=\"summary-total\">([^<]+)<\\/div>/); return m ? parseInt(m[1].replace(/[^\\d]/g, ''), 10) : null; };",
+                  "",
+                  "pm.test(\"TC-CART-BVA-01 | product_id = 0 (dưới biên) → 404\", function () {",
+                  "ok(pm.response.code === 404, 'Mong đợi HTTP 404, thực tế ' + pm.response.code);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "TC-CART-BVA-02.1 product_id = min_id",
+          "protocolProfileBehavior": {
+            "followRedirects": false
+          },
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{base_url}}/cart/add/{{min_id}}/"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const html = pm.response.text();",
+                  "const ok = (c, m) => { if (!c) { throw new Error(m); } };",
+                  "const cv = (k) => pm.collectionVariables.get(k);",
+                  "const loc = () => pm.response.headers.get('Location') || '';",
+                  "const inCart = (id) => html.includes('/cart/remove/' + id + '/');",
+                  "const rows = (id) => html.split('/cart/remove/' + id + '/').length - 1;",
+                  "const qtyOf = (id) => { const m = html.match(new RegExp('/cart/decrease/' + id + '/\"[^>]*>[^<]*</a>\\\\s*<span class=\"qty-number\">(\\\\d+)</span>')); return m ? parseInt(m[1], 10) : null; };",
+                  "const total = () => { const m = html.match(/<div class=\"summary-total\">([^<]+)<\\/div>/); return m ? parseInt(m[1].replace(/[^\\d]/g, ''), 10) : null; };",
+                  "",
+                  "pm.test(\"TC-CART-BVA-02 | product_id = min_id → 302 về /cart/\", function () {",
+                  "ok(pm.response.code === 302, 'Mong đợi HTTP 302, thực tế ' + pm.response.code);",
+                  "const exp = '/cart/';",
+                  "ok(loc() === exp, 'Location mong đợi ' + exp + ', thực tế ' + loc());",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "TC-CART-BVA-02.2 Kiểm tra SP min_id có quantity = 1",
+          "protocolProfileBehavior": {
+            "followRedirects": false
+          },
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{base_url}}/cart/"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const html = pm.response.text();",
+                  "const ok = (c, m) => { if (!c) { throw new Error(m); } };",
+                  "const cv = (k) => pm.collectionVariables.get(k);",
+                  "const loc = () => pm.response.headers.get('Location') || '';",
+                  "const inCart = (id) => html.includes('/cart/remove/' + id + '/');",
+                  "const rows = (id) => html.split('/cart/remove/' + id + '/').length - 1;",
+                  "const qtyOf = (id) => { const m = html.match(new RegExp('/cart/decrease/' + id + '/\"[^>]*>[^<]*</a>\\\\s*<span class=\"qty-number\">(\\\\d+)</span>')); return m ? parseInt(m[1], 10) : null; };",
+                  "const total = () => { const m = html.match(/<div class=\"summary-total\">([^<]+)<\\/div>/); return m ? parseInt(m[1].replace(/[^\\d]/g, ''), 10) : null; };",
+                  "",
+                  "pm.test(\"TC-CART-BVA-02 | SP min_id có quantity = 1\", function () {",
+                  "ok(pm.response.code === 200, 'Mong đợi HTTP 200, thực tế ' + pm.response.code);",
+                  "const q = qtyOf(cv('min_id'));",
+                  "ok(q === 1, 'Số lượng mong đợi 1, thực tế ' + q);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "[setup] Dọn giỏ hàng user1 (2)",
+          "protocolProfileBehavior": {
+            "followRedirects": false
+          },
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{base_url}}/cart/"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const html = pm.response.text();",
+                  "const ok = (c, m) => { if (!c) { throw new Error(m); } };",
+                  "const cv = (k) => pm.collectionVariables.get(k);",
+                  "const loc = () => pm.response.headers.get('Location') || '';",
+                  "const inCart = (id) => html.includes('/cart/remove/' + id + '/');",
+                  "const rows = (id) => html.split('/cart/remove/' + id + '/').length - 1;",
+                  "const qtyOf = (id) => { const m = html.match(new RegExp('/cart/decrease/' + id + '/\"[^>]*>[^<]*</a>\\\\s*<span class=\"qty-number\">(\\\\d+)</span>')); return m ? parseInt(m[1], 10) : null; };",
+                  "const total = () => { const m = html.match(/<div class=\"summary-total\">([^<]+)<\\/div>/); return m ? parseInt(m[1].replace(/[^\\d]/g, ''), 10) : null; };",
+                  "",
+                  "pm.test(\"SETUP | Mở giỏ hàng user1 (200)\", function () {",
+                  "ok(pm.response.code === 200, 'Mong đợi HTTP 200, thực tế ' + pm.response.code);",
+                  "});",
+                  "",
+                  "// Xóa mọi sản phẩm đang có trong giỏ bằng pm.sendRequest",
+                  "const base = pm.variables.replaceIn('{{base_url}}');",
+                  "const ids = [...new Set(Array.from(html.matchAll(/\\/cart\\/remove\\/(\\d+)\\//g), (x) => x[1]))];",
+                  "ids.forEach((id) => pm.sendRequest(base + '/cart/remove/' + id + '/', () => {}));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "TC-CART-BVA-03.1 product_id = max_id",
+          "protocolProfileBehavior": {
+            "followRedirects": false
+          },
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{base_url}}/cart/add/{{max_id}}/"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const html = pm.response.text();",
+                  "const ok = (c, m) => { if (!c) { throw new Error(m); } };",
+                  "const cv = (k) => pm.collectionVariables.get(k);",
+                  "const loc = () => pm.response.headers.get('Location') || '';",
+                  "const inCart = (id) => html.includes('/cart/remove/' + id + '/');",
+                  "const rows = (id) => html.split('/cart/remove/' + id + '/').length - 1;",
+                  "const qtyOf = (id) => { const m = html.match(new RegExp('/cart/decrease/' + id + '/\"[^>]*>[^<]*</a>\\\\s*<span class=\"qty-number\">(\\\\d+)</span>')); return m ? parseInt(m[1], 10) : null; };",
+                  "const total = () => { const m = html.match(/<div class=\"summary-total\">([^<]+)<\\/div>/); return m ? parseInt(m[1].replace(/[^\\d]/g, ''), 10) : null; };",
+                  "",
+                  "pm.test(\"TC-CART-BVA-03 | product_id = max_id → 302 về /cart/\", function () {",
+                  "ok(pm.response.code === 302, 'Mong đợi HTTP 302, thực tế ' + pm.response.code);",
+                  "const exp = '/cart/';",
+                  "ok(loc() === exp, 'Location mong đợi ' + exp + ', thực tế ' + loc());",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "TC-CART-BVA-03.2 Kiểm tra SP max_id có quantity = 1",
+          "protocolProfileBehavior": {
+            "followRedirects": false
+          },
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{base_url}}/cart/"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const html = pm.response.text();",
+                  "const ok = (c, m) => { if (!c) { throw new Error(m); } };",
+                  "const cv = (k) => pm.collectionVariables.get(k);",
+                  "const loc = () => pm.response.headers.get('Location') || '';",
+                  "const inCart = (id) => html.includes('/cart/remove/' + id + '/');",
+                  "const rows = (id) => html.split('/cart/remove/' + id + '/').length - 1;",
+                  "const qtyOf = (id) => { const m = html.match(new RegExp('/cart/decrease/' + id + '/\"[^>]*>[^<]*</a>\\\\s*<span class=\"qty-number\">(\\\\d+)</span>')); return m ? parseInt(m[1], 10) : null; };",
+                  "const total = () => { const m = html.match(/<div class=\"summary-total\">([^<]+)<\\/div>/); return m ? parseInt(m[1].replace(/[^\\d]/g, ''), 10) : null; };",
+                  "",
+                  "pm.test(\"TC-CART-BVA-03 | SP max_id có quantity = 1\", function () {",
+                  "ok(pm.response.code === 200, 'Mong đợi HTTP 200, thực tế ' + pm.response.code);",
+                  "const q = qtyOf(cv('max_id'));",
+                  "ok(q === 1, 'Số lượng mong đợi 1, thực tế ' + q);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "TC-CART-BVA-04 product_id = max_id + 1",
+          "protocolProfileBehavior": {
+            "followRedirects": false
+          },
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{base_url}}/cart/add/{{max_id_plus_1}}/"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const html = pm.response.text();",
+                  "const ok = (c, m) => { if (!c) { throw new Error(m); } };",
+                  "const cv = (k) => pm.collectionVariables.get(k);",
+                  "const loc = () => pm.response.headers.get('Location') || '';",
+                  "const inCart = (id) => html.includes('/cart/remove/' + id + '/');",
+                  "const rows = (id) => html.split('/cart/remove/' + id + '/').length - 1;",
+                  "const qtyOf = (id) => { const m = html.match(new RegExp('/cart/decrease/' + id + '/\"[^>]*>[^<]*</a>\\\\s*<span class=\"qty-number\">(\\\\d+)</span>')); return m ? parseInt(m[1], 10) : null; };",
+                  "const total = () => { const m = html.match(/<div class=\"summary-total\">([^<]+)<\\/div>/); return m ? parseInt(m[1].replace(/[^\\d]/g, ''), 10) : null; };",
+                  "",
+                  "pm.test(\"TC-CART-BVA-04 | product_id = max_id + 1 (trên biên) → 404\", function () {",
+                  "ok(pm.response.code === 404, 'Mong đợi HTTP 404, thực tế ' + pm.response.code);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "TC-CART-BVA-05 product_id = 2^63 - 1",
+          "protocolProfileBehavior": {
+            "followRedirects": false
+          },
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{base_url}}/cart/add/9223372036854775807/"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const html = pm.response.text();",
+                  "const ok = (c, m) => { if (!c) { throw new Error(m); } };",
+                  "const cv = (k) => pm.collectionVariables.get(k);",
+                  "const loc = () => pm.response.headers.get('Location') || '';",
+                  "const inCart = (id) => html.includes('/cart/remove/' + id + '/');",
+                  "const rows = (id) => html.split('/cart/remove/' + id + '/').length - 1;",
+                  "const qtyOf = (id) => { const m = html.match(new RegExp('/cart/decrease/' + id + '/\"[^>]*>[^<]*</a>\\\\s*<span class=\"qty-number\">(\\\\d+)</span>')); return m ? parseInt(m[1], 10) : null; };",
+                  "const total = () => { const m = html.match(/<div class=\"summary-total\">([^<]+)<\\/div>/); return m ? parseInt(m[1].replace(/[^\\d]/g, ''), 10) : null; };",
+                  "",
+                  "pm.test(\"TC-CART-BVA-05 | product_id = 9223372036854775807 → 404\", function () {",
+                  "ok(pm.response.code === 404, 'Mong đợi HTTP 404, thực tế ' + pm.response.code);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "TC-CART-BVA-06.1 add product_id = 2^63",
+          "protocolProfileBehavior": {
+            "followRedirects": false
+          },
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{base_url}}/cart/add/9223372036854775808/"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const html = pm.response.text();",
+                  "const ok = (c, m) => { if (!c) { throw new Error(m); } };",
+                  "const cv = (k) => pm.collectionVariables.get(k);",
+                  "const loc = () => pm.response.headers.get('Location') || '';",
+                  "const inCart = (id) => html.includes('/cart/remove/' + id + '/');",
+                  "const rows = (id) => html.split('/cart/remove/' + id + '/').length - 1;",
+                  "const qtyOf = (id) => { const m = html.match(new RegExp('/cart/decrease/' + id + '/\"[^>]*>[^<]*</a>\\\\s*<span class=\"qty-number\">(\\\\d+)</span>')); return m ? parseInt(m[1], 10) : null; };",
+                  "const total = () => { const m = html.match(/<div class=\"summary-total\">([^<]+)<\\/div>/); return m ? parseInt(m[1].replace(/[^\\d]/g, ''), 10) : null; };",
+                  "",
+                  "pm.test(\"TC-CART-BVA-06 | add với product_id = 9223372036854775808 → 404, không 500\", function () {",
+                  "ok(pm.response.code === 404, 'Mong đợi HTTP 404, thực tế ' + pm.response.code);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "TC-CART-BVA-06.2 increase product_id = 2^63",
+          "protocolProfileBehavior": {
+            "followRedirects": false
+          },
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{base_url}}/cart/increase/9223372036854775808/"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const html = pm.response.text();",
+                  "const ok = (c, m) => { if (!c) { throw new Error(m); } };",
+                  "const cv = (k) => pm.collectionVariables.get(k);",
+                  "const loc = () => pm.response.headers.get('Location') || '';",
+                  "const inCart = (id) => html.includes('/cart/remove/' + id + '/');",
+                  "const rows = (id) => html.split('/cart/remove/' + id + '/').length - 1;",
+                  "const qtyOf = (id) => { const m = html.match(new RegExp('/cart/decrease/' + id + '/\"[^>]*>[^<]*</a>\\\\s*<span class=\"qty-number\">(\\\\d+)</span>')); return m ? parseInt(m[1], 10) : null; };",
+                  "const total = () => { const m = html.match(/<div class=\"summary-total\">([^<]+)<\\/div>/); return m ? parseInt(m[1].replace(/[^\\d]/g, ''), 10) : null; };",
+                  "",
+                  "pm.test(\"TC-CART-BVA-06 | increase với product_id = 9223372036854775808 → 404, không 500\", function () {",
+                  "ok(pm.response.code === 404, 'Mong đợi HTTP 404, thực tế ' + pm.response.code);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "TC-CART-BVA-06.3 decrease product_id = 2^63",
+          "protocolProfileBehavior": {
+            "followRedirects": false
+          },
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{base_url}}/cart/decrease/9223372036854775808/"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const html = pm.response.text();",
+                  "const ok = (c, m) => { if (!c) { throw new Error(m); } };",
+                  "const cv = (k) => pm.collectionVariables.get(k);",
+                  "const loc = () => pm.response.headers.get('Location') || '';",
+                  "const inCart = (id) => html.includes('/cart/remove/' + id + '/');",
+                  "const rows = (id) => html.split('/cart/remove/' + id + '/').length - 1;",
+                  "const qtyOf = (id) => { const m = html.match(new RegExp('/cart/decrease/' + id + '/\"[^>]*>[^<]*</a>\\\\s*<span class=\"qty-number\">(\\\\d+)</span>')); return m ? parseInt(m[1], 10) : null; };",
+                  "const total = () => { const m = html.match(/<div class=\"summary-total\">([^<]+)<\\/div>/); return m ? parseInt(m[1].replace(/[^\\d]/g, ''), 10) : null; };",
+                  "",
+                  "pm.test(\"TC-CART-BVA-06 | decrease với product_id = 9223372036854775808 → 404, không 500\", function () {",
+                  "ok(pm.response.code === 404, 'Mong đợi HTTP 404, thực tế ' + pm.response.code);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "TC-CART-BVA-06.4 remove product_id = 2^63",
+          "protocolProfileBehavior": {
+            "followRedirects": false
+          },
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{base_url}}/cart/remove/9223372036854775808/"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const html = pm.response.text();",
+                  "const ok = (c, m) => { if (!c) { throw new Error(m); } };",
+                  "const cv = (k) => pm.collectionVariables.get(k);",
+                  "const loc = () => pm.response.headers.get('Location') || '';",
+                  "const inCart = (id) => html.includes('/cart/remove/' + id + '/');",
+                  "const rows = (id) => html.split('/cart/remove/' + id + '/').length - 1;",
+                  "const qtyOf = (id) => { const m = html.match(new RegExp('/cart/decrease/' + id + '/\"[^>]*>[^<]*</a>\\\\s*<span class=\"qty-number\">(\\\\d+)</span>')); return m ? parseInt(m[1], 10) : null; };",
+                  "const total = () => { const m = html.match(/<div class=\"summary-total\">([^<]+)<\\/div>/); return m ? parseInt(m[1].replace(/[^\\d]/g, ''), 10) : null; };",
+                  "",
+                  "pm.test(\"TC-CART-BVA-06 | remove với product_id = 9223372036854775808 → 404, không 500\", function () {",
+                  "ok(pm.response.code === 404, 'Mong đợi HTTP 404, thực tế ' + pm.response.code);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "[setup] Dọn giỏ hàng user1 (3)",
+          "protocolProfileBehavior": {
+            "followRedirects": false
+          },
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{base_url}}/cart/"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const html = pm.response.text();",
+                  "const ok = (c, m) => { if (!c) { throw new Error(m); } };",
+                  "const cv = (k) => pm.collectionVariables.get(k);",
+                  "const loc = () => pm.response.headers.get('Location') || '';",
+                  "const inCart = (id) => html.includes('/cart/remove/' + id + '/');",
+                  "const rows = (id) => html.split('/cart/remove/' + id + '/').length - 1;",
+                  "const qtyOf = (id) => { const m = html.match(new RegExp('/cart/decrease/' + id + '/\"[^>]*>[^<]*</a>\\\\s*<span class=\"qty-number\">(\\\\d+)</span>')); return m ? parseInt(m[1], 10) : null; };",
+                  "const total = () => { const m = html.match(/<div class=\"summary-total\">([^<]+)<\\/div>/); return m ? parseInt(m[1].replace(/[^\\d]/g, ''), 10) : null; };",
+                  "",
+                  "pm.test(\"SETUP | Mở giỏ hàng user1 (200)\", function () {",
+                  "ok(pm.response.code === 200, 'Mong đợi HTTP 200, thực tế ' + pm.response.code);",
+                  "});",
+                  "",
+                  "// Xóa mọi sản phẩm đang có trong giỏ bằng pm.sendRequest",
+                  "const base = pm.variables.replaceIn('{{base_url}}');",
+                  "const ids = [...new Set(Array.from(html.matchAll(/\\/cart\\/remove\\/(\\d+)\\//g), (x) => x[1]))];",
+                  "ids.forEach((id) => pm.sendRequest(base + '/cart/remove/' + id + '/', () => {}));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "[setup] Thêm SP A (giỏ có 1 SP)",
+          "protocolProfileBehavior": {
+            "followRedirects": false
+          },
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{base_url}}/cart/add/{{product_a}}/"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const html = pm.response.text();",
+                  "const ok = (c, m) => { if (!c) { throw new Error(m); } };",
+                  "const cv = (k) => pm.collectionVariables.get(k);",
+                  "const loc = () => pm.response.headers.get('Location') || '';",
+                  "const inCart = (id) => html.includes('/cart/remove/' + id + '/');",
+                  "const rows = (id) => html.split('/cart/remove/' + id + '/').length - 1;",
+                  "const qtyOf = (id) => { const m = html.match(new RegExp('/cart/decrease/' + id + '/\"[^>]*>[^<]*</a>\\\\s*<span class=\"qty-number\">(\\\\d+)</span>')); return m ? parseInt(m[1], 10) : null; };",
+                  "const total = () => { const m = html.match(/<div class=\"summary-total\">([^<]+)<\\/div>/); return m ? parseInt(m[1].replace(/[^\\d]/g, ''), 10) : null; };",
+                  "",
+                  "pm.test(\"SETUP | Thêm SP A\", function () {",
+                  "ok(pm.response.code === 302 || pm.response.code === 200, 'HTTP ' + pm.response.code);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "TC-CART-BVA-11 Giỏ 1 SP (A x1) - tổng = đơn giá A",
+          "protocolProfileBehavior": {
+            "followRedirects": false
+          },
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{base_url}}/cart/"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const html = pm.response.text();",
+                  "const ok = (c, m) => { if (!c) { throw new Error(m); } };",
+                  "const cv = (k) => pm.collectionVariables.get(k);",
+                  "const loc = () => pm.response.headers.get('Location') || '';",
+                  "const inCart = (id) => html.includes('/cart/remove/' + id + '/');",
+                  "const rows = (id) => html.split('/cart/remove/' + id + '/').length - 1;",
+                  "const qtyOf = (id) => { const m = html.match(new RegExp('/cart/decrease/' + id + '/\"[^>]*>[^<]*</a>\\\\s*<span class=\"qty-number\">(\\\\d+)</span>')); return m ? parseInt(m[1], 10) : null; };",
+                  "const total = () => { const m = html.match(/<div class=\"summary-total\">([^<]+)<\\/div>/); return m ? parseInt(m[1].replace(/[^\\d]/g, ''), 10) : null; };",
+                  "",
+                  "pm.test(\"TC-CART-BVA-11 | Tổng tiền = price_a\", function () {",
+                  "ok(pm.response.code === 200, 'Mong đợi HTTP 200, thực tế ' + pm.response.code);",
+                  "const exp = parseInt(cv('price_a'), 10);",
+                  "ok(total() === exp, 'Tổng mong đợi ' + exp + ', thực tế ' + total());",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "[setup] Thêm SP A lần 2 (A x2)",
+          "protocolProfileBehavior": {
+            "followRedirects": false
+          },
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{base_url}}/cart/add/{{product_a}}/"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const html = pm.response.text();",
+                  "const ok = (c, m) => { if (!c) { throw new Error(m); } };",
+                  "const cv = (k) => pm.collectionVariables.get(k);",
+                  "const loc = () => pm.response.headers.get('Location') || '';",
+                  "const inCart = (id) => html.includes('/cart/remove/' + id + '/');",
+                  "const rows = (id) => html.split('/cart/remove/' + id + '/').length - 1;",
+                  "const qtyOf = (id) => { const m = html.match(new RegExp('/cart/decrease/' + id + '/\"[^>]*>[^<]*</a>\\\\s*<span class=\"qty-number\">(\\\\d+)</span>')); return m ? parseInt(m[1], 10) : null; };",
+                  "const total = () => { const m = html.match(/<div class=\"summary-total\">([^<]+)<\\/div>/); return m ? parseInt(m[1].replace(/[^\\d]/g, ''), 10) : null; };",
+                  "",
+                  "pm.test(\"SETUP | Thêm SP A lần 2\", function () {",
+                  "ok(pm.response.code === 302 || pm.response.code === 200, 'HTTP ' + pm.response.code);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "[setup] Thêm SP B (giỏ có 2 SP)",
+          "protocolProfileBehavior": {
+            "followRedirects": false
+          },
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{base_url}}/cart/add/{{product_b}}/"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const html = pm.response.text();",
+                  "const ok = (c, m) => { if (!c) { throw new Error(m); } };",
+                  "const cv = (k) => pm.collectionVariables.get(k);",
+                  "const loc = () => pm.response.headers.get('Location') || '';",
+                  "const inCart = (id) => html.includes('/cart/remove/' + id + '/');",
+                  "const rows = (id) => html.split('/cart/remove/' + id + '/').length - 1;",
+                  "const qtyOf = (id) => { const m = html.match(new RegExp('/cart/decrease/' + id + '/\"[^>]*>[^<]*</a>\\\\s*<span class=\"qty-number\">(\\\\d+)</span>')); return m ? parseInt(m[1], 10) : null; };",
+                  "const total = () => { const m = html.match(/<div class=\"summary-total\">([^<]+)<\\/div>/); return m ? parseInt(m[1].replace(/[^\\d]/g, ''), 10) : null; };",
+                  "",
+                  "pm.test(\"SETUP | Thêm SP B\", function () {",
+                  "ok(pm.response.code === 302 || pm.response.code === 200, 'HTTP ' + pm.response.code);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "TC-CART-BVA-12 Giỏ 2 SP (A x2, B x1) - tổng = 2A + B",
+          "protocolProfileBehavior": {
+            "followRedirects": false
+          },
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{base_url}}/cart/"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const html = pm.response.text();",
+                  "const ok = (c, m) => { if (!c) { throw new Error(m); } };",
+                  "const cv = (k) => pm.collectionVariables.get(k);",
+                  "const loc = () => pm.response.headers.get('Location') || '';",
+                  "const inCart = (id) => html.includes('/cart/remove/' + id + '/');",
+                  "const rows = (id) => html.split('/cart/remove/' + id + '/').length - 1;",
+                  "const qtyOf = (id) => { const m = html.match(new RegExp('/cart/decrease/' + id + '/\"[^>]*>[^<]*</a>\\\\s*<span class=\"qty-number\">(\\\\d+)</span>')); return m ? parseInt(m[1], 10) : null; };",
+                  "const total = () => { const m = html.match(/<div class=\"summary-total\">([^<]+)<\\/div>/); return m ? parseInt(m[1].replace(/[^\\d]/g, ''), 10) : null; };",
+                  "",
+                  "pm.test(\"TC-CART-BVA-12 | Tổng tiền = price_a * 2 + price_b\", function () {",
+                  "ok(pm.response.code === 200, 'Mong đợi HTTP 200, thực tế ' + pm.response.code);",
+                  "const exp = parseInt(cv('price_a'), 10) * 2 + parseInt(cv('price_b'), 10);",
+                  "ok(total() === exp, 'Tổng mong đợi ' + exp + ', thực tế ' + total());",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "[setup] Dọn giỏ hàng user1 (4)",
+          "protocolProfileBehavior": {
+            "followRedirects": false
+          },
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{base_url}}/cart/"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const html = pm.response.text();",
+                  "const ok = (c, m) => { if (!c) { throw new Error(m); } };",
+                  "const cv = (k) => pm.collectionVariables.get(k);",
+                  "const loc = () => pm.response.headers.get('Location') || '';",
+                  "const inCart = (id) => html.includes('/cart/remove/' + id + '/');",
+                  "const rows = (id) => html.split('/cart/remove/' + id + '/').length - 1;",
+                  "const qtyOf = (id) => { const m = html.match(new RegExp('/cart/decrease/' + id + '/\"[^>]*>[^<]*</a>\\\\s*<span class=\"qty-number\">(\\\\d+)</span>')); return m ? parseInt(m[1], 10) : null; };",
+                  "const total = () => { const m = html.match(/<div class=\"summary-total\">([^<]+)<\\/div>/); return m ? parseInt(m[1].replace(/[^\\d]/g, ''), 10) : null; };",
+                  "",
+                  "pm.test(\"SETUP | Mở giỏ hàng user1 (200)\", function () {",
+                  "ok(pm.response.code === 200, 'Mong đợi HTTP 200, thực tế ' + pm.response.code);",
+                  "});",
+                  "",
+                  "// Xóa mọi sản phẩm đang có trong giỏ bằng pm.sendRequest",
+                  "const base = pm.variables.replaceIn('{{base_url}}');",
+                  "const ids = [...new Set(Array.from(html.matchAll(/\\/cart\\/remove\\/(\\d+)\\//g), (x) => x[1]))];",
+                  "ids.forEach((id) => pm.sendRequest(base + '/cart/remove/' + id + '/', () => {}));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "[setup] Thêm SP A (A = 1)",
+          "protocolProfileBehavior": {
+            "followRedirects": false
+          },
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{base_url}}/cart/add/{{product_a}}/"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const html = pm.response.text();",
+                  "const ok = (c, m) => { if (!c) { throw new Error(m); } };",
+                  "const cv = (k) => pm.collectionVariables.get(k);",
+                  "const loc = () => pm.response.headers.get('Location') || '';",
+                  "const inCart = (id) => html.includes('/cart/remove/' + id + '/');",
+                  "const rows = (id) => html.split('/cart/remove/' + id + '/').length - 1;",
+                  "const qtyOf = (id) => { const m = html.match(new RegExp('/cart/decrease/' + id + '/\"[^>]*>[^<]*</a>\\\\s*<span class=\"qty-number\">(\\\\d+)</span>')); return m ? parseInt(m[1], 10) : null; };",
+                  "const total = () => { const m = html.match(/<div class=\"summary-total\">([^<]+)<\\/div>/); return m ? parseInt(m[1].replace(/[^\\d]/g, ''), 10) : null; };",
+                  "",
+                  "pm.test(\"SETUP | Thêm SP A lần 1\", function () {",
+                  "ok(pm.response.code === 302 || pm.response.code === 200, 'HTTP ' + pm.response.code);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "[setup] Thêm SP A (A = 2)",
+          "protocolProfileBehavior": {
+            "followRedirects": false
+          },
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{base_url}}/cart/add/{{product_a}}/"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const html = pm.response.text();",
+                  "const ok = (c, m) => { if (!c) { throw new Error(m); } };",
+                  "const cv = (k) => pm.collectionVariables.get(k);",
+                  "const loc = () => pm.response.headers.get('Location') || '';",
+                  "const inCart = (id) => html.includes('/cart/remove/' + id + '/');",
+                  "const rows = (id) => html.split('/cart/remove/' + id + '/').length - 1;",
+                  "const qtyOf = (id) => { const m = html.match(new RegExp('/cart/decrease/' + id + '/\"[^>]*>[^<]*</a>\\\\s*<span class=\"qty-number\">(\\\\d+)</span>')); return m ? parseInt(m[1], 10) : null; };",
+                  "const total = () => { const m = html.match(/<div class=\"summary-total\">([^<]+)<\\/div>/); return m ? parseInt(m[1].replace(/[^\\d]/g, ''), 10) : null; };",
+                  "",
+                  "pm.test(\"SETUP | Thêm SP A lần 2\", function () {",
+                  "ok(pm.response.code === 302 || pm.response.code === 200, 'HTTP ' + pm.response.code);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "[setup] Thêm SP A (A = 3)",
+          "protocolProfileBehavior": {
+            "followRedirects": false
+          },
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{base_url}}/cart/add/{{product_a}}/"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const html = pm.response.text();",
+                  "const ok = (c, m) => { if (!c) { throw new Error(m); } };",
+                  "const cv = (k) => pm.collectionVariables.get(k);",
+                  "const loc = () => pm.response.headers.get('Location') || '';",
+                  "const inCart = (id) => html.includes('/cart/remove/' + id + '/');",
+                  "const rows = (id) => html.split('/cart/remove/' + id + '/').length - 1;",
+                  "const qtyOf = (id) => { const m = html.match(new RegExp('/cart/decrease/' + id + '/\"[^>]*>[^<]*</a>\\\\s*<span class=\"qty-number\">(\\\\d+)</span>')); return m ? parseInt(m[1], 10) : null; };",
+                  "const total = () => { const m = html.match(/<div class=\"summary-total\">([^<]+)<\\/div>/); return m ? parseInt(m[1].replace(/[^\\d]/g, ''), 10) : null; };",
+                  "",
+                  "pm.test(\"SETUP | Thêm SP A lần 3\", function () {",
+                  "ok(pm.response.code === 302 || pm.response.code === 200, 'HTTP ' + pm.response.code);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "TC-CART-BVA-09.1 Giảm khi quantity = 3",
+          "protocolProfileBehavior": {
+            "followRedirects": false
+          },
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{base_url}}/cart/decrease/{{product_a}}/"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const html = pm.response.text();",
+                  "const ok = (c, m) => { if (!c) { throw new Error(m); } };",
+                  "const cv = (k) => pm.collectionVariables.get(k);",
+                  "const loc = () => pm.response.headers.get('Location') || '';",
+                  "const inCart = (id) => html.includes('/cart/remove/' + id + '/');",
+                  "const rows = (id) => html.split('/cart/remove/' + id + '/').length - 1;",
+                  "const qtyOf = (id) => { const m = html.match(new RegExp('/cart/decrease/' + id + '/\"[^>]*>[^<]*</a>\\\\s*<span class=\"qty-number\">(\\\\d+)</span>')); return m ? parseInt(m[1], 10) : null; };",
+                  "const total = () => { const m = html.match(/<div class=\"summary-total\">([^<]+)<\\/div>/); return m ? parseInt(m[1].replace(/[^\\d]/g, ''), 10) : null; };",
+                  "",
+                  "pm.test(\"TC-CART-BVA-09 | Giảm → 302 về /cart/\", function () {",
+                  "ok(pm.response.code === 302, 'Mong đợi HTTP 302, thực tế ' + pm.response.code);",
+                  "const exp = '/cart/';",
+                  "ok(loc() === exp, 'Location mong đợi ' + exp + ', thực tế ' + loc());",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "TC-CART-BVA-09.2 Kiểm tra A = 2",
+          "protocolProfileBehavior": {
+            "followRedirects": false
+          },
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{base_url}}/cart/"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const html = pm.response.text();",
+                  "const ok = (c, m) => { if (!c) { throw new Error(m); } };",
+                  "const cv = (k) => pm.collectionVariables.get(k);",
+                  "const loc = () => pm.response.headers.get('Location') || '';",
+                  "const inCart = (id) => html.includes('/cart/remove/' + id + '/');",
+                  "const rows = (id) => html.split('/cart/remove/' + id + '/').length - 1;",
+                  "const qtyOf = (id) => { const m = html.match(new RegExp('/cart/decrease/' + id + '/\"[^>]*>[^<]*</a>\\\\s*<span class=\"qty-number\">(\\\\d+)</span>')); return m ? parseInt(m[1], 10) : null; };",
+                  "const total = () => { const m = html.match(/<div class=\"summary-total\">([^<]+)<\\/div>/); return m ? parseInt(m[1].replace(/[^\\d]/g, ''), 10) : null; };",
+                  "",
+                  "pm.test(\"TC-CART-BVA-09 | quantity 3 → 2\", function () {",
+                  "ok(pm.response.code === 200, 'Mong đợi HTTP 200, thực tế ' + pm.response.code);",
+                  "const q = qtyOf(cv('product_a'));",
+                  "ok(q === 2, 'Số lượng mong đợi 2, thực tế ' + q);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "TC-CART-BVA-08.1 Giảm khi quantity = 2",
+          "protocolProfileBehavior": {
+            "followRedirects": false
+          },
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{base_url}}/cart/decrease/{{product_a}}/"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const html = pm.response.text();",
+                  "const ok = (c, m) => { if (!c) { throw new Error(m); } };",
+                  "const cv = (k) => pm.collectionVariables.get(k);",
+                  "const loc = () => pm.response.headers.get('Location') || '';",
+                  "const inCart = (id) => html.includes('/cart/remove/' + id + '/');",
+                  "const rows = (id) => html.split('/cart/remove/' + id + '/').length - 1;",
+                  "const qtyOf = (id) => { const m = html.match(new RegExp('/cart/decrease/' + id + '/\"[^>]*>[^<]*</a>\\\\s*<span class=\"qty-number\">(\\\\d+)</span>')); return m ? parseInt(m[1], 10) : null; };",
+                  "const total = () => { const m = html.match(/<div class=\"summary-total\">([^<]+)<\\/div>/); return m ? parseInt(m[1].replace(/[^\\d]/g, ''), 10) : null; };",
+                  "",
+                  "pm.test(\"TC-CART-BVA-08 | Giảm → 302 về /cart/\", function () {",
+                  "ok(pm.response.code === 302, 'Mong đợi HTTP 302, thực tế ' + pm.response.code);",
+                  "const exp = '/cart/';",
+                  "ok(loc() === exp, 'Location mong đợi ' + exp + ', thực tế ' + loc());",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "TC-CART-BVA-08.2 Kiểm tra A = 1, vẫn trong giỏ",
+          "protocolProfileBehavior": {
+            "followRedirects": false
+          },
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{base_url}}/cart/"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const html = pm.response.text();",
+                  "const ok = (c, m) => { if (!c) { throw new Error(m); } };",
+                  "const cv = (k) => pm.collectionVariables.get(k);",
+                  "const loc = () => pm.response.headers.get('Location') || '';",
+                  "const inCart = (id) => html.includes('/cart/remove/' + id + '/');",
+                  "const rows = (id) => html.split('/cart/remove/' + id + '/').length - 1;",
+                  "const qtyOf = (id) => { const m = html.match(new RegExp('/cart/decrease/' + id + '/\"[^>]*>[^<]*</a>\\\\s*<span class=\"qty-number\">(\\\\d+)</span>')); return m ? parseInt(m[1], 10) : null; };",
+                  "const total = () => { const m = html.match(/<div class=\"summary-total\">([^<]+)<\\/div>/); return m ? parseInt(m[1].replace(/[^\\d]/g, ''), 10) : null; };",
+                  "",
+                  "pm.test(\"TC-CART-BVA-08 | quantity 2 → 1, SP vẫn trong giỏ\", function () {",
+                  "ok(pm.response.code === 200, 'Mong đợi HTTP 200, thực tế ' + pm.response.code);",
+                  "const q = qtyOf(cv('product_a'));",
+                  "ok(q === 1, 'Số lượng mong đợi 1, thực tế ' + q);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "TC-CART-BVA-10.1 Tăng khi quantity = 1",
+          "protocolProfileBehavior": {
+            "followRedirects": false
+          },
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{base_url}}/cart/increase/{{product_a}}/"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const html = pm.response.text();",
+                  "const ok = (c, m) => { if (!c) { throw new Error(m); } };",
+                  "const cv = (k) => pm.collectionVariables.get(k);",
+                  "const loc = () => pm.response.headers.get('Location') || '';",
+                  "const inCart = (id) => html.includes('/cart/remove/' + id + '/');",
+                  "const rows = (id) => html.split('/cart/remove/' + id + '/').length - 1;",
+                  "const qtyOf = (id) => { const m = html.match(new RegExp('/cart/decrease/' + id + '/\"[^>]*>[^<]*</a>\\\\s*<span class=\"qty-number\">(\\\\d+)</span>')); return m ? parseInt(m[1], 10) : null; };",
+                  "const total = () => { const m = html.match(/<div class=\"summary-total\">([^<]+)<\\/div>/); return m ? parseInt(m[1].replace(/[^\\d]/g, ''), 10) : null; };",
+                  "",
+                  "pm.test(\"TC-CART-BVA-10 | Tăng → 302 về /cart/\", function () {",
+                  "ok(pm.response.code === 302, 'Mong đợi HTTP 302, thực tế ' + pm.response.code);",
+                  "const exp = '/cart/';",
+                  "ok(loc() === exp, 'Location mong đợi ' + exp + ', thực tế ' + loc());",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "TC-CART-BVA-10.2 Kiểm tra A = 2",
+          "protocolProfileBehavior": {
+            "followRedirects": false
+          },
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{base_url}}/cart/"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const html = pm.response.text();",
+                  "const ok = (c, m) => { if (!c) { throw new Error(m); } };",
+                  "const cv = (k) => pm.collectionVariables.get(k);",
+                  "const loc = () => pm.response.headers.get('Location') || '';",
+                  "const inCart = (id) => html.includes('/cart/remove/' + id + '/');",
+                  "const rows = (id) => html.split('/cart/remove/' + id + '/').length - 1;",
+                  "const qtyOf = (id) => { const m = html.match(new RegExp('/cart/decrease/' + id + '/\"[^>]*>[^<]*</a>\\\\s*<span class=\"qty-number\">(\\\\d+)</span>')); return m ? parseInt(m[1], 10) : null; };",
+                  "const total = () => { const m = html.match(/<div class=\"summary-total\">([^<]+)<\\/div>/); return m ? parseInt(m[1].replace(/[^\\d]/g, ''), 10) : null; };",
+                  "",
+                  "pm.test(\"TC-CART-BVA-10 | quantity 1 → 2\", function () {",
+                  "ok(pm.response.code === 200, 'Mong đợi HTTP 200, thực tế ' + pm.response.code);",
+                  "const q = qtyOf(cv('product_a'));",
+                  "ok(q === 2, 'Số lượng mong đợi 2, thực tế ' + q);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "[setup] Giảm A về 1",
+          "protocolProfileBehavior": {
+            "followRedirects": false
+          },
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{base_url}}/cart/decrease/{{product_a}}/"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const html = pm.response.text();",
+                  "const ok = (c, m) => { if (!c) { throw new Error(m); } };",
+                  "const cv = (k) => pm.collectionVariables.get(k);",
+                  "const loc = () => pm.response.headers.get('Location') || '';",
+                  "const inCart = (id) => html.includes('/cart/remove/' + id + '/');",
+                  "const rows = (id) => html.split('/cart/remove/' + id + '/').length - 1;",
+                  "const qtyOf = (id) => { const m = html.match(new RegExp('/cart/decrease/' + id + '/\"[^>]*>[^<]*</a>\\\\s*<span class=\"qty-number\">(\\\\d+)</span>')); return m ? parseInt(m[1], 10) : null; };",
+                  "const total = () => { const m = html.match(/<div class=\"summary-total\">([^<]+)<\\/div>/); return m ? parseInt(m[1].replace(/[^\\d]/g, ''), 10) : null; };",
+                  "",
+                  "pm.test(\"SETUP | Giảm A về 1\", function () {",
+                  "ok(pm.response.code === 302 || pm.response.code === 200, 'HTTP ' + pm.response.code);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "TC-CART-BVA-07.1 Giảm khi quantity = 1",
+          "protocolProfileBehavior": {
+            "followRedirects": false
+          },
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{base_url}}/cart/decrease/{{product_a}}/"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const html = pm.response.text();",
+                  "const ok = (c, m) => { if (!c) { throw new Error(m); } };",
+                  "const cv = (k) => pm.collectionVariables.get(k);",
+                  "const loc = () => pm.response.headers.get('Location') || '';",
+                  "const inCart = (id) => html.includes('/cart/remove/' + id + '/');",
+                  "const rows = (id) => html.split('/cart/remove/' + id + '/').length - 1;",
+                  "const qtyOf = (id) => { const m = html.match(new RegExp('/cart/decrease/' + id + '/\"[^>]*>[^<]*</a>\\\\s*<span class=\"qty-number\">(\\\\d+)</span>')); return m ? parseInt(m[1], 10) : null; };",
+                  "const total = () => { const m = html.match(/<div class=\"summary-total\">([^<]+)<\\/div>/); return m ? parseInt(m[1].replace(/[^\\d]/g, ''), 10) : null; };",
+                  "",
+                  "pm.test(\"TC-CART-BVA-07 | Giảm → 302 về /cart/\", function () {",
+                  "ok(pm.response.code === 302, 'Mong đợi HTTP 302, thực tế ' + pm.response.code);",
+                  "const exp = '/cart/';",
+                  "ok(loc() === exp, 'Location mong đợi ' + exp + ', thực tế ' + loc());",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "TC-CART-BVA-07.2 Kiểm tra A bị xóa khỏi giỏ",
+          "protocolProfileBehavior": {
+            "followRedirects": false
+          },
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{base_url}}/cart/"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const html = pm.response.text();",
+                  "const ok = (c, m) => { if (!c) { throw new Error(m); } };",
+                  "const cv = (k) => pm.collectionVariables.get(k);",
+                  "const loc = () => pm.response.headers.get('Location') || '';",
+                  "const inCart = (id) => html.includes('/cart/remove/' + id + '/');",
+                  "const rows = (id) => html.split('/cart/remove/' + id + '/').length - 1;",
+                  "const qtyOf = (id) => { const m = html.match(new RegExp('/cart/decrease/' + id + '/\"[^>]*>[^<]*</a>\\\\s*<span class=\"qty-number\">(\\\\d+)</span>')); return m ? parseInt(m[1], 10) : null; };",
+                  "const total = () => { const m = html.match(/<div class=\"summary-total\">([^<]+)<\\/div>/); return m ? parseInt(m[1].replace(/[^\\d]/g, ''), 10) : null; };",
+                  "",
+                  "pm.test(\"TC-CART-BVA-07 | quantity 1 → 0 → SP bị xóa khỏi giỏ\", function () {",
+                  "ok(pm.response.code === 200, 'Mong đợi HTTP 200, thực tế ' + pm.response.code);",
+                  "ok(!inCart(cv('product_a')), 'Sản phẩm ' + cv('product_a') + ' vẫn còn trong giỏ');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "[setup] Thêm SP A (giỏ có đúng 1 SP)",
+          "protocolProfileBehavior": {
+            "followRedirects": false
+          },
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{base_url}}/cart/add/{{product_a}}/"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const html = pm.response.text();",
+                  "const ok = (c, m) => { if (!c) { throw new Error(m); } };",
+                  "const cv = (k) => pm.collectionVariables.get(k);",
+                  "const loc = () => pm.response.headers.get('Location') || '';",
+                  "const inCart = (id) => html.includes('/cart/remove/' + id + '/');",
+                  "const rows = (id) => html.split('/cart/remove/' + id + '/').length - 1;",
+                  "const qtyOf = (id) => { const m = html.match(new RegExp('/cart/decrease/' + id + '/\"[^>]*>[^<]*</a>\\\\s*<span class=\"qty-number\">(\\\\d+)</span>')); return m ? parseInt(m[1], 10) : null; };",
+                  "const total = () => { const m = html.match(/<div class=\"summary-total\">([^<]+)<\\/div>/); return m ? parseInt(m[1].replace(/[^\\d]/g, ''), 10) : null; };",
+                  "",
+                  "pm.test(\"SETUP | Thêm SP A\", function () {",
+                  "ok(pm.response.code === 302 || pm.response.code === 200, 'HTTP ' + pm.response.code);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "TC-CART-BVA-13.1 Xóa SP cuối cùng trong giỏ",
+          "protocolProfileBehavior": {
+            "followRedirects": false
+          },
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{base_url}}/cart/remove/{{product_a}}/"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const html = pm.response.text();",
+                  "const ok = (c, m) => { if (!c) { throw new Error(m); } };",
+                  "const cv = (k) => pm.collectionVariables.get(k);",
+                  "const loc = () => pm.response.headers.get('Location') || '';",
+                  "const inCart = (id) => html.includes('/cart/remove/' + id + '/');",
+                  "const rows = (id) => html.split('/cart/remove/' + id + '/').length - 1;",
+                  "const qtyOf = (id) => { const m = html.match(new RegExp('/cart/decrease/' + id + '/\"[^>]*>[^<]*</a>\\\\s*<span class=\"qty-number\">(\\\\d+)</span>')); return m ? parseInt(m[1], 10) : null; };",
+                  "const total = () => { const m = html.match(/<div class=\"summary-total\">([^<]+)<\\/div>/); return m ? parseInt(m[1].replace(/[^\\d]/g, ''), 10) : null; };",
+                  "",
+                  "pm.test(\"TC-CART-BVA-13 | Xóa → 302 về /cart/\", function () {",
+                  "ok(pm.response.code === 302, 'Mong đợi HTTP 302, thực tế ' + pm.response.code);",
+                  "const exp = '/cart/';",
+                  "ok(loc() === exp, 'Location mong đợi ' + exp + ', thực tế ' + loc());",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "TC-CART-BVA-13.2 Kiểm tra giỏ 0 SP - hiện thông báo trống",
+          "protocolProfileBehavior": {
+            "followRedirects": false
+          },
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{base_url}}/cart/"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const html = pm.response.text();",
+                  "const ok = (c, m) => { if (!c) { throw new Error(m); } };",
+                  "const cv = (k) => pm.collectionVariables.get(k);",
+                  "const loc = () => pm.response.headers.get('Location') || '';",
+                  "const inCart = (id) => html.includes('/cart/remove/' + id + '/');",
+                  "const rows = (id) => html.split('/cart/remove/' + id + '/').length - 1;",
+                  "const qtyOf = (id) => { const m = html.match(new RegExp('/cart/decrease/' + id + '/\"[^>]*>[^<]*</a>\\\\s*<span class=\"qty-number\">(\\\\d+)</span>')); return m ? parseInt(m[1], 10) : null; };",
+                  "const total = () => { const m = html.match(/<div class=\"summary-total\">([^<]+)<\\/div>/); return m ? parseInt(m[1].replace(/[^\\d]/g, ''), 10) : null; };",
+                  "",
+                  "pm.test(\"TC-CART-BVA-13 | Giỏ 1 → 0 SP, hiện thông báo trống\", function () {",
+                  "ok(pm.response.code === 200, 'Mong đợi HTTP 200, thực tế ' + pm.response.code);",
+                  "ok(html.includes('Giỏ hàng của bạn đang trống'), 'Không thấy thông báo giỏ trống');",
+                  "ok(!html.includes('/orders/checkout/'), 'Giỏ trống nhưng vẫn có nút đặt hàng');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "[setup] Dọn giỏ hàng user1 (kết thúc)",
+          "protocolProfileBehavior": {
+            "followRedirects": false
+          },
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{base_url}}/cart/"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const html = pm.response.text();",
+                  "const ok = (c, m) => { if (!c) { throw new Error(m); } };",
+                  "const cv = (k) => pm.collectionVariables.get(k);",
+                  "const loc = () => pm.response.headers.get('Location') || '';",
+                  "const inCart = (id) => html.includes('/cart/remove/' + id + '/');",
+                  "const rows = (id) => html.split('/cart/remove/' + id + '/').length - 1;",
+                  "const qtyOf = (id) => { const m = html.match(new RegExp('/cart/decrease/' + id + '/\"[^>]*>[^<]*</a>\\\\s*<span class=\"qty-number\">(\\\\d+)</span>')); return m ? parseInt(m[1], 10) : null; };",
+                  "const total = () => { const m = html.match(/<div class=\"summary-total\">([^<]+)<\\/div>/); return m ? parseInt(m[1].replace(/[^\\d]/g, ''), 10) : null; };",
+                  "",
+                  "pm.test(\"SETUP | Mở giỏ hàng user1 (kết thúc) (200)\", function () {",
+                  "ok(pm.response.code === 200, 'Mong đợi HTTP 200, thực tế ' + pm.response.code);",
+                  "});",
+                  "",
+                  "// Xóa mọi sản phẩm đang có trong giỏ bằng pm.sendRequest",
+                  "const base = pm.variables.replaceIn('{{base_url}}');",
+                  "const ids = [...new Set(Array.from(html.matchAll(/\\/cart\\/remove\\/(\\d+)\\//g), (x) => x[1]))];",
+                  "ids.forEach((id) => pm.sendRequest(base + '/cart/remove/' + id + '/', () => {}));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "[setup] Đăng xuất user1 (kết thúc)",
+          "protocolProfileBehavior": {
+            "followRedirects": false
+          },
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": "{{base_url}}/accounts/logout/",
+            "body": {
+              "mode": "urlencoded",
+              "urlencoded": [
+                {
+                  "key": "csrfmiddlewaretoken",
+                  "value": "{{csrf_token_val}}",
+                  "type": "text"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const html = pm.response.text();",
+                  "const ok = (c, m) => { if (!c) { throw new Error(m); } };",
+                  "const cv = (k) => pm.collectionVariables.get(k);",
+                  "const loc = () => pm.response.headers.get('Location') || '';",
+                  "const inCart = (id) => html.includes('/cart/remove/' + id + '/');",
+                  "const rows = (id) => html.split('/cart/remove/' + id + '/').length - 1;",
+                  "const qtyOf = (id) => { const m = html.match(new RegExp('/cart/decrease/' + id + '/\"[^>]*>[^<]*</a>\\\\s*<span class=\"qty-number\">(\\\\d+)</span>')); return m ? parseInt(m[1], 10) : null; };",
+                  "const total = () => { const m = html.match(/<div class=\"summary-total\">([^<]+)<\\/div>/); return m ? parseInt(m[1].replace(/[^\\d]/g, ''), 10) : null; };",
+                  "",
+                  "pm.test(\"SETUP | Đăng xuất user1 (kết thúc)\", function () {",
+                  "ok(pm.response.code === 302 || pm.response.code === 200, 'HTTP ' + pm.response.code);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

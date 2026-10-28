@@ -1,0 +1,4 @@
+$kind: collection
+name: "00. Chuẩn bị - lấy CSRF, đăng xuất, lấy dữ liệu sản phẩm"
+description: "Chạy đầu tiên. Lấy cookie csrftoken, đăng xuất phiên cũ và lấy id/giá sản phẩm từ /products/api/."
+order: 1000
