@@ -1,0 +1,40 @@
+$kind: http-request
+name: "08. Boundary: Tìm kiếm ký tự đại diện SQL q=% (TC-PS-014)"
+url: "{{baseUrl}}/products/?q=%"
+method: GET
+queryParams:
+  - key: q
+    value: "%"
+    $type: |-
+      {
+        "type": "",
+        "format": "",
+        "required": false,
+        "deprecated": false,
+        "default": "",
+        "enum": [],
+        "pattern": "",
+        "minLength": "",
+        "maxLength": "",
+        "minItems": "",
+        "maxItems": "",
+        "minimum": "",
+        "maximum": "",
+        "uniqueItems": false
+      }
+scripts:
+  - type: afterResponse
+    code: "// Kỳ vọng: Tìm kiếm ký tự '%' không được trả về tất cả sản phẩm\r
+
+      pm.test(\"[TC-PS-014] Tìm kiếm ký tự % không bị lỗi Wildcard SQL\", function () {\r
+
+      \    pm.response.to.have.status(200);\r
+
+      \    // Nếu trong tên sản phẩm không có ký tự % thì không được hiển thị danh sách đầy đủ\r
+
+      \    pm.expect(pm.response.text()).to.not.include(\"Cây Sen Đá Mini\");\r
+
+      });\r\n"
+    language: text/javascript
+settings: {}
+order: 8000

@@ -1,6 +1,7 @@
 from django.shortcuts import render, get_object_or_404
 from django.urls import reverse
 from django.http import JsonResponse
+from django.db import connection
 from .models import Product, Category
 
 from rest_framework.decorators import api_view
@@ -19,7 +20,17 @@ def product_list(request):
         products = products.filter(name__icontains=q)
 
     if category_id:
-        products = products.filter(category_id=category_id)
+        try:
+            category_pk = int(category_id)
+        except ValueError:
+            category_pk = None
+
+        if category_pk is not None:
+            minimum, maximum = connection.ops.integer_field_range(
+                Category._meta.pk.get_internal_type()
+            )
+            if minimum <= category_pk <= maximum:
+                products = products.filter(category_id=category_pk)
 
     if sort == 'name_asc':
         products = products.order_by('name')
@@ -82,6 +93,19 @@ def product_api_list(request):
         serializer = ProductSerializer(products, many=True)
         return Response(serializer.data)
 
+    # Chỉ Admin mới được phép tạo mới sản phẩm qua API
+    if not request.user.is_authenticated:
+        return Response(
+            {'detail': 'Authentication credentials were not provided.'},
+            status=401
+        )
+
+    if not request.user.is_staff:
+        return Response(
+            {'detail': 'You do not have permission to perform this action.'},
+            status=403
+        )
+
     serializer = ProductSerializer(data=request.data)
 
     if serializer.is_valid():
@@ -93,6 +117,20 @@ def product_api_list(request):
 
 @api_view(['GET', 'PUT', 'PATCH', 'DELETE'])
 def product_api_detail(request, pk):
+    # Chỉ Admin mới được sửa/xóa sản phẩm qua API
+    if request.method in ['PUT', 'PATCH', 'DELETE']:
+        if not request.user.is_authenticated:
+            return Response(
+                {'detail': 'Authentication credentials were not provided.'},
+                status=401
+            )
+
+        if not request.user.is_staff:
+            return Response(
+                {'detail': 'You do not have permission to perform this action.'},
+                status=403
+            )
+
     product = get_object_or_404(Product, pk=pk)
 
     if request.method == 'GET':

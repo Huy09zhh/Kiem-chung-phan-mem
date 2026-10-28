@@ -1,0 +1,18 @@
+$kind: http-request
+url: "{{base_url}}/accounts/login/"
+method: POST
+body:
+  type: urlencoded
+  content:
+    csrfmiddlewaretoken: "{{csrf_token}}"
+    username: no_such_user_999999
+    password: "{{aa_password}}"
+scripts:
+  - type: afterResponse
+    code: "pm.test(\"Unknown username does not authenticate\", () => { pm.response.to.have.status(200); });\r
+
+      pm.test(\"Login form remains visible\", () => { pm.expect(pm.response.text()).to.include(\"<title>Đăng nhập</title>\"); });"
+    language: text/javascript
+settings:
+  followRedirects: false
+order: 3000

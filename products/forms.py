@@ -40,3 +40,13 @@ class ProductForm(forms.ModelForm):
         if old_price is not None and old_price < 0:
             raise ValidationError('Giá cũ phải lớn hơn hoặc bằng 0.')
         return old_price
+
+    def clean(self):
+        cleaned_data = super().clean()
+        price = cleaned_data.get('price')
+        old_price = cleaned_data.get('old_price')
+
+        if price is not None and old_price is not None and old_price <= price:
+            self.add_error('old_price', 'Giá cũ phải lớn hơn giá bán.')
+
+        return cleaned_data

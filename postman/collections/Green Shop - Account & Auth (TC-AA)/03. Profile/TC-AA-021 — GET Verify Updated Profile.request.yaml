@@ -1,0 +1,15 @@
+$kind: http-request
+url: "{{base_url}}/accounts/profile/"
+method: GET
+scripts:
+  - type: afterResponse
+    code: "pm.test('Profile returns 200', () => pm.response.to.have.status(200));\r
+
+      const html = pm.response.text();\r
+
+      pm.test('Updated first and last name are shown', () => { pm.expect(html).to.include('Test'); pm.expect(html).to.include('Account'); });\r
+
+      pm.test('Customer username is shown', () => pm.expect(html).to.include(pm.collectionVariables.get('aa_username')));"
+    language: text/javascript
+settings: {}
+order: 2000

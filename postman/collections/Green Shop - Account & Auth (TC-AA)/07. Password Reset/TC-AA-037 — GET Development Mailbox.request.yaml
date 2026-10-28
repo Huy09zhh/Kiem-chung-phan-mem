@@ -1,0 +1,11 @@
+$kind: http-request
+url: "{{base_url}}/dev/mailbox/"
+method: GET
+scripts:
+  - type: afterResponse
+    code: "pm.test('Development mailbox returns 200', () => pm.response.to.have.status(200));\r
+
+      pm.test('Reset email is visible', () => pm.expect(pm.response.text()).to.include(pm.collectionVariables.get('aa_email')));"
+    language: text/javascript
+settings: {}
+order: 3000

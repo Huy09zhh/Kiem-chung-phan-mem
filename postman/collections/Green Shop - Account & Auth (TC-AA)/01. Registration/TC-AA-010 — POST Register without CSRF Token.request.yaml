@@ -1,0 +1,25 @@
+$kind: http-request
+url: "{{base_url}}/accounts/register/"
+method: POST
+body:
+  type: urlencoded
+  content:
+    username: "{{case_username}}"
+    email: "{{case_email}}"
+    password1: "{{aa_password}}"
+    password2: "{{aa_password}}"
+scripts:
+  - type: beforeRequest
+    code: "const id = Date.now();\r
+
+      pm.collectionVariables.set('case_username', 'aa_csrf_' + id);\r
+
+      pm.collectionVariables.set('case_email', 'aa_csrf_' + id + '@example.test');"
+    language: text/javascript
+  - type: afterResponse
+    code: "pm.test(\"Registration without CSRF is forbidden\", () => { pm.response.to.have.status(403); });\r
+
+      pm.test(\"CSRF rejection is reported\", () => { pm.expect(pm.response.text()).to.match(/CSRF/i); });"
+    language: text/javascript
+settings: {}
+order: 10000

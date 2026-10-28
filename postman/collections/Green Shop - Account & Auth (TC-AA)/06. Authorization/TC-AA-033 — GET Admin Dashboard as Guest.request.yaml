@@ -1,0 +1,13 @@
+$kind: http-request
+url: "{{base_url}}/accounts/admin-dashboard/"
+method: GET
+scripts:
+  - type: afterResponse
+    code: "pm.test('Guest is redirected to login', () => pm.response.to.have.status(302));\r
+
+      pm.test('Location points to login', () => pm.expect(pm.response.headers.get('Location') || '').to.include('/accounts/login/'));"
+    language: text/javascript
+settings:
+  followRedirects: false
+  disableCookies: true
+order: 2000

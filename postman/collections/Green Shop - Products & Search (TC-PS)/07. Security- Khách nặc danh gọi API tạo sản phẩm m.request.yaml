@@ -1,0 +1,27 @@
+$kind: http-request
+name: "07. Security: Khách nặc danh gọi API tạo sản phẩm mới (TC-PS-013)"
+url: "{{baseUrl}}/products/api/"
+method: POST
+body:
+  type: json
+  content: "{\r
+
+    \  \"name\": \"Sản phẩm rác từ khách nặc danh\",\r
+
+    \  \"price\": \"100000\",\r
+
+    \  \"description\": \"Test tạo sản phẩm không cần quyền\"\r
+
+    }"
+scripts:
+  - type: afterResponse
+    code: "// Kỳ vọng: Hệ thống phải từ chối (401 hoặc 403)\r
+
+      pm.test(\"[TC-PS-013] Yêu cầu quyền Admin khi tạo sản phẩm mới qua API\", function () {\r
+
+      \    pm.expect(pm.response.code).to.be.oneOf([401, 403]);\r
+
+      });\r\n"
+    language: text/javascript
+settings: {}
+order: 7000

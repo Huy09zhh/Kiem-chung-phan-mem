@@ -1,7 +1,11 @@
 from django.shortcuts import render, redirect
 from products.models import Category
 from .forms import ContactForm, FeedbackForm
-
+from django.core.exceptions import ValidationError
+from django.core.validators import validate_email
+from django.utils.http import url_has_allowed_host_and_scheme
+from django.views.decorators.http import require_POST
+from .models import NewsletterSubscriber
 
 def contact_page(request):
     categories = Category.objects.all()
@@ -34,3 +38,25 @@ def contact_page(request):
         'contact_success': request.GET.get('contact_success') == '1',
         'feedback_success': request.GET.get('feedback_success') == '1',
     })
+
+@require_POST
+def newsletter_subscribe(request):
+    email = (request.POST.get('email') or '').strip().lower()
+ 
+    next_url = request.POST.get('next') or '/'
+    if not url_has_allowed_host_and_scheme(
+        next_url, allowed_hosts={request.get_host()}, require_https=request.is_secure()
+    ):
+        next_url = '/'
+    next_url = next_url.split('?')[0].split('#')[0]
+ 
+    try:
+        validate_email(email)
+    except ValidationError:
+        result = 'invalid'
+    else:
+        _, created = NewsletterSubscriber.objects.get_or_create(email=email)
+        result = 'success' if created else 'exists'
+ 
+    return redirect(f'{next_url}?newsletter={result}#newsletter')
+ 

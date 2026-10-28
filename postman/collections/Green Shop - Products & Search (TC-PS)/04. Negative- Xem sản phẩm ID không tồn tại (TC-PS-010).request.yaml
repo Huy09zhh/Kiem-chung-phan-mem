@@ -1,0 +1,13 @@
+$kind: http-request
+name: "04. Negative: Xem sản phẩm ID không tồn tại (TC-PS-010)"
+url: "{{baseUrl}}/products/999999/"
+method: GET
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test("[TC-PS-010] Negative: Xem sản phẩm ID không tồn tại (Bắt đúng mã lỗi 404 Not Found)", function () {
+          pm.response.to.have.status(404);
+      });
+    language: text/javascript
+settings: {}
+order: 4000

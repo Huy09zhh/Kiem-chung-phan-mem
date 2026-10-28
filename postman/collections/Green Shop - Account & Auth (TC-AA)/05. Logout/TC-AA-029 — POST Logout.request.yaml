@@ -1,0 +1,14 @@
+$kind: http-request
+url: "{{base_url}}/accounts/logout/"
+method: POST
+body:
+  type: urlencoded
+  content:
+    csrfmiddlewaretoken: "{{csrf_token}}"
+scripts:
+  - type: afterResponse
+    code: pm.test("Logout redirects", () => { pm.response.to.have.status(302); });
+    language: text/javascript
+settings:
+  followRedirects: false
+order: 1000

@@ -1,0 +1,33 @@
+$kind: http-request
+url: "{{baseUrl}}/products/?sort=price_desc"
+method: GET
+queryParams:
+  - key: sort
+    value: price_desc
+    $type: |-
+      {
+        "type": "",
+        "format": "",
+        "required": false,
+        "deprecated": false,
+        "default": "",
+        "enum": [],
+        "pattern": "",
+        "minLength": "",
+        "maxLength": "",
+        "minItems": "",
+        "maxItems": "",
+        "minimum": "",
+        "maximum": "",
+        "uniqueItems": false
+      }
+scripts:
+  - type: afterResponse
+    code: "pm.test(\"[TC-PS-017] Sắp xếp sản phẩm theo giá giảm dần thành công (200 OK)\", function () {\r
+
+      \    pm.response.to.have.status(200);\r
+
+      });"
+    language: text/javascript
+settings: {}
+order: 11000

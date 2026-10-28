@@ -1,0 +1,37 @@
+$kind: http-request
+url: "{{baseUrl}}/products/search-suggestions/?q="
+method: GET
+queryParams:
+  - key: q
+    value: ""
+    $type: |-
+      {
+        "type": "",
+        "format": "",
+        "required": false,
+        "deprecated": false,
+        "default": "",
+        "enum": [],
+        "pattern": "",
+        "minLength": "",
+        "maxLength": "",
+        "minItems": "",
+        "maxItems": "",
+        "minimum": "",
+        "maximum": "",
+        "uniqueItems": false
+      }
+scripts:
+  - type: afterResponse
+    code: "pm.test(\"[TC-PS-019] Từ khóa rỗng trả về mảng kết quả rỗng (200 OK)\", function () {\r
+
+      \    pm.response.to.have.status(200);\r
+
+      \    const data = pm.response.json();\r
+
+      \    pm.expect(data.results).to.be.an('array').that.is.empty;\r
+
+      });"
+    language: text/javascript
+settings: {}
+order: 13000

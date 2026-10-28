@@ -56,6 +56,36 @@ class ProfileUpdateForm(forms.ModelForm):
         return email
 
 
+class UserProfileUpdateForm(forms.ModelForm):
+    """SCRUM-30: Form cập nhật hồ sơ dành cho người dùng thông thường.
+
+    Trường username bị loại khỏi form hoàn toàn — không nhận, không xử lý,
+    không lưu username từ dữ liệu POST của người dùng thường.
+    Chỉ cho phép cập nhật: first_name, last_name, email.
+    """
+
+    first_name = forms.CharField(required=False)
+    last_name = forms.CharField(required=False)
+    email = forms.EmailField(required=True)
+
+    class Meta:
+        model = User
+        fields = ['first_name', 'last_name', 'email']
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields['first_name'].widget.attrs.update({'placeholder': 'Họ'})
+        self.fields['last_name'].widget.attrs.update({'placeholder': 'Tên'})
+        self.fields['email'].widget.attrs.update({'placeholder': 'Email'})
+
+    def clean_email(self):
+        email = self.cleaned_data['email']
+        qs = User.objects.filter(email__iexact=email).exclude(pk=self.instance.pk)
+        if qs.exists():
+            raise forms.ValidationError('Email này đã được sử dụng.')
+        return email
+
+
 class CustomPasswordChangeForm(PasswordChangeForm):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)

@@ -1,0 +1,35 @@
+$kind: http-request
+url: "{{base_url}}/accounts/register/"
+method: POST
+body:
+  type: urlencoded
+  content:
+    csrfmiddlewaretoken: "{{csrf_token}}"
+    username: "{{aa_username}}"
+    email: "{{aa_email}}"
+    password1: "{{aa_password}}"
+    password2: "{{aa_password}}"
+scripts:
+  - type: afterResponse
+    code: "pm.test(\"Valid registration redirects\", () => {\r
+
+      \  pm.response.to.have.status(302);\r
+
+      });\r
+
+      pm.test(\"Redirects to home\", () => {\r
+
+      \  pm.expect(pm.response.headers.get(\"Location\") || \"\").to.match(/\\/$/);\r
+
+      });"
+    language: text/javascript
+  - type: beforeRequest
+    code: "const id = Date.now();\r
+
+      pm.collectionVariables.set(\"aa_username\", `aa_${id}`);\r
+
+      pm.collectionVariables.set(\"aa_email\", `aa_${id}@example.test`);"
+    language: text/javascript
+settings:
+  followRedirects: false
+order: 3000

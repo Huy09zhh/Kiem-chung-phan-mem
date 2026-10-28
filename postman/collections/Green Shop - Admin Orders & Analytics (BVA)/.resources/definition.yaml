@@ -1,0 +1,50 @@
+$kind: collection
+description: |-
+  Kiểm thử phân vùng tương đương kết hợp giá trị biên (BVA) cho phân hệ Admin Orders & Analytics.
+  1. Chạy server: python manage.py runserver
+  2. Điền admin_password trong tab Variables (kiểm tra phone_known và search_order_id là dữ liệu có thật).
+  3. Chạy Collection Runner theo thứ tự folder 00 → 03.
+  TC-BVA Dashboard (0/1/6/7 đơn) kiểm tra thủ công.
+variables:
+  base_url: http://127.0.0.1:8000
+  admin_username: adminquan
+  admin_password: ""
+  search_order_id: "2"
+  phone_known: "0912345678"
+  run_tag: ""
+  csrf_html: ""
+  csrf_token_val: ""
+  csrf_cookie: ""
+  bva_kw: ""
+  bva_name: ""
+  bva_email: ""
+  bva_phone: ""
+  bva_message: ""
+  bva_sat: ""
+scripts:
+  - type: http:beforeRequest
+    code: |-
+      // Tự thêm CSRF cho các request ghi dữ liệu (Django bắt buộc).
+      const m = pm.request.method;
+      pm.request.headers.upsert({ key: 'Referer', value: pm.variables.replaceIn('{{base_url}}') + '/' });
+      if (m !== 'GET' && m !== 'HEAD') {
+          const token = pm.collectionVariables.get('csrf_cookie') || pm.cookies.get('csrftoken') || pm.collectionVariables.get('csrf_html');
+          if (token) {
+              pm.request.headers.upsert({ key: 'X-CSRFToken', value: token });
+              pm.collectionVariables.set('csrf_token_val', token);
+          }
+      }
+    language: text/javascript
+  - type: http:afterResponse
+    code: |-
+      // Sau mỗi response: nhớ lại cookie csrftoken mới nhất (Django đổi token sau khi đăng nhập).
+      let tk = null;
+      try { tk = pm.cookies.get('csrftoken'); } catch (e) {}
+      if (!tk) {
+          try {
+              const rc = pm.response.cookies.get('csrftoken');
+              tk = rc && typeof rc === 'object' ? rc.value : rc;
+          } catch (e) {}
+      }
+      if (tk) { pm.collectionVariables.set('csrf_cookie', tk); }
+    language: text/javascript

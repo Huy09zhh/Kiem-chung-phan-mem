@@ -1,0 +1,19 @@
+$kind: http-request
+url: "{{base_url}}/accounts/profile/edit/"
+method: GET
+scripts:
+  - type: afterResponse
+    code: "pm.test('Profile edit page returns 200', () => pm.response.to.have.status(200));\r
+
+      const html = pm.response.text();\r
+
+      pm.test('Profile edit form is present', () => pm.expect(html).to.include('name=\"email\"'));\r
+
+      const match = html.match(/name=\"csrfmiddlewaretoken\" value=\"([^\"]+)\"/);\r
+
+      pm.test('CSRF token is present', () => pm.expect(match).to.not.be.null);\r
+
+      if (match) pm.collectionVariables.set('csrf_token', match[1]);"
+    language: text/javascript
+settings: {}
+order: 1000

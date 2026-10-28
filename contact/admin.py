@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import ContactMessage, Feedback
+from .models import ContactMessage, Feedback, NewsletterSubscriber
 
 
 @admin.register(ContactMessage)
@@ -16,3 +16,8 @@ class FeedbackAdmin(admin.ModelAdmin):
     list_filter = ('category', 'satisfaction', 'is_reviewed', 'created_at')
     search_fields = ('name', 'email', 'message')
     list_editable = ('is_reviewed',)
+
+@admin.register(NewsletterSubscriber)
+class NewsletterSubscriberAdmin(admin.ModelAdmin):
+    list_display = ('email', 'created_at')
+    search_fields = ('email',)

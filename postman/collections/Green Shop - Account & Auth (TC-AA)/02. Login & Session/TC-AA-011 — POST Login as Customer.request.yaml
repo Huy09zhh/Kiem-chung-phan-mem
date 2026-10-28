@@ -1,0 +1,18 @@
+$kind: http-request
+url: "{{base_url}}/accounts/login/"
+method: POST
+body:
+  type: urlencoded
+  content:
+    csrfmiddlewaretoken: "{{csrf_token}}"
+    username: "{{aa_username}}"
+    password: "{{aa_password}}"
+scripts:
+  - type: afterResponse
+    code: "pm.test(\"Customer login redirects\", () => { pm.response.to.have.status(302); });\r
+
+      pm.test(\"Redirects to home\", () => { pm.expect(pm.response.headers.get(\"Location\")).to.eql(\"/\"); });"
+    language: text/javascript
+settings:
+  followRedirects: false
+order: 1000

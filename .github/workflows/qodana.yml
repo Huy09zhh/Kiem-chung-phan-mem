@@ -1,0 +1,38 @@
+
+name: Qodana Code Quality
+
+on:
+  push:
+    branches:
+      - tuan-2
+      - tuan-3
+      - tuan-4
+      - main
+
+  pull_request:
+    branches:
+      - tuan-2
+      - tuan-3
+      - tuan-4
+      - main
+
+  workflow_dispatch:
+
+jobs:
+  qodana:
+    name: Analyze Python Code
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Run Qodana
+        uses: JetBrains/qodana-action@v2026.2
+        with:
+          args: --linter qodana-python-community

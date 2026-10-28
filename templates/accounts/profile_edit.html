@@ -9,7 +9,47 @@
 
         <form method="post">
             {% csrf_token %}
-            {{ form.as_p }}
+
+            <p>
+                <label for="id_username_display"><strong>Tên đăng nhập</strong></label><br>
+                <input
+                    type="text"
+                    id="id_username_display"
+                    value="{{ request.user.username }}"
+                    readonly
+                    style="background: #f5f5f5; color: #555; cursor: default; width: 100%; padding: 8px 10px; border: 1px solid #ccc; border-radius: 6px; box-sizing: border-box;"
+                    title="Tên đăng nhập không thể thay đổi"
+                >
+                <small style="color: #888;">Tên đăng nhập không thể thay đổi.</small>
+            </p>
+
+            <p>
+                <label for="{{ form.first_name.id_for_label }}"><strong>Họ</strong></label><br>
+                {{ form.first_name }}
+                {% if form.first_name.errors %}
+                    <span style="color: red;">{{ form.first_name.errors }}</span>
+                {% endif %}
+            </p>
+
+            <p>
+                <label for="{{ form.last_name.id_for_label }}"><strong>Tên</strong></label><br>
+                {{ form.last_name }}
+                {% if form.last_name.errors %}
+                    <span style="color: red;">{{ form.last_name.errors }}</span>
+                {% endif %}
+            </p>
+
+            <p>
+                <label for="{{ form.email.id_for_label }}"><strong>Email</strong></label><br>
+                {{ form.email }}
+                {% if form.email.errors %}
+                    <span style="color: red;">{{ form.email.errors }}</span>
+                {% endif %}
+            </p>
+
+            {% if form.non_field_errors %}
+                <div style="color: red;">{{ form.non_field_errors }}</div>
+            {% endif %}
 
             <div style="margin-top: 20px; display: flex; gap: 12px;">
                 <button type="submit" class="btn btn-primary">Lưu thay đổi</button>

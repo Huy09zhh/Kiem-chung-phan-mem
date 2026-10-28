@@ -1,0 +1,14 @@
+$kind: http-request
+name: "12. Sắp xếp theo tên A-Z (TC-PS-018) Phương thức: GET"
+url: "{{baseUrl}}/products/api/1/"
+method: DELETE
+scripts:
+  - type: afterResponse
+    code: "pm.test(\"TC-PS-012: Chặn xóa sản phẩm khi chưa đăng nhập\", function () {\r
+
+      \    pm.expect([401, 403]).to.include(pm.response.code);\r
+
+      });"
+    language: text/javascript
+settings: {}
+order: 12000

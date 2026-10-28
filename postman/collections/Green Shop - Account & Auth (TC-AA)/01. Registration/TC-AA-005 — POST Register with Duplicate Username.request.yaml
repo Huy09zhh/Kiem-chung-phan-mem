@@ -1,0 +1,32 @@
+$kind: http-request
+url: "{{base_url}}/accounts/register/"
+method: POST
+body:
+  type: urlencoded
+  content:
+    csrfmiddlewaretoken: "{{csrf_token}}"
+    username: "{{aa_username}}"
+    email: "{{case_email}}"
+    password1: "{{aa_password}}"
+    password2: "{{aa_password}}"
+scripts:
+  - type: beforeRequest
+    code: "const id = Date.now();\r
+
+      pm.collectionVariables.set(\"case_email\", `duplicate_name_${id}@example.test`);"
+    language: text/javascript
+  - type: afterResponse
+    code: "pm.test(\"Duplicate username stays on registration form\", () => {\r
+
+      \  pm.response.to.have.status(200);\r
+
+      });\r
+
+      pm.test(\"Username field is present\", () => {\r
+
+      \  pm.expect(pm.response.text()).to.include('name=\"username\"');\r
+
+      });"
+    language: text/javascript
+settings: {}
+order: 5000

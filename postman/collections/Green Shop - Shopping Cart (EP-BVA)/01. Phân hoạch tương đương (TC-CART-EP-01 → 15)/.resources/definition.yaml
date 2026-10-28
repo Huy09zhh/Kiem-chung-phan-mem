@@ -1,0 +1,4 @@
+$kind: collection
+name: "01. Phân hoạch tương đương (TC-CART-EP-01 → 15)"
+description: "Mỗi lớp tương đương (V = hợp lệ, I = không hợp lệ) có 1 test case đại diện."
+order: 2000

@@ -1,0 +1,35 @@
+$kind: http-request
+url: "{{baseUrl}}/products/?sort=price_asc"
+method: GET
+queryParams:
+  - key: sort
+    value: price_asc
+    $type: |-
+      {
+        "type": "",
+        "format": "",
+        "required": false,
+        "deprecated": false,
+        "default": "",
+        "enum": [],
+        "pattern": "",
+        "minLength": "",
+        "maxLength": "",
+        "minItems": "",
+        "maxItems": "",
+        "minimum": "",
+        "maximum": "",
+        "uniqueItems": false
+      }
+scripts:
+  - type: afterResponse
+    code: "pm.test(\"[TC-PS-016] Sắp xếp sản phẩm theo giá tăng dần thành công (200 OK)\", function () {\r
+
+      \    pm.response.to.have.status(200);\r
+
+      \    pm.expect(pm.response.text()).to.include(\"products\");\r
+
+      });"
+    language: text/javascript
+settings: {}
+order: 10000
