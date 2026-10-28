@@ -1,0 +1,28 @@
+$kind: http-request
+url: "{{base_url}}/accounts/login/"
+method: POST
+body:
+  type: urlencoded
+  content:
+    username: "{{user_username}}"
+    password: "{{user_password}}"
+    csrfmiddlewaretoken: "{{csrf_token_val}}"
+scripts:
+  - type: afterResponse
+    code: |-
+      const html = pm.response.text();
+      const ok = (c, m) => { if (!c) { throw new Error(m); } };
+      const cv = (k) => pm.collectionVariables.get(k);
+      const loc = () => pm.response.headers.get('Location') || '';
+      const inCart = (id) => html.includes('/cart/remove/' + id + '/');
+      const rows = (id) => html.split('/cart/remove/' + id + '/').length - 1;
+      const qtyOf = (id) => { const m = html.match(new RegExp('/cart/decrease/' + id + '/"[^>]*>[^<]*</a>\\s*<span class="qty-number">(\\d+)</span>')); return m ? parseInt(m[1], 10) : null; };
+      const total = () => { const m = html.match(/<div class="summary-total">([^<]+)<\/div>/); return m ? parseInt(m[1].replace(/[^\d]/g, ''), 10) : null; };
+
+      pm.test("SETUP | Đăng nhập user1 thành công (302)", function () {
+      ok(pm.response.code === 302, 'Mong đợi HTTP 302, thực tế ' + pm.response.code); // sai mật khẩu thì kiểm tra user_username / user_password trong tab Variables
+      });
+    language: text/javascript
+settings:
+  followRedirects: false
+order: 4000
