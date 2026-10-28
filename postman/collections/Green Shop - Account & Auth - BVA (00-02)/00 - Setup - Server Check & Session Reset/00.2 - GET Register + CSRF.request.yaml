@@ -1,0 +1,14 @@
+$kind: http-request
+url: '{{base_url}}/accounts/register/'
+method: GET
+scripts:
+- type: afterResponse
+  code: |-
+    pm.test("SETUP: trả về 200", () => pm.response.to.have.status(200));
+
+    const csrfMatch = pm.response.text().match(/name=["\']csrfmiddlewaretoken["\'][^>]*value=["\']([^"\']+)["\']/i);
+    pm.test("SETUP: lấy được CSRF token", () => pm.expect(csrfMatch, "Không tìm thấy CSRF").to.not.be.null);
+    if (csrfMatch) pm.collectionVariables.set("bva_csrf", csrfMatch[1]);
+  language: text/javascript
+settings: {}
+order: 2000

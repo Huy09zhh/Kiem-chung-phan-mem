@@ -1,0 +1,27 @@
+$kind: http-request
+url: "{{base_url}}/admin-panel/orders/?keyword=1"
+method: GET
+queryParams:
+  keyword: "1"
+scripts:
+  - type: afterResponse
+    code: |-
+      const html = pm.response.text();
+      const ok = (c, m) => { if (!c) { throw new Error(m); } };
+      const num = (s) => parseInt(String(s).replace(/[^\d]/g, ''), 10);
+      const grab = (re) => { const m = html.match(re); return m ? m[1] : null; };
+      const rowIds = () => Array.from(html.matchAll(/<td>#(\d+)<\/td>/g), (m) => parseInt(m[1], 10));
+      const loc = () => pm.response.headers.get('Location') || '';
+      const cv = (k) => pm.collectionVariables.get(k);
+      const setcv = (k, v) => pm.collectionVariables.set(k, v);
+      const selectedStatus = () => grab(/<option value="(\w+)"\s+selected>/);
+      const LABEL = { pending: 'Chờ xử lý', awaiting_transfer: 'Chờ chuyển khoản', paid: 'Đã thanh toán', failed: 'Thanh toán thất bại', confirmed: 'Đã xác nhận', shipping: 'Đang giao', completed: 'Hoàn thành', cancelled: 'Đã hủy' };
+
+      pm.test("TC-BVA-005 | Mã đơn 1 (min)", function () {
+      ok(pm.response.code < 500, 'Server lỗi ' + pm.response.code);
+      const ids = rowIds(); ok(ids.length === 1 && ids[0] === 1, 'Mong đợi chỉ đơn #1, nhận: ' + ids.join(','));
+      });
+    language: text/javascript
+settings:
+  followRedirects: false
+order: 5000

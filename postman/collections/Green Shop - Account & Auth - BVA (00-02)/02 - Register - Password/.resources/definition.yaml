@@ -1,0 +1,3 @@
+$kind: collection
+description: Robustness BVA (6n+1, n=1) cho password1/password2 (nhập trùng nhau), miền hợp lệ [8, 128]. min=8 theo MinimumLengthValidator; max=128 là giới hạn đề xuất (SRS và code hiện CHƯA áp dụng), nên L129 dự kiến FAIL cho tới khi bổ sung validator độ dài tối đa.
+order: 3000

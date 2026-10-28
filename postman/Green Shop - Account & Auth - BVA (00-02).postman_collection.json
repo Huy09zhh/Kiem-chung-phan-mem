@@ -1,0 +1,4090 @@
+{
+  "info": {
+    "_postman_id": "12dbbcab-d6d7-4775-93ce-b75fa2779177",
+    "name": "Green Shop - Account & Auth - BVA (00-02)",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "_exporter_id": "58973177"
+  },
+  "item": [
+    {
+      "name": "00 - Setup - Server Check & Session Reset",
+      "item": [
+        {
+          "name": "00.1 - GET Home (server check)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Green Shop phản hồi 200\", () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                ""
+              ]
+            },
+            "description": "Chạy folder 00 trước mỗi lần chạy folder BVA (Collection Runner). 00.2 + 00.3 xoá phiên đăng nhập còn sót trong cookie jar để case đầu tiên không bị redirect."
+          },
+          "response": []
+        },
+        {
+          "name": "00.2 - GET Register + CSRF",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"SETUP: trả về 200\", () => pm.response.to.have.status(200));",
+                  "",
+                  "const csrfMatch = pm.response.text().match(/name=[\"\\']csrfmiddlewaretoken[\"\\'][^>]*value=[\"\\']([^\"\\']+)[\"\\']/i);",
+                  "pm.test(\"SETUP: lấy được CSRF token\", () => pm.expect(csrfMatch, \"Không tìm thấy CSRF\").to.not.be.null);",
+                  "if (csrfMatch) pm.collectionVariables.set(\"bva_csrf\", csrfMatch[1]);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/accounts/register/",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "accounts",
+                "register",
+                ""
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "00.3 - POST Logout (session reset)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "// Đã đăng nhập -> 302 về \"/\", chưa đăng nhập -> 302 về trang login. Cả hai đều là phiên sạch.",
+                  "pm.test(\"CLEANUP: logout trả về 302\", () => pm.response.to.have.status(302));"
+                ]
+              }
+            }
+          ],
+          "protocolProfileBehavior": {
+            "followRedirects": false
+          },
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "urlencoded",
+              "urlencoded": [
+                {
+                  "key": "csrfmiddlewaretoken",
+                  "value": "{{bva_csrf}}",
+                  "type": "text"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{base_url}}/accounts/logout/",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "accounts",
+                "logout",
+                ""
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "01 - Register - Username",
+      "item": [
+        {
+          "name": "BVA-AA-REG-USER-L000 | Reject",
+          "item": [
+            {
+              "name": "01 - GET Register + CSRF",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"SETUP: trang trả về 200\", () => pm.response.to.have.status(200));",
+                      "pm.test(\"SETUP: đang ở form Đăng ký (chưa đăng nhập)\", () => {",
+                      "  pm.expect(pm.response.text(), \"Còn phiên đăng nhập cũ - chạy folder 00 trước\").to.include('name=\"password1\"');",
+                      "});",
+                      "",
+                      "const csrfMatch = pm.response.text().match(/name=[\"\\']csrfmiddlewaretoken[\"\\'][^>]*value=[\"\\']([^\"\\']+)[\"\\']/i);",
+                      "pm.test(\"SETUP: lấy được CSRF token\", () => pm.expect(csrfMatch, \"Không tìm thấy CSRF\").to.not.be.null);",
+                      "if (csrfMatch) pm.collectionVariables.set(\"bva_csrf\", csrfMatch[1]);"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{base_url}}/accounts/register/",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "accounts",
+                    "register",
+                    ""
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "02 - POST Register",
+              "event": [
+                {
+                  "listen": "prerequest",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "const length = 0;",
+                      "const stamp = Date.now().toString(36) + Math.random().toString(36).slice(2, 7);",
+                      "let username = \"\";",
+                      "if (length === 1) username = String.fromCodePoint(0x4e00 + Math.floor(Math.random() * 18000));",
+                      "else if (length === 2) username = String.fromCodePoint(0x4e00 + Math.floor(Math.random() * 18000)) + String.fromCodePoint(0x4e00 + Math.floor(Math.random() * 18000));",
+                      "else if (length > 0) username = (\"u\" + stamp + \"x\".repeat(length)).slice(0, length);",
+                      "pm.collectionVariables.set(\"bva_user\", username);",
+                      "pm.collectionVariables.set(\"bva_email\", \"bva_\" + stamp + \"@example.test\");",
+                      "pm.collectionVariables.set(\"bva_password\", \"Q7!mT2#x\");",
+                      "if (username.length !== length) throw new Error(\"Sai độ dài username\");"
+                    ]
+                  }
+                },
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "const html = pm.response.text();",
+                      "pm.test(\"BVA-AA-REG-USER-L000: REJECT - giữ lại form (200)\", () => pm.response.to.have.status(200));",
+                      "pm.test(\"BVA-AA-REG-USER-L000: hiển thị đúng thông báo lỗi\", () => {",
+                      "  pm.expect(html).to.include('class=\"auth-error\"');",
+                      "  pm.expect(html).to.include(\"This field is required.\");",
+                      "});"
+                    ]
+                  }
+                }
+              ],
+              "protocolProfileBehavior": {
+                "followRedirects": false
+              },
+              "request": {
+                "method": "POST",
+                "header": [],
+                "body": {
+                  "mode": "urlencoded",
+                  "urlencoded": [
+                    {
+                      "key": "csrfmiddlewaretoken",
+                      "value": "{{bva_csrf}}",
+                      "type": "text"
+                    },
+                    {
+                      "key": "username",
+                      "value": "{{bva_user}}",
+                      "type": "text"
+                    },
+                    {
+                      "key": "email",
+                      "value": "{{bva_email}}",
+                      "type": "text"
+                    },
+                    {
+                      "key": "password1",
+                      "value": "{{bva_password}}",
+                      "type": "text"
+                    },
+                    {
+                      "key": "password2",
+                      "value": "{{bva_password}}",
+                      "type": "text"
+                    }
+                  ]
+                },
+                "url": {
+                  "raw": "{{base_url}}/accounts/register/",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "accounts",
+                    "register",
+                    ""
+                  ]
+                }
+              },
+              "response": []
+            }
+          ],
+          "description": "Điểm biên: min-"
+        },
+        {
+          "name": "BVA-AA-REG-USER-L001 | Accept",
+          "item": [
+            {
+              "name": "01 - GET Register + CSRF",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"SETUP: trang trả về 200\", () => pm.response.to.have.status(200));",
+                      "pm.test(\"SETUP: đang ở form Đăng ký (chưa đăng nhập)\", () => {",
+                      "  pm.expect(pm.response.text(), \"Còn phiên đăng nhập cũ - chạy folder 00 trước\").to.include('name=\"password1\"');",
+                      "});",
+                      "",
+                      "const csrfMatch = pm.response.text().match(/name=[\"\\']csrfmiddlewaretoken[\"\\'][^>]*value=[\"\\']([^\"\\']+)[\"\\']/i);",
+                      "pm.test(\"SETUP: lấy được CSRF token\", () => pm.expect(csrfMatch, \"Không tìm thấy CSRF\").to.not.be.null);",
+                      "if (csrfMatch) pm.collectionVariables.set(\"bva_csrf\", csrfMatch[1]);"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{base_url}}/accounts/register/",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "accounts",
+                    "register",
+                    ""
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "02 - POST Register",
+              "event": [
+                {
+                  "listen": "prerequest",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "const length = 1;",
+                      "const stamp = Date.now().toString(36) + Math.random().toString(36).slice(2, 7);",
+                      "let username = \"\";",
+                      "if (length === 1) username = String.fromCodePoint(0x4e00 + Math.floor(Math.random() * 18000));",
+                      "else if (length === 2) username = String.fromCodePoint(0x4e00 + Math.floor(Math.random() * 18000)) + String.fromCodePoint(0x4e00 + Math.floor(Math.random() * 18000));",
+                      "else if (length > 0) username = (\"u\" + stamp + \"x\".repeat(length)).slice(0, length);",
+                      "pm.collectionVariables.set(\"bva_user\", username);",
+                      "pm.collectionVariables.set(\"bva_email\", \"bva_\" + stamp + \"@example.test\");",
+                      "pm.collectionVariables.set(\"bva_password\", \"Q7!mT2#x\");",
+                      "if (username.length !== length) throw new Error(\"Sai độ dài username\");"
+                    ]
+                  }
+                },
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"BVA-AA-REG-USER-L001: ACCEPT - trả về 302\", () => pm.response.to.have.status(302));",
+                      "pm.test(\"BVA-AA-REG-USER-L001: redirect về trang chủ\", () => {",
+                      "  pm.expect(pm.response.headers.get(\"Location\") || \"\").to.match(/^\\/($|\\?)/);",
+                      "});"
+                    ]
+                  }
+                }
+              ],
+              "protocolProfileBehavior": {
+                "followRedirects": false
+              },
+              "request": {
+                "method": "POST",
+                "header": [],
+                "body": {
+                  "mode": "urlencoded",
+                  "urlencoded": [
+                    {
+                      "key": "csrfmiddlewaretoken",
+                      "value": "{{bva_csrf}}",
+                      "type": "text"
+                    },
+                    {
+                      "key": "username",
+                      "value": "{{bva_user}}",
+                      "type": "text"
+                    },
+                    {
+                      "key": "email",
+                      "value": "{{bva_email}}",
+                      "type": "text"
+                    },
+                    {
+                      "key": "password1",
+                      "value": "{{bva_password}}",
+                      "type": "text"
+                    },
+                    {
+                      "key": "password2",
+                      "value": "{{bva_password}}",
+                      "type": "text"
+                    }
+                  ]
+                },
+                "url": {
+                  "raw": "{{base_url}}/accounts/register/",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "accounts",
+                    "register",
+                    ""
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "03 - GET Verify Profile + CSRF",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"VERIFY: profile trả về 200\", () => pm.response.to.have.status(200));",
+                      "pm.test(\"BVA-AA-REG-USER-L001: đúng tài khoản đang đăng nhập\", () => {",
+                      "  pm.expect(pm.response.text()).to.include(pm.collectionVariables.get(\"bva_user\"));",
+                      "});",
+                      "",
+                      "const csrfMatch = pm.response.text().match(/name=[\"\\']csrfmiddlewaretoken[\"\\'][^>]*value=[\"\\']([^\"\\']+)[\"\\']/i);",
+                      "pm.test(\"VERIFY: lấy được CSRF token\", () => pm.expect(csrfMatch, \"Không tìm thấy CSRF\").to.not.be.null);",
+                      "if (csrfMatch) pm.collectionVariables.set(\"bva_csrf\", csrfMatch[1]);"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{base_url}}/accounts/profile/",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "accounts",
+                    "profile",
+                    ""
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "04 - POST Logout (cleanup)",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"CLEANUP: logout trả về 302\", () => pm.response.to.have.status(302));"
+                    ]
+                  }
+                }
+              ],
+              "protocolProfileBehavior": {
+                "followRedirects": false
+              },
+              "request": {
+                "method": "POST",
+                "header": [],
+                "body": {
+                  "mode": "urlencoded",
+                  "urlencoded": [
+                    {
+                      "key": "csrfmiddlewaretoken",
+                      "value": "{{bva_csrf}}",
+                      "type": "text"
+                    }
+                  ]
+                },
+                "url": {
+                  "raw": "{{base_url}}/accounts/logout/",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "accounts",
+                    "logout",
+                    ""
+                  ]
+                }
+              },
+              "response": []
+            }
+          ],
+          "description": "Điểm biên: min"
+        },
+        {
+          "name": "BVA-AA-REG-USER-L002 | Accept",
+          "item": [
+            {
+              "name": "01 - GET Register + CSRF",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"SETUP: trang trả về 200\", () => pm.response.to.have.status(200));",
+                      "pm.test(\"SETUP: đang ở form Đăng ký (chưa đăng nhập)\", () => {",
+                      "  pm.expect(pm.response.text(), \"Còn phiên đăng nhập cũ - chạy folder 00 trước\").to.include('name=\"password1\"');",
+                      "});",
+                      "",
+                      "const csrfMatch = pm.response.text().match(/name=[\"\\']csrfmiddlewaretoken[\"\\'][^>]*value=[\"\\']([^\"\\']+)[\"\\']/i);",
+                      "pm.test(\"SETUP: lấy được CSRF token\", () => pm.expect(csrfMatch, \"Không tìm thấy CSRF\").to.not.be.null);",
+                      "if (csrfMatch) pm.collectionVariables.set(\"bva_csrf\", csrfMatch[1]);"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{base_url}}/accounts/register/",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "accounts",
+                    "register",
+                    ""
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "02 - POST Register",
+              "event": [
+                {
+                  "listen": "prerequest",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "const length = 2;",
+                      "const stamp = Date.now().toString(36) + Math.random().toString(36).slice(2, 7);",
+                      "let username = \"\";",
+                      "if (length === 1) username = String.fromCodePoint(0x4e00 + Math.floor(Math.random() * 18000));",
+                      "else if (length === 2) username = String.fromCodePoint(0x4e00 + Math.floor(Math.random() * 18000)) + String.fromCodePoint(0x4e00 + Math.floor(Math.random() * 18000));",
+                      "else if (length > 0) username = (\"u\" + stamp + \"x\".repeat(length)).slice(0, length);",
+                      "pm.collectionVariables.set(\"bva_user\", username);",
+                      "pm.collectionVariables.set(\"bva_email\", \"bva_\" + stamp + \"@example.test\");",
+                      "pm.collectionVariables.set(\"bva_password\", \"Q7!mT2#x\");",
+                      "if (username.length !== length) throw new Error(\"Sai độ dài username\");"
+                    ]
+                  }
+                },
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"BVA-AA-REG-USER-L002: ACCEPT - trả về 302\", () => pm.response.to.have.status(302));",
+                      "pm.test(\"BVA-AA-REG-USER-L002: redirect về trang chủ\", () => {",
+                      "  pm.expect(pm.response.headers.get(\"Location\") || \"\").to.match(/^\\/($|\\?)/);",
+                      "});"
+                    ]
+                  }
+                }
+              ],
+              "protocolProfileBehavior": {
+                "followRedirects": false
+              },
+              "request": {
+                "method": "POST",
+                "header": [],
+                "body": {
+                  "mode": "urlencoded",
+                  "urlencoded": [
+                    {
+                      "key": "csrfmiddlewaretoken",
+                      "value": "{{bva_csrf}}",
+                      "type": "text"
+                    },
+                    {
+                      "key": "username",
+                      "value": "{{bva_user}}",
+                      "type": "text"
+                    },
+                    {
+                      "key": "email",
+                      "value": "{{bva_email}}",
+                      "type": "text"
+                    },
+                    {
+                      "key": "password1",
+                      "value": "{{bva_password}}",
+                      "type": "text"
+                    },
+                    {
+                      "key": "password2",
+                      "value": "{{bva_password}}",
+                      "type": "text"
+                    }
+                  ]
+                },
+                "url": {
+                  "raw": "{{base_url}}/accounts/register/",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "accounts",
+                    "register",
+                    ""
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "03 - GET Verify Profile + CSRF",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"VERIFY: profile trả về 200\", () => pm.response.to.have.status(200));",
+                      "pm.test(\"BVA-AA-REG-USER-L002: đúng tài khoản đang đăng nhập\", () => {",
+                      "  pm.expect(pm.response.text()).to.include(pm.collectionVariables.get(\"bva_user\"));",
+                      "});",
+                      "",
+                      "const csrfMatch = pm.response.text().match(/name=[\"\\']csrfmiddlewaretoken[\"\\'][^>]*value=[\"\\']([^\"\\']+)[\"\\']/i);",
+                      "pm.test(\"VERIFY: lấy được CSRF token\", () => pm.expect(csrfMatch, \"Không tìm thấy CSRF\").to.not.be.null);",
+                      "if (csrfMatch) pm.collectionVariables.set(\"bva_csrf\", csrfMatch[1]);"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{base_url}}/accounts/profile/",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "accounts",
+                    "profile",
+                    ""
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "04 - POST Logout (cleanup)",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"CLEANUP: logout trả về 302\", () => pm.response.to.have.status(302));"
+                    ]
+                  }
+                }
+              ],
+              "protocolProfileBehavior": {
+                "followRedirects": false
+              },
+              "request": {
+                "method": "POST",
+                "header": [],
+                "body": {
+                  "mode": "urlencoded",
+                  "urlencoded": [
+                    {
+                      "key": "csrfmiddlewaretoken",
+                      "value": "{{bva_csrf}}",
+                      "type": "text"
+                    }
+                  ]
+                },
+                "url": {
+                  "raw": "{{base_url}}/accounts/logout/",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "accounts",
+                    "logout",
+                    ""
+                  ]
+                }
+              },
+              "response": []
+            }
+          ],
+          "description": "Điểm biên: min+"
+        },
+        {
+          "name": "BVA-AA-REG-USER-L076 | Accept",
+          "item": [
+            {
+              "name": "01 - GET Register + CSRF",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"SETUP: trang trả về 200\", () => pm.response.to.have.status(200));",
+                      "pm.test(\"SETUP: đang ở form Đăng ký (chưa đăng nhập)\", () => {",
+                      "  pm.expect(pm.response.text(), \"Còn phiên đăng nhập cũ - chạy folder 00 trước\").to.include('name=\"password1\"');",
+                      "});",
+                      "",
+                      "const csrfMatch = pm.response.text().match(/name=[\"\\']csrfmiddlewaretoken[\"\\'][^>]*value=[\"\\']([^\"\\']+)[\"\\']/i);",
+                      "pm.test(\"SETUP: lấy được CSRF token\", () => pm.expect(csrfMatch, \"Không tìm thấy CSRF\").to.not.be.null);",
+                      "if (csrfMatch) pm.collectionVariables.set(\"bva_csrf\", csrfMatch[1]);"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{base_url}}/accounts/register/",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "accounts",
+                    "register",
+                    ""
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "02 - POST Register",
+              "event": [
+                {
+                  "listen": "prerequest",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "const length = Math.round(1 + (150 - 1) / 2); // nom giữa min=1 và max=150;",
+                      "const stamp = Date.now().toString(36) + Math.random().toString(36).slice(2, 7);",
+                      "let username = \"\";",
+                      "if (length === 1) username = String.fromCodePoint(0x4e00 + Math.floor(Math.random() * 18000));",
+                      "else if (length === 2) username = String.fromCodePoint(0x4e00 + Math.floor(Math.random() * 18000)) + String.fromCodePoint(0x4e00 + Math.floor(Math.random() * 18000));",
+                      "else if (length > 0) username = (\"u\" + stamp + \"x\".repeat(length)).slice(0, length);",
+                      "pm.collectionVariables.set(\"bva_user\", username);",
+                      "pm.collectionVariables.set(\"bva_email\", \"bva_\" + stamp + \"@example.test\");",
+                      "pm.collectionVariables.set(\"bva_password\", \"Q7!mT2#x\");",
+                      "if (username.length !== length) throw new Error(\"Sai độ dài username\");"
+                    ]
+                  }
+                },
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"BVA-AA-REG-USER-L076: ACCEPT - trả về 302\", () => pm.response.to.have.status(302));",
+                      "pm.test(\"BVA-AA-REG-USER-L076: redirect về trang chủ\", () => {",
+                      "  pm.expect(pm.response.headers.get(\"Location\") || \"\").to.match(/^\\/($|\\?)/);",
+                      "});"
+                    ]
+                  }
+                }
+              ],
+              "protocolProfileBehavior": {
+                "followRedirects": false
+              },
+              "request": {
+                "method": "POST",
+                "header": [],
+                "body": {
+                  "mode": "urlencoded",
+                  "urlencoded": [
+                    {
+                      "key": "csrfmiddlewaretoken",
+                      "value": "{{bva_csrf}}",
+                      "type": "text"
+                    },
+                    {
+                      "key": "username",
+                      "value": "{{bva_user}}",
+                      "type": "text"
+                    },
+                    {
+                      "key": "email",
+                      "value": "{{bva_email}}",
+                      "type": "text"
+                    },
+                    {
+                      "key": "password1",
+                      "value": "{{bva_password}}",
+                      "type": "text"
+                    },
+                    {
+                      "key": "password2",
+                      "value": "{{bva_password}}",
+                      "type": "text"
+                    }
+                  ]
+                },
+                "url": {
+                  "raw": "{{base_url}}/accounts/register/",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "accounts",
+                    "register",
+                    ""
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "03 - GET Verify Profile + CSRF",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"VERIFY: profile trả về 200\", () => pm.response.to.have.status(200));",
+                      "pm.test(\"BVA-AA-REG-USER-L076: đúng tài khoản đang đăng nhập\", () => {",
+                      "  pm.expect(pm.response.text()).to.include(pm.collectionVariables.get(\"bva_user\"));",
+                      "});",
+                      "",
+                      "const csrfMatch = pm.response.text().match(/name=[\"\\']csrfmiddlewaretoken[\"\\'][^>]*value=[\"\\']([^\"\\']+)[\"\\']/i);",
+                      "pm.test(\"VERIFY: lấy được CSRF token\", () => pm.expect(csrfMatch, \"Không tìm thấy CSRF\").to.not.be.null);",
+                      "if (csrfMatch) pm.collectionVariables.set(\"bva_csrf\", csrfMatch[1]);"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{base_url}}/accounts/profile/",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "accounts",
+                    "profile",
+                    ""
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "04 - POST Logout (cleanup)",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"CLEANUP: logout trả về 302\", () => pm.response.to.have.status(302));"
+                    ]
+                  }
+                }
+              ],
+              "protocolProfileBehavior": {
+                "followRedirects": false
+              },
+              "request": {
+                "method": "POST",
+                "header": [],
+                "body": {
+                  "mode": "urlencoded",
+                  "urlencoded": [
+                    {
+                      "key": "csrfmiddlewaretoken",
+                      "value": "{{bva_csrf}}",
+                      "type": "text"
+                    }
+                  ]
+                },
+                "url": {
+                  "raw": "{{base_url}}/accounts/logout/",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "accounts",
+                    "logout",
+                    ""
+                  ]
+                }
+              },
+              "response": []
+            }
+          ],
+          "description": "Điểm biên: nom"
+        },
+        {
+          "name": "BVA-AA-REG-USER-L149 | Accept",
+          "item": [
+            {
+              "name": "01 - GET Register + CSRF",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"SETUP: trang trả về 200\", () => pm.response.to.have.status(200));",
+                      "pm.test(\"SETUP: đang ở form Đăng ký (chưa đăng nhập)\", () => {",
+                      "  pm.expect(pm.response.text(), \"Còn phiên đăng nhập cũ - chạy folder 00 trước\").to.include('name=\"password1\"');",
+                      "});",
+                      "",
+                      "const csrfMatch = pm.response.text().match(/name=[\"\\']csrfmiddlewaretoken[\"\\'][^>]*value=[\"\\']([^\"\\']+)[\"\\']/i);",
+                      "pm.test(\"SETUP: lấy được CSRF token\", () => pm.expect(csrfMatch, \"Không tìm thấy CSRF\").to.not.be.null);",
+                      "if (csrfMatch) pm.collectionVariables.set(\"bva_csrf\", csrfMatch[1]);"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{base_url}}/accounts/register/",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "accounts",
+                    "register",
+                    ""
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "02 - POST Register",
+              "event": [
+                {
+                  "listen": "prerequest",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "const length = 149;",
+                      "const stamp = Date.now().toString(36) + Math.random().toString(36).slice(2, 7);",
+                      "let username = \"\";",
+                      "if (length === 1) username = String.fromCodePoint(0x4e00 + Math.floor(Math.random() * 18000));",
+                      "else if (length === 2) username = String.fromCodePoint(0x4e00 + Math.floor(Math.random() * 18000)) + String.fromCodePoint(0x4e00 + Math.floor(Math.random() * 18000));",
+                      "else if (length > 0) username = (\"u\" + stamp + \"x\".repeat(length)).slice(0, length);",
+                      "pm.collectionVariables.set(\"bva_user\", username);",
+                      "pm.collectionVariables.set(\"bva_email\", \"bva_\" + stamp + \"@example.test\");",
+                      "pm.collectionVariables.set(\"bva_password\", \"Q7!mT2#x\");",
+                      "if (username.length !== length) throw new Error(\"Sai độ dài username\");"
+                    ]
+                  }
+                },
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"BVA-AA-REG-USER-L149: ACCEPT - trả về 302\", () => pm.response.to.have.status(302));",
+                      "pm.test(\"BVA-AA-REG-USER-L149: redirect về trang chủ\", () => {",
+                      "  pm.expect(pm.response.headers.get(\"Location\") || \"\").to.match(/^\\/($|\\?)/);",
+                      "});"
+                    ]
+                  }
+                }
+              ],
+              "protocolProfileBehavior": {
+                "followRedirects": false
+              },
+              "request": {
+                "method": "POST",
+                "header": [],
+                "body": {
+                  "mode": "urlencoded",
+                  "urlencoded": [
+                    {
+                      "key": "csrfmiddlewaretoken",
+                      "value": "{{bva_csrf}}",
+                      "type": "text"
+                    },
+                    {
+                      "key": "username",
+                      "value": "{{bva_user}}",
+                      "type": "text"
+                    },
+                    {
+                      "key": "email",
+                      "value": "{{bva_email}}",
+                      "type": "text"
+                    },
+                    {
+                      "key": "password1",
+                      "value": "{{bva_password}}",
+                      "type": "text"
+                    },
+                    {
+                      "key": "password2",
+                      "value": "{{bva_password}}",
+                      "type": "text"
+                    }
+                  ]
+                },
+                "url": {
+                  "raw": "{{base_url}}/accounts/register/",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "accounts",
+                    "register",
+                    ""
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "03 - GET Verify Profile + CSRF",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"VERIFY: profile trả về 200\", () => pm.response.to.have.status(200));",
+                      "pm.test(\"BVA-AA-REG-USER-L149: đúng tài khoản đang đăng nhập\", () => {",
+                      "  pm.expect(pm.response.text()).to.include(pm.collectionVariables.get(\"bva_user\"));",
+                      "});",
+                      "",
+                      "const csrfMatch = pm.response.text().match(/name=[\"\\']csrfmiddlewaretoken[\"\\'][^>]*value=[\"\\']([^\"\\']+)[\"\\']/i);",
+                      "pm.test(\"VERIFY: lấy được CSRF token\", () => pm.expect(csrfMatch, \"Không tìm thấy CSRF\").to.not.be.null);",
+                      "if (csrfMatch) pm.collectionVariables.set(\"bva_csrf\", csrfMatch[1]);"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{base_url}}/accounts/profile/",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "accounts",
+                    "profile",
+                    ""
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "04 - POST Logout (cleanup)",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"CLEANUP: logout trả về 302\", () => pm.response.to.have.status(302));"
+                    ]
+                  }
+                }
+              ],
+              "protocolProfileBehavior": {
+                "followRedirects": false
+              },
+              "request": {
+                "method": "POST",
+                "header": [],
+                "body": {
+                  "mode": "urlencoded",
+                  "urlencoded": [
+                    {
+                      "key": "csrfmiddlewaretoken",
+                      "value": "{{bva_csrf}}",
+                      "type": "text"
+                    }
+                  ]
+                },
+                "url": {
+                  "raw": "{{base_url}}/accounts/logout/",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "accounts",
+                    "logout",
+                    ""
+                  ]
+                }
+              },
+              "response": []
+            }
+          ],
+          "description": "Điểm biên: max-"
+        },
+        {
+          "name": "BVA-AA-REG-USER-L150 | Accept",
+          "item": [
+            {
+              "name": "01 - GET Register + CSRF",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"SETUP: trang trả về 200\", () => pm.response.to.have.status(200));",
+                      "pm.test(\"SETUP: đang ở form Đăng ký (chưa đăng nhập)\", () => {",
+                      "  pm.expect(pm.response.text(), \"Còn phiên đăng nhập cũ - chạy folder 00 trước\").to.include('name=\"password1\"');",
+                      "});",
+                      "",
+                      "const csrfMatch = pm.response.text().match(/name=[\"\\']csrfmiddlewaretoken[\"\\'][^>]*value=[\"\\']([^\"\\']+)[\"\\']/i);",
+                      "pm.test(\"SETUP: lấy được CSRF token\", () => pm.expect(csrfMatch, \"Không tìm thấy CSRF\").to.not.be.null);",
+                      "if (csrfMatch) pm.collectionVariables.set(\"bva_csrf\", csrfMatch[1]);"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{base_url}}/accounts/register/",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "accounts",
+                    "register",
+                    ""
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "02 - POST Register",
+              "event": [
+                {
+                  "listen": "prerequest",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "const length = 150;",
+                      "const stamp = Date.now().toString(36) + Math.random().toString(36).slice(2, 7);",
+                      "let username = \"\";",
+                      "if (length === 1) username = String.fromCodePoint(0x4e00 + Math.floor(Math.random() * 18000));",
+                      "else if (length === 2) username = String.fromCodePoint(0x4e00 + Math.floor(Math.random() * 18000)) + String.fromCodePoint(0x4e00 + Math.floor(Math.random() * 18000));",
+                      "else if (length > 0) username = (\"u\" + stamp + \"x\".repeat(length)).slice(0, length);",
+                      "pm.collectionVariables.set(\"bva_user\", username);",
+                      "pm.collectionVariables.set(\"bva_email\", \"bva_\" + stamp + \"@example.test\");",
+                      "pm.collectionVariables.set(\"bva_password\", \"Q7!mT2#x\");",
+                      "if (username.length !== length) throw new Error(\"Sai độ dài username\");"
+                    ]
+                  }
+                },
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"BVA-AA-REG-USER-L150: ACCEPT - trả về 302\", () => pm.response.to.have.status(302));",
+                      "pm.test(\"BVA-AA-REG-USER-L150: redirect về trang chủ\", () => {",
+                      "  pm.expect(pm.response.headers.get(\"Location\") || \"\").to.match(/^\\/($|\\?)/);",
+                      "});"
+                    ]
+                  }
+                }
+              ],
+              "protocolProfileBehavior": {
+                "followRedirects": false
+              },
+              "request": {
+                "method": "POST",
+                "header": [],
+                "body": {
+                  "mode": "urlencoded",
+                  "urlencoded": [
+                    {
+                      "key": "csrfmiddlewaretoken",
+                      "value": "{{bva_csrf}}",
+                      "type": "text"
+                    },
+                    {
+                      "key": "username",
+                      "value": "{{bva_user}}",
+                      "type": "text"
+                    },
+                    {
+                      "key": "email",
+                      "value": "{{bva_email}}",
+                      "type": "text"
+                    },
+                    {
+                      "key": "password1",
+                      "value": "{{bva_password}}",
+                      "type": "text"
+                    },
+                    {
+                      "key": "password2",
+                      "value": "{{bva_password}}",
+                      "type": "text"
+                    }
+                  ]
+                },
+                "url": {
+                  "raw": "{{base_url}}/accounts/register/",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "accounts",
+                    "register",
+                    ""
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "03 - GET Verify Profile + CSRF",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"VERIFY: profile trả về 200\", () => pm.response.to.have.status(200));",
+                      "pm.test(\"BVA-AA-REG-USER-L150: đúng tài khoản đang đăng nhập\", () => {",
+                      "  pm.expect(pm.response.text()).to.include(pm.collectionVariables.get(\"bva_user\"));",
+                      "});",
+                      "",
+                      "const csrfMatch = pm.response.text().match(/name=[\"\\']csrfmiddlewaretoken[\"\\'][^>]*value=[\"\\']([^\"\\']+)[\"\\']/i);",
+                      "pm.test(\"VERIFY: lấy được CSRF token\", () => pm.expect(csrfMatch, \"Không tìm thấy CSRF\").to.not.be.null);",
+                      "if (csrfMatch) pm.collectionVariables.set(\"bva_csrf\", csrfMatch[1]);"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{base_url}}/accounts/profile/",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "accounts",
+                    "profile",
+                    ""
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "04 - POST Logout (cleanup)",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"CLEANUP: logout trả về 302\", () => pm.response.to.have.status(302));"
+                    ]
+                  }
+                }
+              ],
+              "protocolProfileBehavior": {
+                "followRedirects": false
+              },
+              "request": {
+                "method": "POST",
+                "header": [],
+                "body": {
+                  "mode": "urlencoded",
+                  "urlencoded": [
+                    {
+                      "key": "csrfmiddlewaretoken",
+                      "value": "{{bva_csrf}}",
+                      "type": "text"
+                    }
+                  ]
+                },
+                "url": {
+                  "raw": "{{base_url}}/accounts/logout/",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "accounts",
+                    "logout",
+                    ""
+                  ]
+                }
+              },
+              "response": []
+            }
+          ],
+          "description": "Điểm biên: max"
+        },
+        {
+          "name": "BVA-AA-REG-USER-L151 | Reject",
+          "item": [
+            {
+              "name": "01 - GET Register + CSRF",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"SETUP: trang trả về 200\", () => pm.response.to.have.status(200));",
+                      "pm.test(\"SETUP: đang ở form Đăng ký (chưa đăng nhập)\", () => {",
+                      "  pm.expect(pm.response.text(), \"Còn phiên đăng nhập cũ - chạy folder 00 trước\").to.include('name=\"password1\"');",
+                      "});",
+                      "",
+                      "const csrfMatch = pm.response.text().match(/name=[\"\\']csrfmiddlewaretoken[\"\\'][^>]*value=[\"\\']([^\"\\']+)[\"\\']/i);",
+                      "pm.test(\"SETUP: lấy được CSRF token\", () => pm.expect(csrfMatch, \"Không tìm thấy CSRF\").to.not.be.null);",
+                      "if (csrfMatch) pm.collectionVariables.set(\"bva_csrf\", csrfMatch[1]);"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{base_url}}/accounts/register/",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "accounts",
+                    "register",
+                    ""
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "02 - POST Register",
+              "event": [
+                {
+                  "listen": "prerequest",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "const length = 151;",
+                      "const stamp = Date.now().toString(36) + Math.random().toString(36).slice(2, 7);",
+                      "let username = \"\";",
+                      "if (length === 1) username = String.fromCodePoint(0x4e00 + Math.floor(Math.random() * 18000));",
+                      "else if (length === 2) username = String.fromCodePoint(0x4e00 + Math.floor(Math.random() * 18000)) + String.fromCodePoint(0x4e00 + Math.floor(Math.random() * 18000));",
+                      "else if (length > 0) username = (\"u\" + stamp + \"x\".repeat(length)).slice(0, length);",
+                      "pm.collectionVariables.set(\"bva_user\", username);",
+                      "pm.collectionVariables.set(\"bva_email\", \"bva_\" + stamp + \"@example.test\");",
+                      "pm.collectionVariables.set(\"bva_password\", \"Q7!mT2#x\");",
+                      "if (username.length !== length) throw new Error(\"Sai độ dài username\");"
+                    ]
+                  }
+                },
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "const html = pm.response.text();",
+                      "pm.test(\"BVA-AA-REG-USER-L151: REJECT - giữ lại form (200)\", () => pm.response.to.have.status(200));",
+                      "pm.test(\"BVA-AA-REG-USER-L151: hiển thị đúng thông báo lỗi\", () => {",
+                      "  pm.expect(html).to.include('class=\"auth-error\"');",
+                      "  pm.expect(html).to.include(\"Ensure this value has at most 150 characters (it has 151).\");",
+                      "});"
+                    ]
+                  }
+                }
+              ],
+              "protocolProfileBehavior": {
+                "followRedirects": false
+              },
+              "request": {
+                "method": "POST",
+                "header": [],
+                "body": {
+                  "mode": "urlencoded",
+                  "urlencoded": [
+                    {
+                      "key": "csrfmiddlewaretoken",
+                      "value": "{{bva_csrf}}",
+                      "type": "text"
+                    },
+                    {
+                      "key": "username",
+                      "value": "{{bva_user}}",
+                      "type": "text"
+                    },
+                    {
+                      "key": "email",
+                      "value": "{{bva_email}}",
+                      "type": "text"
+                    },
+                    {
+                      "key": "password1",
+                      "value": "{{bva_password}}",
+                      "type": "text"
+                    },
+                    {
+                      "key": "password2",
+                      "value": "{{bva_password}}",
+                      "type": "text"
+                    }
+                  ]
+                },
+                "url": {
+                  "raw": "{{base_url}}/accounts/register/",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "accounts",
+                    "register",
+                    ""
+                  ]
+                }
+              },
+              "response": []
+            }
+          ],
+          "description": "Điểm biên: max+"
+        }
+      ],
+      "description": "Robustness BVA (6n+1, n=1) cho username: miền hợp lệ [1, 150] (Django User.username max_length=150, required)."
+    },
+    {
+      "name": "02 - Register - Password",
+      "item": [
+        {
+          "name": "BVA-AA-REG-PASS-L007 | Reject",
+          "item": [
+            {
+              "name": "01 - GET Register + CSRF",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"SETUP: trang trả về 200\", () => pm.response.to.have.status(200));",
+                      "pm.test(\"SETUP: đang ở form Đăng ký (chưa đăng nhập)\", () => {",
+                      "  pm.expect(pm.response.text(), \"Còn phiên đăng nhập cũ - chạy folder 00 trước\").to.include('name=\"password1\"');",
+                      "});",
+                      "",
+                      "const csrfMatch = pm.response.text().match(/name=[\"\\']csrfmiddlewaretoken[\"\\'][^>]*value=[\"\\']([^\"\\']+)[\"\\']/i);",
+                      "pm.test(\"SETUP: lấy được CSRF token\", () => pm.expect(csrfMatch, \"Không tìm thấy CSRF\").to.not.be.null);",
+                      "if (csrfMatch) pm.collectionVariables.set(\"bva_csrf\", csrfMatch[1]);"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{base_url}}/accounts/register/",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "accounts",
+                    "register",
+                    ""
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "02 - POST Register",
+              "event": [
+                {
+                  "listen": "prerequest",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "const length = 7;",
+                      "const stamp = Date.now().toString(36) + Math.random().toString(36).slice(2, 7);",
+                      "// Mẫu gồm chữ hoa/thường/số/ký tự đặc biệt: không bị Common/Numeric/Similarity validator chặn,",
+                      "// nên kết quả chỉ phụ thuộc vào độ dài mật khẩu.",
+                      "const pattern = \"Qv7!mT2#kZ9@rL4$wN6%\";",
+                      "const password = pattern.repeat(Math.ceil(length / pattern.length)).slice(0, length);",
+                      "pm.collectionVariables.set(\"bva_user\", \"p\" + stamp);",
+                      "pm.collectionVariables.set(\"bva_email\", \"bva_\" + stamp + \"@example.test\");",
+                      "pm.collectionVariables.set(\"bva_password\", password);",
+                      "if (password.length !== length) throw new Error(\"Sai độ dài password\");"
+                    ]
+                  }
+                },
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "const html = pm.response.text();",
+                      "pm.test(\"BVA-AA-REG-PASS-L007: REJECT - giữ lại form (200)\", () => pm.response.to.have.status(200));",
+                      "pm.test(\"BVA-AA-REG-PASS-L007: hiển thị thông báo lỗi\", () => {",
+                      "  pm.expect(html).to.include('class=\"auth-error\"');",
+                      "  pm.expect(html).to.include(\"This password is too short. It must contain at least 8 characters.\");",
+                      "});"
+                    ]
+                  }
+                }
+              ],
+              "protocolProfileBehavior": {
+                "followRedirects": false
+              },
+              "request": {
+                "method": "POST",
+                "header": [],
+                "body": {
+                  "mode": "urlencoded",
+                  "urlencoded": [
+                    {
+                      "key": "csrfmiddlewaretoken",
+                      "value": "{{bva_csrf}}",
+                      "type": "text"
+                    },
+                    {
+                      "key": "username",
+                      "value": "{{bva_user}}",
+                      "type": "text"
+                    },
+                    {
+                      "key": "email",
+                      "value": "{{bva_email}}",
+                      "type": "text"
+                    },
+                    {
+                      "key": "password1",
+                      "value": "{{bva_password}}",
+                      "type": "text"
+                    },
+                    {
+                      "key": "password2",
+                      "value": "{{bva_password}}",
+                      "type": "text"
+                    }
+                  ]
+                },
+                "url": {
+                  "raw": "{{base_url}}/accounts/register/",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "accounts",
+                    "register",
+                    ""
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "03 - GET Register + CSRF (session reset)",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"SETUP: trả về 200\", () => pm.response.to.have.status(200));",
+                      "",
+                      "const csrfMatch = pm.response.text().match(/name=[\"\\']csrfmiddlewaretoken[\"\\'][^>]*value=[\"\\']([^\"\\']+)[\"\\']/i);",
+                      "pm.test(\"SETUP: lấy được CSRF token\", () => pm.expect(csrfMatch, \"Không tìm thấy CSRF\").to.not.be.null);",
+                      "if (csrfMatch) pm.collectionVariables.set(\"bva_csrf\", csrfMatch[1]);"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{base_url}}/accounts/register/",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "accounts",
+                    "register",
+                    ""
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "04 - POST Logout (session reset)",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "// Đã đăng nhập -> 302 về \"/\", chưa đăng nhập -> 302 về trang login. Cả hai đều là phiên sạch.",
+                      "pm.test(\"CLEANUP: logout trả về 302\", () => pm.response.to.have.status(302));"
+                    ]
+                  }
+                }
+              ],
+              "protocolProfileBehavior": {
+                "followRedirects": false
+              },
+              "request": {
+                "method": "POST",
+                "header": [],
+                "body": {
+                  "mode": "urlencoded",
+                  "urlencoded": [
+                    {
+                      "key": "csrfmiddlewaretoken",
+                      "value": "{{bva_csrf}}",
+                      "type": "text"
+                    }
+                  ]
+                },
+                "url": {
+                  "raw": "{{base_url}}/accounts/logout/",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "accounts",
+                    "logout",
+                    ""
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "05 - GET Login + CSRF",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"SETUP: trang Đăng nhập trả về 200\", () => pm.response.to.have.status(200));",
+                      "pm.test(\"SETUP: đang ở form Đăng nhập\", () => pm.expect(pm.response.text()).to.include('name=\"password\"'));",
+                      "",
+                      "const csrfMatch = pm.response.text().match(/name=[\"\\']csrfmiddlewaretoken[\"\\'][^>]*value=[\"\\']([^\"\\']+)[\"\\']/i);",
+                      "pm.test(\"SETUP: lấy được CSRF token\", () => pm.expect(csrfMatch, \"Không tìm thấy CSRF\").to.not.be.null);",
+                      "if (csrfMatch) pm.collectionVariables.set(\"bva_csrf\", csrfMatch[1]);"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{base_url}}/accounts/login/",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "accounts",
+                    "login",
+                    ""
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "06 - POST Login (verify account not created)",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"BVA-AA-REG-PASS-L007: không đăng nhập được (200)\", () => pm.response.to.have.status(200));",
+                      "pm.test(\"BVA-AA-REG-PASS-L007: tài khoản không tồn tại sau khi bị từ chối\", () => {",
+                      "  pm.expect(pm.response.text()).to.include(\"Please enter a correct username and password\");",
+                      "});"
+                    ]
+                  }
+                }
+              ],
+              "protocolProfileBehavior": {
+                "followRedirects": false
+              },
+              "request": {
+                "method": "POST",
+                "header": [],
+                "body": {
+                  "mode": "urlencoded",
+                  "urlencoded": [
+                    {
+                      "key": "csrfmiddlewaretoken",
+                      "value": "{{bva_csrf}}",
+                      "type": "text"
+                    },
+                    {
+                      "key": "username",
+                      "value": "{{bva_user}}",
+                      "type": "text"
+                    },
+                    {
+                      "key": "password",
+                      "value": "{{bva_password}}",
+                      "type": "text"
+                    }
+                  ]
+                },
+                "url": {
+                  "raw": "{{base_url}}/accounts/login/",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "accounts",
+                    "login",
+                    ""
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "07 - GET Register + CSRF (cleanup)",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"SETUP: trả về 200\", () => pm.response.to.have.status(200));",
+                      "",
+                      "const csrfMatch = pm.response.text().match(/name=[\"\\']csrfmiddlewaretoken[\"\\'][^>]*value=[\"\\']([^\"\\']+)[\"\\']/i);",
+                      "pm.test(\"SETUP: lấy được CSRF token\", () => pm.expect(csrfMatch, \"Không tìm thấy CSRF\").to.not.be.null);",
+                      "if (csrfMatch) pm.collectionVariables.set(\"bva_csrf\", csrfMatch[1]);"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{base_url}}/accounts/register/",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "accounts",
+                    "register",
+                    ""
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "08 - POST Logout (cleanup)",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "// Đã đăng nhập -> 302 về \"/\", chưa đăng nhập -> 302 về trang login. Cả hai đều là phiên sạch.",
+                      "pm.test(\"CLEANUP: logout trả về 302\", () => pm.response.to.have.status(302));"
+                    ]
+                  }
+                }
+              ],
+              "protocolProfileBehavior": {
+                "followRedirects": false
+              },
+              "request": {
+                "method": "POST",
+                "header": [],
+                "body": {
+                  "mode": "urlencoded",
+                  "urlencoded": [
+                    {
+                      "key": "csrfmiddlewaretoken",
+                      "value": "{{bva_csrf}}",
+                      "type": "text"
+                    }
+                  ]
+                },
+                "url": {
+                  "raw": "{{base_url}}/accounts/logout/",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "accounts",
+                    "logout",
+                    ""
+                  ]
+                }
+              },
+              "response": []
+            }
+          ],
+          "description": "Điểm biên: min- (7)"
+        },
+        {
+          "name": "BVA-AA-REG-PASS-L008 | Accept",
+          "item": [
+            {
+              "name": "01 - GET Register + CSRF",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"SETUP: trang trả về 200\", () => pm.response.to.have.status(200));",
+                      "pm.test(\"SETUP: đang ở form Đăng ký (chưa đăng nhập)\", () => {",
+                      "  pm.expect(pm.response.text(), \"Còn phiên đăng nhập cũ - chạy folder 00 trước\").to.include('name=\"password1\"');",
+                      "});",
+                      "",
+                      "const csrfMatch = pm.response.text().match(/name=[\"\\']csrfmiddlewaretoken[\"\\'][^>]*value=[\"\\']([^\"\\']+)[\"\\']/i);",
+                      "pm.test(\"SETUP: lấy được CSRF token\", () => pm.expect(csrfMatch, \"Không tìm thấy CSRF\").to.not.be.null);",
+                      "if (csrfMatch) pm.collectionVariables.set(\"bva_csrf\", csrfMatch[1]);"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{base_url}}/accounts/register/",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "accounts",
+                    "register",
+                    ""
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "02 - POST Register",
+              "event": [
+                {
+                  "listen": "prerequest",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "const length = 8;",
+                      "const stamp = Date.now().toString(36) + Math.random().toString(36).slice(2, 7);",
+                      "// Mẫu gồm chữ hoa/thường/số/ký tự đặc biệt: không bị Common/Numeric/Similarity validator chặn,",
+                      "// nên kết quả chỉ phụ thuộc vào độ dài mật khẩu.",
+                      "const pattern = \"Qv7!mT2#kZ9@rL4$wN6%\";",
+                      "const password = pattern.repeat(Math.ceil(length / pattern.length)).slice(0, length);",
+                      "pm.collectionVariables.set(\"bva_user\", \"p\" + stamp);",
+                      "pm.collectionVariables.set(\"bva_email\", \"bva_\" + stamp + \"@example.test\");",
+                      "pm.collectionVariables.set(\"bva_password\", password);",
+                      "if (password.length !== length) throw new Error(\"Sai độ dài password\");"
+                    ]
+                  }
+                },
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"BVA-AA-REG-PASS-L008: ACCEPT - trả về 302\", () => pm.response.to.have.status(302));",
+                      "pm.test(\"BVA-AA-REG-PASS-L008: redirect về trang chủ\", () => {",
+                      "  pm.expect(pm.response.headers.get(\"Location\") || \"\").to.match(/^\\/($|\\?)/);",
+                      "});"
+                    ]
+                  }
+                }
+              ],
+              "protocolProfileBehavior": {
+                "followRedirects": false
+              },
+              "request": {
+                "method": "POST",
+                "header": [],
+                "body": {
+                  "mode": "urlencoded",
+                  "urlencoded": [
+                    {
+                      "key": "csrfmiddlewaretoken",
+                      "value": "{{bva_csrf}}",
+                      "type": "text"
+                    },
+                    {
+                      "key": "username",
+                      "value": "{{bva_user}}",
+                      "type": "text"
+                    },
+                    {
+                      "key": "email",
+                      "value": "{{bva_email}}",
+                      "type": "text"
+                    },
+                    {
+                      "key": "password1",
+                      "value": "{{bva_password}}",
+                      "type": "text"
+                    },
+                    {
+                      "key": "password2",
+                      "value": "{{bva_password}}",
+                      "type": "text"
+                    }
+                  ]
+                },
+                "url": {
+                  "raw": "{{base_url}}/accounts/register/",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "accounts",
+                    "register",
+                    ""
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "03 - GET Verify Profile + CSRF",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"VERIFY: profile trả về 200\", () => pm.response.to.have.status(200));",
+                      "pm.test(\"BVA-AA-REG-PASS-L008: đúng tài khoản đang đăng nhập\", () => {",
+                      "  pm.expect(pm.response.text()).to.include(pm.collectionVariables.get(\"bva_user\"));",
+                      "});",
+                      "",
+                      "const csrfMatch = pm.response.text().match(/name=[\"\\']csrfmiddlewaretoken[\"\\'][^>]*value=[\"\\']([^\"\\']+)[\"\\']/i);",
+                      "pm.test(\"VERIFY: lấy được CSRF token\", () => pm.expect(csrfMatch, \"Không tìm thấy CSRF\").to.not.be.null);",
+                      "if (csrfMatch) pm.collectionVariables.set(\"bva_csrf\", csrfMatch[1]);"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{base_url}}/accounts/profile/",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "accounts",
+                    "profile",
+                    ""
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "04 - POST Logout",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"CLEANUP: logout trả về 302\", () => pm.response.to.have.status(302));"
+                    ]
+                  }
+                }
+              ],
+              "protocolProfileBehavior": {
+                "followRedirects": false
+              },
+              "request": {
+                "method": "POST",
+                "header": [],
+                "body": {
+                  "mode": "urlencoded",
+                  "urlencoded": [
+                    {
+                      "key": "csrfmiddlewaretoken",
+                      "value": "{{bva_csrf}}",
+                      "type": "text"
+                    }
+                  ]
+                },
+                "url": {
+                  "raw": "{{base_url}}/accounts/logout/",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "accounts",
+                    "logout",
+                    ""
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "05 - GET Login + CSRF",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"SETUP: trang Đăng nhập trả về 200\", () => pm.response.to.have.status(200));",
+                      "pm.test(\"SETUP: đang ở form Đăng nhập\", () => pm.expect(pm.response.text()).to.include('name=\"password\"'));",
+                      "",
+                      "const csrfMatch = pm.response.text().match(/name=[\"\\']csrfmiddlewaretoken[\"\\'][^>]*value=[\"\\']([^\"\\']+)[\"\\']/i);",
+                      "pm.test(\"SETUP: lấy được CSRF token\", () => pm.expect(csrfMatch, \"Không tìm thấy CSRF\").to.not.be.null);",
+                      "if (csrfMatch) pm.collectionVariables.set(\"bva_csrf\", csrfMatch[1]);"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{base_url}}/accounts/login/",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "accounts",
+                    "login",
+                    ""
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "06 - POST Login (verify new password)",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"BVA-AA-REG-PASS-L008: đăng nhập lại thành công (302)\", () => pm.response.to.have.status(302));",
+                      "pm.test(\"BVA-AA-REG-PASS-L008: mật khẩu 8 ký tự được lưu nguyên vẹn\", () => {",
+                      "  pm.expect(pm.response.headers.get(\"Location\") || \"\").to.match(/^\\/($|\\?)/);",
+                      "});"
+                    ]
+                  }
+                }
+              ],
+              "protocolProfileBehavior": {
+                "followRedirects": false
+              },
+              "request": {
+                "method": "POST",
+                "header": [],
+                "body": {
+                  "mode": "urlencoded",
+                  "urlencoded": [
+                    {
+                      "key": "csrfmiddlewaretoken",
+                      "value": "{{bva_csrf}}",
+                      "type": "text"
+                    },
+                    {
+                      "key": "username",
+                      "value": "{{bva_user}}",
+                      "type": "text"
+                    },
+                    {
+                      "key": "password",
+                      "value": "{{bva_password}}",
+                      "type": "text"
+                    }
+                  ]
+                },
+                "url": {
+                  "raw": "{{base_url}}/accounts/login/",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "accounts",
+                    "login",
+                    ""
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "07 - GET Verify Profile + CSRF",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"VERIFY: profile trả về 200\", () => pm.response.to.have.status(200));",
+                      "pm.test(\"BVA-AA-REG-PASS-L008: đúng tài khoản đang đăng nhập\", () => {",
+                      "  pm.expect(pm.response.text()).to.include(pm.collectionVariables.get(\"bva_user\"));",
+                      "});",
+                      "",
+                      "const csrfMatch = pm.response.text().match(/name=[\"\\']csrfmiddlewaretoken[\"\\'][^>]*value=[\"\\']([^\"\\']+)[\"\\']/i);",
+                      "pm.test(\"VERIFY: lấy được CSRF token\", () => pm.expect(csrfMatch, \"Không tìm thấy CSRF\").to.not.be.null);",
+                      "if (csrfMatch) pm.collectionVariables.set(\"bva_csrf\", csrfMatch[1]);"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{base_url}}/accounts/profile/",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "accounts",
+                    "profile",
+                    ""
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "08 - POST Logout (cleanup)",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"CLEANUP: logout trả về 302\", () => pm.response.to.have.status(302));"
+                    ]
+                  }
+                }
+              ],
+              "protocolProfileBehavior": {
+                "followRedirects": false
+              },
+              "request": {
+                "method": "POST",
+                "header": [],
+                "body": {
+                  "mode": "urlencoded",
+                  "urlencoded": [
+                    {
+                      "key": "csrfmiddlewaretoken",
+                      "value": "{{bva_csrf}}",
+                      "type": "text"
+                    }
+                  ]
+                },
+                "url": {
+                  "raw": "{{base_url}}/accounts/logout/",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "accounts",
+                    "logout",
+                    ""
+                  ]
+                }
+              },
+              "response": []
+            }
+          ],
+          "description": "Điểm biên: min (8)"
+        },
+        {
+          "name": "BVA-AA-REG-PASS-L009 | Accept",
+          "item": [
+            {
+              "name": "01 - GET Register + CSRF",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"SETUP: trang trả về 200\", () => pm.response.to.have.status(200));",
+                      "pm.test(\"SETUP: đang ở form Đăng ký (chưa đăng nhập)\", () => {",
+                      "  pm.expect(pm.response.text(), \"Còn phiên đăng nhập cũ - chạy folder 00 trước\").to.include('name=\"password1\"');",
+                      "});",
+                      "",
+                      "const csrfMatch = pm.response.text().match(/name=[\"\\']csrfmiddlewaretoken[\"\\'][^>]*value=[\"\\']([^\"\\']+)[\"\\']/i);",
+                      "pm.test(\"SETUP: lấy được CSRF token\", () => pm.expect(csrfMatch, \"Không tìm thấy CSRF\").to.not.be.null);",
+                      "if (csrfMatch) pm.collectionVariables.set(\"bva_csrf\", csrfMatch[1]);"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{base_url}}/accounts/register/",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "accounts",
+                    "register",
+                    ""
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "02 - POST Register",
+              "event": [
+                {
+                  "listen": "prerequest",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "const length = 9;",
+                      "const stamp = Date.now().toString(36) + Math.random().toString(36).slice(2, 7);",
+                      "// Mẫu gồm chữ hoa/thường/số/ký tự đặc biệt: không bị Common/Numeric/Similarity validator chặn,",
+                      "// nên kết quả chỉ phụ thuộc vào độ dài mật khẩu.",
+                      "const pattern = \"Qv7!mT2#kZ9@rL4$wN6%\";",
+                      "const password = pattern.repeat(Math.ceil(length / pattern.length)).slice(0, length);",
+                      "pm.collectionVariables.set(\"bva_user\", \"p\" + stamp);",
+                      "pm.collectionVariables.set(\"bva_email\", \"bva_\" + stamp + \"@example.test\");",
+                      "pm.collectionVariables.set(\"bva_password\", password);",
+                      "if (password.length !== length) throw new Error(\"Sai độ dài password\");"
+                    ]
+                  }
+                },
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"BVA-AA-REG-PASS-L009: ACCEPT - trả về 302\", () => pm.response.to.have.status(302));",
+                      "pm.test(\"BVA-AA-REG-PASS-L009: redirect về trang chủ\", () => {",
+                      "  pm.expect(pm.response.headers.get(\"Location\") || \"\").to.match(/^\\/($|\\?)/);",
+                      "});"
+                    ]
+                  }
+                }
+              ],
+              "protocolProfileBehavior": {
+                "followRedirects": false
+              },
+              "request": {
+                "method": "POST",
+                "header": [],
+                "body": {
+                  "mode": "urlencoded",
+                  "urlencoded": [
+                    {
+                      "key": "csrfmiddlewaretoken",
+                      "value": "{{bva_csrf}}",
+                      "type": "text"
+                    },
+                    {
+                      "key": "username",
+                      "value": "{{bva_user}}",
+                      "type": "text"
+                    },
+                    {
+                      "key": "email",
+                      "value": "{{bva_email}}",
+                      "type": "text"
+                    },
+                    {
+                      "key": "password1",
+                      "value": "{{bva_password}}",
+                      "type": "text"
+                    },
+                    {
+                      "key": "password2",
+                      "value": "{{bva_password}}",
+                      "type": "text"
+                    }
+                  ]
+                },
+                "url": {
+                  "raw": "{{base_url}}/accounts/register/",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "accounts",
+                    "register",
+                    ""
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "03 - GET Verify Profile + CSRF",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"VERIFY: profile trả về 200\", () => pm.response.to.have.status(200));",
+                      "pm.test(\"BVA-AA-REG-PASS-L009: đúng tài khoản đang đăng nhập\", () => {",
+                      "  pm.expect(pm.response.text()).to.include(pm.collectionVariables.get(\"bva_user\"));",
+                      "});",
+                      "",
+                      "const csrfMatch = pm.response.text().match(/name=[\"\\']csrfmiddlewaretoken[\"\\'][^>]*value=[\"\\']([^\"\\']+)[\"\\']/i);",
+                      "pm.test(\"VERIFY: lấy được CSRF token\", () => pm.expect(csrfMatch, \"Không tìm thấy CSRF\").to.not.be.null);",
+                      "if (csrfMatch) pm.collectionVariables.set(\"bva_csrf\", csrfMatch[1]);"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{base_url}}/accounts/profile/",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "accounts",
+                    "profile",
+                    ""
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "04 - POST Logout",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"CLEANUP: logout trả về 302\", () => pm.response.to.have.status(302));"
+                    ]
+                  }
+                }
+              ],
+              "protocolProfileBehavior": {
+                "followRedirects": false
+              },
+              "request": {
+                "method": "POST",
+                "header": [],
+                "body": {
+                  "mode": "urlencoded",
+                  "urlencoded": [
+                    {
+                      "key": "csrfmiddlewaretoken",
+                      "value": "{{bva_csrf}}",
+                      "type": "text"
+                    }
+                  ]
+                },
+                "url": {
+                  "raw": "{{base_url}}/accounts/logout/",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "accounts",
+                    "logout",
+                    ""
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "05 - GET Login + CSRF",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"SETUP: trang Đăng nhập trả về 200\", () => pm.response.to.have.status(200));",
+                      "pm.test(\"SETUP: đang ở form Đăng nhập\", () => pm.expect(pm.response.text()).to.include('name=\"password\"'));",
+                      "",
+                      "const csrfMatch = pm.response.text().match(/name=[\"\\']csrfmiddlewaretoken[\"\\'][^>]*value=[\"\\']([^\"\\']+)[\"\\']/i);",
+                      "pm.test(\"SETUP: lấy được CSRF token\", () => pm.expect(csrfMatch, \"Không tìm thấy CSRF\").to.not.be.null);",
+                      "if (csrfMatch) pm.collectionVariables.set(\"bva_csrf\", csrfMatch[1]);"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{base_url}}/accounts/login/",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "accounts",
+                    "login",
+                    ""
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "06 - POST Login (verify new password)",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"BVA-AA-REG-PASS-L009: đăng nhập lại thành công (302)\", () => pm.response.to.have.status(302));",
+                      "pm.test(\"BVA-AA-REG-PASS-L009: mật khẩu 9 ký tự được lưu nguyên vẹn\", () => {",
+                      "  pm.expect(pm.response.headers.get(\"Location\") || \"\").to.match(/^\\/($|\\?)/);",
+                      "});"
+                    ]
+                  }
+                }
+              ],
+              "protocolProfileBehavior": {
+                "followRedirects": false
+              },
+              "request": {
+                "method": "POST",
+                "header": [],
+                "body": {
+                  "mode": "urlencoded",
+                  "urlencoded": [
+                    {
+                      "key": "csrfmiddlewaretoken",
+                      "value": "{{bva_csrf}}",
+                      "type": "text"
+                    },
+                    {
+                      "key": "username",
+                      "value": "{{bva_user}}",
+                      "type": "text"
+                    },
+                    {
+                      "key": "password",
+                      "value": "{{bva_password}}",
+                      "type": "text"
+                    }
+                  ]
+                },
+                "url": {
+                  "raw": "{{base_url}}/accounts/login/",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "accounts",
+                    "login",
+                    ""
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "07 - GET Verify Profile + CSRF",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"VERIFY: profile trả về 200\", () => pm.response.to.have.status(200));",
+                      "pm.test(\"BVA-AA-REG-PASS-L009: đúng tài khoản đang đăng nhập\", () => {",
+                      "  pm.expect(pm.response.text()).to.include(pm.collectionVariables.get(\"bva_user\"));",
+                      "});",
+                      "",
+                      "const csrfMatch = pm.response.text().match(/name=[\"\\']csrfmiddlewaretoken[\"\\'][^>]*value=[\"\\']([^\"\\']+)[\"\\']/i);",
+                      "pm.test(\"VERIFY: lấy được CSRF token\", () => pm.expect(csrfMatch, \"Không tìm thấy CSRF\").to.not.be.null);",
+                      "if (csrfMatch) pm.collectionVariables.set(\"bva_csrf\", csrfMatch[1]);"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{base_url}}/accounts/profile/",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "accounts",
+                    "profile",
+                    ""
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "08 - POST Logout (cleanup)",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"CLEANUP: logout trả về 302\", () => pm.response.to.have.status(302));"
+                    ]
+                  }
+                }
+              ],
+              "protocolProfileBehavior": {
+                "followRedirects": false
+              },
+              "request": {
+                "method": "POST",
+                "header": [],
+                "body": {
+                  "mode": "urlencoded",
+                  "urlencoded": [
+                    {
+                      "key": "csrfmiddlewaretoken",
+                      "value": "{{bva_csrf}}",
+                      "type": "text"
+                    }
+                  ]
+                },
+                "url": {
+                  "raw": "{{base_url}}/accounts/logout/",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "accounts",
+                    "logout",
+                    ""
+                  ]
+                }
+              },
+              "response": []
+            }
+          ],
+          "description": "Điểm biên: min+ (9)"
+        },
+        {
+          "name": "BVA-AA-REG-PASS-L068 | Accept",
+          "item": [
+            {
+              "name": "01 - GET Register + CSRF",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"SETUP: trang trả về 200\", () => pm.response.to.have.status(200));",
+                      "pm.test(\"SETUP: đang ở form Đăng ký (chưa đăng nhập)\", () => {",
+                      "  pm.expect(pm.response.text(), \"Còn phiên đăng nhập cũ - chạy folder 00 trước\").to.include('name=\"password1\"');",
+                      "});",
+                      "",
+                      "const csrfMatch = pm.response.text().match(/name=[\"\\']csrfmiddlewaretoken[\"\\'][^>]*value=[\"\\']([^\"\\']+)[\"\\']/i);",
+                      "pm.test(\"SETUP: lấy được CSRF token\", () => pm.expect(csrfMatch, \"Không tìm thấy CSRF\").to.not.be.null);",
+                      "if (csrfMatch) pm.collectionVariables.set(\"bva_csrf\", csrfMatch[1]);"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{base_url}}/accounts/register/",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "accounts",
+                    "register",
+                    ""
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "02 - POST Register",
+              "event": [
+                {
+                  "listen": "prerequest",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "const length = Math.round((8 + 128) / 2); // nom = trung bình min=8 và max=128",
+                      "const stamp = Date.now().toString(36) + Math.random().toString(36).slice(2, 7);",
+                      "// Mẫu gồm chữ hoa/thường/số/ký tự đặc biệt: không bị Common/Numeric/Similarity validator chặn,",
+                      "// nên kết quả chỉ phụ thuộc vào độ dài mật khẩu.",
+                      "const pattern = \"Qv7!mT2#kZ9@rL4$wN6%\";",
+                      "const password = pattern.repeat(Math.ceil(length / pattern.length)).slice(0, length);",
+                      "pm.collectionVariables.set(\"bva_user\", \"p\" + stamp);",
+                      "pm.collectionVariables.set(\"bva_email\", \"bva_\" + stamp + \"@example.test\");",
+                      "pm.collectionVariables.set(\"bva_password\", password);",
+                      "if (password.length !== length) throw new Error(\"Sai độ dài password\");"
+                    ]
+                  }
+                },
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"BVA-AA-REG-PASS-L068: ACCEPT - trả về 302\", () => pm.response.to.have.status(302));",
+                      "pm.test(\"BVA-AA-REG-PASS-L068: redirect về trang chủ\", () => {",
+                      "  pm.expect(pm.response.headers.get(\"Location\") || \"\").to.match(/^\\/($|\\?)/);",
+                      "});"
+                    ]
+                  }
+                }
+              ],
+              "protocolProfileBehavior": {
+                "followRedirects": false
+              },
+              "request": {
+                "method": "POST",
+                "header": [],
+                "body": {
+                  "mode": "urlencoded",
+                  "urlencoded": [
+                    {
+                      "key": "csrfmiddlewaretoken",
+                      "value": "{{bva_csrf}}",
+                      "type": "text"
+                    },
+                    {
+                      "key": "username",
+                      "value": "{{bva_user}}",
+                      "type": "text"
+                    },
+                    {
+                      "key": "email",
+                      "value": "{{bva_email}}",
+                      "type": "text"
+                    },
+                    {
+                      "key": "password1",
+                      "value": "{{bva_password}}",
+                      "type": "text"
+                    },
+                    {
+                      "key": "password2",
+                      "value": "{{bva_password}}",
+                      "type": "text"
+                    }
+                  ]
+                },
+                "url": {
+                  "raw": "{{base_url}}/accounts/register/",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "accounts",
+                    "register",
+                    ""
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "03 - GET Verify Profile + CSRF",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"VERIFY: profile trả về 200\", () => pm.response.to.have.status(200));",
+                      "pm.test(\"BVA-AA-REG-PASS-L068: đúng tài khoản đang đăng nhập\", () => {",
+                      "  pm.expect(pm.response.text()).to.include(pm.collectionVariables.get(\"bva_user\"));",
+                      "});",
+                      "",
+                      "const csrfMatch = pm.response.text().match(/name=[\"\\']csrfmiddlewaretoken[\"\\'][^>]*value=[\"\\']([^\"\\']+)[\"\\']/i);",
+                      "pm.test(\"VERIFY: lấy được CSRF token\", () => pm.expect(csrfMatch, \"Không tìm thấy CSRF\").to.not.be.null);",
+                      "if (csrfMatch) pm.collectionVariables.set(\"bva_csrf\", csrfMatch[1]);"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{base_url}}/accounts/profile/",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "accounts",
+                    "profile",
+                    ""
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "04 - POST Logout",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"CLEANUP: logout trả về 302\", () => pm.response.to.have.status(302));"
+                    ]
+                  }
+                }
+              ],
+              "protocolProfileBehavior": {
+                "followRedirects": false
+              },
+              "request": {
+                "method": "POST",
+                "header": [],
+                "body": {
+                  "mode": "urlencoded",
+                  "urlencoded": [
+                    {
+                      "key": "csrfmiddlewaretoken",
+                      "value": "{{bva_csrf}}",
+                      "type": "text"
+                    }
+                  ]
+                },
+                "url": {
+                  "raw": "{{base_url}}/accounts/logout/",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "accounts",
+                    "logout",
+                    ""
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "05 - GET Login + CSRF",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"SETUP: trang Đăng nhập trả về 200\", () => pm.response.to.have.status(200));",
+                      "pm.test(\"SETUP: đang ở form Đăng nhập\", () => pm.expect(pm.response.text()).to.include('name=\"password\"'));",
+                      "",
+                      "const csrfMatch = pm.response.text().match(/name=[\"\\']csrfmiddlewaretoken[\"\\'][^>]*value=[\"\\']([^\"\\']+)[\"\\']/i);",
+                      "pm.test(\"SETUP: lấy được CSRF token\", () => pm.expect(csrfMatch, \"Không tìm thấy CSRF\").to.not.be.null);",
+                      "if (csrfMatch) pm.collectionVariables.set(\"bva_csrf\", csrfMatch[1]);"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{base_url}}/accounts/login/",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "accounts",
+                    "login",
+                    ""
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "06 - POST Login (verify new password)",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"BVA-AA-REG-PASS-L068: đăng nhập lại thành công (302)\", () => pm.response.to.have.status(302));",
+                      "pm.test(\"BVA-AA-REG-PASS-L068: mật khẩu 68 ký tự được lưu nguyên vẹn\", () => {",
+                      "  pm.expect(pm.response.headers.get(\"Location\") || \"\").to.match(/^\\/($|\\?)/);",
+                      "});"
+                    ]
+                  }
+                }
+              ],
+              "protocolProfileBehavior": {
+                "followRedirects": false
+              },
+              "request": {
+                "method": "POST",
+                "header": [],
+                "body": {
+                  "mode": "urlencoded",
+                  "urlencoded": [
+                    {
+                      "key": "csrfmiddlewaretoken",
+                      "value": "{{bva_csrf}}",
+                      "type": "text"
+                    },
+                    {
+                      "key": "username",
+                      "value": "{{bva_user}}",
+                      "type": "text"
+                    },
+                    {
+                      "key": "password",
+                      "value": "{{bva_password}}",
+                      "type": "text"
+                    }
+                  ]
+                },
+                "url": {
+                  "raw": "{{base_url}}/accounts/login/",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "accounts",
+                    "login",
+                    ""
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "07 - GET Verify Profile + CSRF",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"VERIFY: profile trả về 200\", () => pm.response.to.have.status(200));",
+                      "pm.test(\"BVA-AA-REG-PASS-L068: đúng tài khoản đang đăng nhập\", () => {",
+                      "  pm.expect(pm.response.text()).to.include(pm.collectionVariables.get(\"bva_user\"));",
+                      "});",
+                      "",
+                      "const csrfMatch = pm.response.text().match(/name=[\"\\']csrfmiddlewaretoken[\"\\'][^>]*value=[\"\\']([^\"\\']+)[\"\\']/i);",
+                      "pm.test(\"VERIFY: lấy được CSRF token\", () => pm.expect(csrfMatch, \"Không tìm thấy CSRF\").to.not.be.null);",
+                      "if (csrfMatch) pm.collectionVariables.set(\"bva_csrf\", csrfMatch[1]);"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{base_url}}/accounts/profile/",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "accounts",
+                    "profile",
+                    ""
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "08 - POST Logout (cleanup)",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"CLEANUP: logout trả về 302\", () => pm.response.to.have.status(302));"
+                    ]
+                  }
+                }
+              ],
+              "protocolProfileBehavior": {
+                "followRedirects": false
+              },
+              "request": {
+                "method": "POST",
+                "header": [],
+                "body": {
+                  "mode": "urlencoded",
+                  "urlencoded": [
+                    {
+                      "key": "csrfmiddlewaretoken",
+                      "value": "{{bva_csrf}}",
+                      "type": "text"
+                    }
+                  ]
+                },
+                "url": {
+                  "raw": "{{base_url}}/accounts/logout/",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "accounts",
+                    "logout",
+                    ""
+                  ]
+                }
+              },
+              "response": []
+            }
+          ],
+          "description": "Điểm biên: nom (68 = (8+128)/2)"
+        },
+        {
+          "name": "BVA-AA-REG-PASS-L127 | Accept",
+          "item": [
+            {
+              "name": "01 - GET Register + CSRF",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"SETUP: trang trả về 200\", () => pm.response.to.have.status(200));",
+                      "pm.test(\"SETUP: đang ở form Đăng ký (chưa đăng nhập)\", () => {",
+                      "  pm.expect(pm.response.text(), \"Còn phiên đăng nhập cũ - chạy folder 00 trước\").to.include('name=\"password1\"');",
+                      "});",
+                      "",
+                      "const csrfMatch = pm.response.text().match(/name=[\"\\']csrfmiddlewaretoken[\"\\'][^>]*value=[\"\\']([^\"\\']+)[\"\\']/i);",
+                      "pm.test(\"SETUP: lấy được CSRF token\", () => pm.expect(csrfMatch, \"Không tìm thấy CSRF\").to.not.be.null);",
+                      "if (csrfMatch) pm.collectionVariables.set(\"bva_csrf\", csrfMatch[1]);"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{base_url}}/accounts/register/",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "accounts",
+                    "register",
+                    ""
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "02 - POST Register",
+              "event": [
+                {
+                  "listen": "prerequest",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "const length = 127;",
+                      "const stamp = Date.now().toString(36) + Math.random().toString(36).slice(2, 7);",
+                      "// Mẫu gồm chữ hoa/thường/số/ký tự đặc biệt: không bị Common/Numeric/Similarity validator chặn,",
+                      "// nên kết quả chỉ phụ thuộc vào độ dài mật khẩu.",
+                      "const pattern = \"Qv7!mT2#kZ9@rL4$wN6%\";",
+                      "const password = pattern.repeat(Math.ceil(length / pattern.length)).slice(0, length);",
+                      "pm.collectionVariables.set(\"bva_user\", \"p\" + stamp);",
+                      "pm.collectionVariables.set(\"bva_email\", \"bva_\" + stamp + \"@example.test\");",
+                      "pm.collectionVariables.set(\"bva_password\", password);",
+                      "if (password.length !== length) throw new Error(\"Sai độ dài password\");"
+                    ]
+                  }
+                },
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"BVA-AA-REG-PASS-L127: ACCEPT - trả về 302\", () => pm.response.to.have.status(302));",
+                      "pm.test(\"BVA-AA-REG-PASS-L127: redirect về trang chủ\", () => {",
+                      "  pm.expect(pm.response.headers.get(\"Location\") || \"\").to.match(/^\\/($|\\?)/);",
+                      "});"
+                    ]
+                  }
+                }
+              ],
+              "protocolProfileBehavior": {
+                "followRedirects": false
+              },
+              "request": {
+                "method": "POST",
+                "header": [],
+                "body": {
+                  "mode": "urlencoded",
+                  "urlencoded": [
+                    {
+                      "key": "csrfmiddlewaretoken",
+                      "value": "{{bva_csrf}}",
+                      "type": "text"
+                    },
+                    {
+                      "key": "username",
+                      "value": "{{bva_user}}",
+                      "type": "text"
+                    },
+                    {
+                      "key": "email",
+                      "value": "{{bva_email}}",
+                      "type": "text"
+                    },
+                    {
+                      "key": "password1",
+                      "value": "{{bva_password}}",
+                      "type": "text"
+                    },
+                    {
+                      "key": "password2",
+                      "value": "{{bva_password}}",
+                      "type": "text"
+                    }
+                  ]
+                },
+                "url": {
+                  "raw": "{{base_url}}/accounts/register/",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "accounts",
+                    "register",
+                    ""
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "03 - GET Verify Profile + CSRF",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"VERIFY: profile trả về 200\", () => pm.response.to.have.status(200));",
+                      "pm.test(\"BVA-AA-REG-PASS-L127: đúng tài khoản đang đăng nhập\", () => {",
+                      "  pm.expect(pm.response.text()).to.include(pm.collectionVariables.get(\"bva_user\"));",
+                      "});",
+                      "",
+                      "const csrfMatch = pm.response.text().match(/name=[\"\\']csrfmiddlewaretoken[\"\\'][^>]*value=[\"\\']([^\"\\']+)[\"\\']/i);",
+                      "pm.test(\"VERIFY: lấy được CSRF token\", () => pm.expect(csrfMatch, \"Không tìm thấy CSRF\").to.not.be.null);",
+                      "if (csrfMatch) pm.collectionVariables.set(\"bva_csrf\", csrfMatch[1]);"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{base_url}}/accounts/profile/",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "accounts",
+                    "profile",
+                    ""
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "04 - POST Logout",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"CLEANUP: logout trả về 302\", () => pm.response.to.have.status(302));"
+                    ]
+                  }
+                }
+              ],
+              "protocolProfileBehavior": {
+                "followRedirects": false
+              },
+              "request": {
+                "method": "POST",
+                "header": [],
+                "body": {
+                  "mode": "urlencoded",
+                  "urlencoded": [
+                    {
+                      "key": "csrfmiddlewaretoken",
+                      "value": "{{bva_csrf}}",
+                      "type": "text"
+                    }
+                  ]
+                },
+                "url": {
+                  "raw": "{{base_url}}/accounts/logout/",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "accounts",
+                    "logout",
+                    ""
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "05 - GET Login + CSRF",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"SETUP: trang Đăng nhập trả về 200\", () => pm.response.to.have.status(200));",
+                      "pm.test(\"SETUP: đang ở form Đăng nhập\", () => pm.expect(pm.response.text()).to.include('name=\"password\"'));",
+                      "",
+                      "const csrfMatch = pm.response.text().match(/name=[\"\\']csrfmiddlewaretoken[\"\\'][^>]*value=[\"\\']([^\"\\']+)[\"\\']/i);",
+                      "pm.test(\"SETUP: lấy được CSRF token\", () => pm.expect(csrfMatch, \"Không tìm thấy CSRF\").to.not.be.null);",
+                      "if (csrfMatch) pm.collectionVariables.set(\"bva_csrf\", csrfMatch[1]);"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{base_url}}/accounts/login/",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "accounts",
+                    "login",
+                    ""
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "06 - POST Login (verify new password)",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"BVA-AA-REG-PASS-L127: đăng nhập lại thành công (302)\", () => pm.response.to.have.status(302));",
+                      "pm.test(\"BVA-AA-REG-PASS-L127: mật khẩu 127 ký tự được lưu nguyên vẹn\", () => {",
+                      "  pm.expect(pm.response.headers.get(\"Location\") || \"\").to.match(/^\\/($|\\?)/);",
+                      "});"
+                    ]
+                  }
+                }
+              ],
+              "protocolProfileBehavior": {
+                "followRedirects": false
+              },
+              "request": {
+                "method": "POST",
+                "header": [],
+                "body": {
+                  "mode": "urlencoded",
+                  "urlencoded": [
+                    {
+                      "key": "csrfmiddlewaretoken",
+                      "value": "{{bva_csrf}}",
+                      "type": "text"
+                    },
+                    {
+                      "key": "username",
+                      "value": "{{bva_user}}",
+                      "type": "text"
+                    },
+                    {
+                      "key": "password",
+                      "value": "{{bva_password}}",
+                      "type": "text"
+                    }
+                  ]
+                },
+                "url": {
+                  "raw": "{{base_url}}/accounts/login/",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "accounts",
+                    "login",
+                    ""
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "07 - GET Verify Profile + CSRF",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"VERIFY: profile trả về 200\", () => pm.response.to.have.status(200));",
+                      "pm.test(\"BVA-AA-REG-PASS-L127: đúng tài khoản đang đăng nhập\", () => {",
+                      "  pm.expect(pm.response.text()).to.include(pm.collectionVariables.get(\"bva_user\"));",
+                      "});",
+                      "",
+                      "const csrfMatch = pm.response.text().match(/name=[\"\\']csrfmiddlewaretoken[\"\\'][^>]*value=[\"\\']([^\"\\']+)[\"\\']/i);",
+                      "pm.test(\"VERIFY: lấy được CSRF token\", () => pm.expect(csrfMatch, \"Không tìm thấy CSRF\").to.not.be.null);",
+                      "if (csrfMatch) pm.collectionVariables.set(\"bva_csrf\", csrfMatch[1]);"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{base_url}}/accounts/profile/",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "accounts",
+                    "profile",
+                    ""
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "08 - POST Logout (cleanup)",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"CLEANUP: logout trả về 302\", () => pm.response.to.have.status(302));"
+                    ]
+                  }
+                }
+              ],
+              "protocolProfileBehavior": {
+                "followRedirects": false
+              },
+              "request": {
+                "method": "POST",
+                "header": [],
+                "body": {
+                  "mode": "urlencoded",
+                  "urlencoded": [
+                    {
+                      "key": "csrfmiddlewaretoken",
+                      "value": "{{bva_csrf}}",
+                      "type": "text"
+                    }
+                  ]
+                },
+                "url": {
+                  "raw": "{{base_url}}/accounts/logout/",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "accounts",
+                    "logout",
+                    ""
+                  ]
+                }
+              },
+              "response": []
+            }
+          ],
+          "description": "Điểm biên: max- (127)"
+        },
+        {
+          "name": "BVA-AA-REG-PASS-L128 | Accept",
+          "item": [
+            {
+              "name": "01 - GET Register + CSRF",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"SETUP: trang trả về 200\", () => pm.response.to.have.status(200));",
+                      "pm.test(\"SETUP: đang ở form Đăng ký (chưa đăng nhập)\", () => {",
+                      "  pm.expect(pm.response.text(), \"Còn phiên đăng nhập cũ - chạy folder 00 trước\").to.include('name=\"password1\"');",
+                      "});",
+                      "",
+                      "const csrfMatch = pm.response.text().match(/name=[\"\\']csrfmiddlewaretoken[\"\\'][^>]*value=[\"\\']([^\"\\']+)[\"\\']/i);",
+                      "pm.test(\"SETUP: lấy được CSRF token\", () => pm.expect(csrfMatch, \"Không tìm thấy CSRF\").to.not.be.null);",
+                      "if (csrfMatch) pm.collectionVariables.set(\"bva_csrf\", csrfMatch[1]);"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{base_url}}/accounts/register/",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "accounts",
+                    "register",
+                    ""
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "02 - POST Register",
+              "event": [
+                {
+                  "listen": "prerequest",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "const length = 128;",
+                      "const stamp = Date.now().toString(36) + Math.random().toString(36).slice(2, 7);",
+                      "// Mẫu gồm chữ hoa/thường/số/ký tự đặc biệt: không bị Common/Numeric/Similarity validator chặn,",
+                      "// nên kết quả chỉ phụ thuộc vào độ dài mật khẩu.",
+                      "const pattern = \"Qv7!mT2#kZ9@rL4$wN6%\";",
+                      "const password = pattern.repeat(Math.ceil(length / pattern.length)).slice(0, length);",
+                      "pm.collectionVariables.set(\"bva_user\", \"p\" + stamp);",
+                      "pm.collectionVariables.set(\"bva_email\", \"bva_\" + stamp + \"@example.test\");",
+                      "pm.collectionVariables.set(\"bva_password\", password);",
+                      "if (password.length !== length) throw new Error(\"Sai độ dài password\");"
+                    ]
+                  }
+                },
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"BVA-AA-REG-PASS-L128: ACCEPT - trả về 302\", () => pm.response.to.have.status(302));",
+                      "pm.test(\"BVA-AA-REG-PASS-L128: redirect về trang chủ\", () => {",
+                      "  pm.expect(pm.response.headers.get(\"Location\") || \"\").to.match(/^\\/($|\\?)/);",
+                      "});"
+                    ]
+                  }
+                }
+              ],
+              "protocolProfileBehavior": {
+                "followRedirects": false
+              },
+              "request": {
+                "method": "POST",
+                "header": [],
+                "body": {
+                  "mode": "urlencoded",
+                  "urlencoded": [
+                    {
+                      "key": "csrfmiddlewaretoken",
+                      "value": "{{bva_csrf}}",
+                      "type": "text"
+                    },
+                    {
+                      "key": "username",
+                      "value": "{{bva_user}}",
+                      "type": "text"
+                    },
+                    {
+                      "key": "email",
+                      "value": "{{bva_email}}",
+                      "type": "text"
+                    },
+                    {
+                      "key": "password1",
+                      "value": "{{bva_password}}",
+                      "type": "text"
+                    },
+                    {
+                      "key": "password2",
+                      "value": "{{bva_password}}",
+                      "type": "text"
+                    }
+                  ]
+                },
+                "url": {
+                  "raw": "{{base_url}}/accounts/register/",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "accounts",
+                    "register",
+                    ""
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "03 - GET Verify Profile + CSRF",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"VERIFY: profile trả về 200\", () => pm.response.to.have.status(200));",
+                      "pm.test(\"BVA-AA-REG-PASS-L128: đúng tài khoản đang đăng nhập\", () => {",
+                      "  pm.expect(pm.response.text()).to.include(pm.collectionVariables.get(\"bva_user\"));",
+                      "});",
+                      "",
+                      "const csrfMatch = pm.response.text().match(/name=[\"\\']csrfmiddlewaretoken[\"\\'][^>]*value=[\"\\']([^\"\\']+)[\"\\']/i);",
+                      "pm.test(\"VERIFY: lấy được CSRF token\", () => pm.expect(csrfMatch, \"Không tìm thấy CSRF\").to.not.be.null);",
+                      "if (csrfMatch) pm.collectionVariables.set(\"bva_csrf\", csrfMatch[1]);"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{base_url}}/accounts/profile/",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "accounts",
+                    "profile",
+                    ""
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "04 - POST Logout",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"CLEANUP: logout trả về 302\", () => pm.response.to.have.status(302));"
+                    ]
+                  }
+                }
+              ],
+              "protocolProfileBehavior": {
+                "followRedirects": false
+              },
+              "request": {
+                "method": "POST",
+                "header": [],
+                "body": {
+                  "mode": "urlencoded",
+                  "urlencoded": [
+                    {
+                      "key": "csrfmiddlewaretoken",
+                      "value": "{{bva_csrf}}",
+                      "type": "text"
+                    }
+                  ]
+                },
+                "url": {
+                  "raw": "{{base_url}}/accounts/logout/",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "accounts",
+                    "logout",
+                    ""
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "05 - GET Login + CSRF",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"SETUP: trang Đăng nhập trả về 200\", () => pm.response.to.have.status(200));",
+                      "pm.test(\"SETUP: đang ở form Đăng nhập\", () => pm.expect(pm.response.text()).to.include('name=\"password\"'));",
+                      "",
+                      "const csrfMatch = pm.response.text().match(/name=[\"\\']csrfmiddlewaretoken[\"\\'][^>]*value=[\"\\']([^\"\\']+)[\"\\']/i);",
+                      "pm.test(\"SETUP: lấy được CSRF token\", () => pm.expect(csrfMatch, \"Không tìm thấy CSRF\").to.not.be.null);",
+                      "if (csrfMatch) pm.collectionVariables.set(\"bva_csrf\", csrfMatch[1]);"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{base_url}}/accounts/login/",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "accounts",
+                    "login",
+                    ""
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "06 - POST Login (verify new password)",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"BVA-AA-REG-PASS-L128: đăng nhập lại thành công (302)\", () => pm.response.to.have.status(302));",
+                      "pm.test(\"BVA-AA-REG-PASS-L128: mật khẩu 128 ký tự được lưu nguyên vẹn\", () => {",
+                      "  pm.expect(pm.response.headers.get(\"Location\") || \"\").to.match(/^\\/($|\\?)/);",
+                      "});"
+                    ]
+                  }
+                }
+              ],
+              "protocolProfileBehavior": {
+                "followRedirects": false
+              },
+              "request": {
+                "method": "POST",
+                "header": [],
+                "body": {
+                  "mode": "urlencoded",
+                  "urlencoded": [
+                    {
+                      "key": "csrfmiddlewaretoken",
+                      "value": "{{bva_csrf}}",
+                      "type": "text"
+                    },
+                    {
+                      "key": "username",
+                      "value": "{{bva_user}}",
+                      "type": "text"
+                    },
+                    {
+                      "key": "password",
+                      "value": "{{bva_password}}",
+                      "type": "text"
+                    }
+                  ]
+                },
+                "url": {
+                  "raw": "{{base_url}}/accounts/login/",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "accounts",
+                    "login",
+                    ""
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "07 - GET Verify Profile + CSRF",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"VERIFY: profile trả về 200\", () => pm.response.to.have.status(200));",
+                      "pm.test(\"BVA-AA-REG-PASS-L128: đúng tài khoản đang đăng nhập\", () => {",
+                      "  pm.expect(pm.response.text()).to.include(pm.collectionVariables.get(\"bva_user\"));",
+                      "});",
+                      "",
+                      "const csrfMatch = pm.response.text().match(/name=[\"\\']csrfmiddlewaretoken[\"\\'][^>]*value=[\"\\']([^\"\\']+)[\"\\']/i);",
+                      "pm.test(\"VERIFY: lấy được CSRF token\", () => pm.expect(csrfMatch, \"Không tìm thấy CSRF\").to.not.be.null);",
+                      "if (csrfMatch) pm.collectionVariables.set(\"bva_csrf\", csrfMatch[1]);"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{base_url}}/accounts/profile/",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "accounts",
+                    "profile",
+                    ""
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "08 - POST Logout (cleanup)",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"CLEANUP: logout trả về 302\", () => pm.response.to.have.status(302));"
+                    ]
+                  }
+                }
+              ],
+              "protocolProfileBehavior": {
+                "followRedirects": false
+              },
+              "request": {
+                "method": "POST",
+                "header": [],
+                "body": {
+                  "mode": "urlencoded",
+                  "urlencoded": [
+                    {
+                      "key": "csrfmiddlewaretoken",
+                      "value": "{{bva_csrf}}",
+                      "type": "text"
+                    }
+                  ]
+                },
+                "url": {
+                  "raw": "{{base_url}}/accounts/logout/",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "accounts",
+                    "logout",
+                    ""
+                  ]
+                }
+              },
+              "response": []
+            }
+          ],
+          "description": "Điểm biên: max (128)"
+        },
+        {
+          "name": "BVA-AA-REG-PASS-L129 | Reject",
+          "item": [
+            {
+              "name": "01 - GET Register + CSRF",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"SETUP: trang trả về 200\", () => pm.response.to.have.status(200));",
+                      "pm.test(\"SETUP: đang ở form Đăng ký (chưa đăng nhập)\", () => {",
+                      "  pm.expect(pm.response.text(), \"Còn phiên đăng nhập cũ - chạy folder 00 trước\").to.include('name=\"password1\"');",
+                      "});",
+                      "",
+                      "const csrfMatch = pm.response.text().match(/name=[\"\\']csrfmiddlewaretoken[\"\\'][^>]*value=[\"\\']([^\"\\']+)[\"\\']/i);",
+                      "pm.test(\"SETUP: lấy được CSRF token\", () => pm.expect(csrfMatch, \"Không tìm thấy CSRF\").to.not.be.null);",
+                      "if (csrfMatch) pm.collectionVariables.set(\"bva_csrf\", csrfMatch[1]);"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{base_url}}/accounts/register/",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "accounts",
+                    "register",
+                    ""
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "02 - POST Register",
+              "event": [
+                {
+                  "listen": "prerequest",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "const length = 129;",
+                      "const stamp = Date.now().toString(36) + Math.random().toString(36).slice(2, 7);",
+                      "// Mẫu gồm chữ hoa/thường/số/ký tự đặc biệt: không bị Common/Numeric/Similarity validator chặn,",
+                      "// nên kết quả chỉ phụ thuộc vào độ dài mật khẩu.",
+                      "const pattern = \"Qv7!mT2#kZ9@rL4$wN6%\";",
+                      "const password = pattern.repeat(Math.ceil(length / pattern.length)).slice(0, length);",
+                      "pm.collectionVariables.set(\"bva_user\", \"p\" + stamp);",
+                      "pm.collectionVariables.set(\"bva_email\", \"bva_\" + stamp + \"@example.test\");",
+                      "pm.collectionVariables.set(\"bva_password\", password);",
+                      "if (password.length !== length) throw new Error(\"Sai độ dài password\");"
+                    ]
+                  }
+                },
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "const html = pm.response.text();",
+                      "pm.test(\"BVA-AA-REG-PASS-L129: REJECT - giữ lại form (200)\", () => pm.response.to.have.status(200));",
+                      "pm.test(\"BVA-AA-REG-PASS-L129: hiển thị thông báo lỗi\", () => {",
+                      "  pm.expect(html).to.include('class=\"auth-error\"');",
+                      "});"
+                    ]
+                  }
+                }
+              ],
+              "protocolProfileBehavior": {
+                "followRedirects": false
+              },
+              "request": {
+                "method": "POST",
+                "header": [],
+                "body": {
+                  "mode": "urlencoded",
+                  "urlencoded": [
+                    {
+                      "key": "csrfmiddlewaretoken",
+                      "value": "{{bva_csrf}}",
+                      "type": "text"
+                    },
+                    {
+                      "key": "username",
+                      "value": "{{bva_user}}",
+                      "type": "text"
+                    },
+                    {
+                      "key": "email",
+                      "value": "{{bva_email}}",
+                      "type": "text"
+                    },
+                    {
+                      "key": "password1",
+                      "value": "{{bva_password}}",
+                      "type": "text"
+                    },
+                    {
+                      "key": "password2",
+                      "value": "{{bva_password}}",
+                      "type": "text"
+                    }
+                  ]
+                },
+                "url": {
+                  "raw": "{{base_url}}/accounts/register/",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "accounts",
+                    "register",
+                    ""
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "03 - GET Register + CSRF (session reset)",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"SETUP: trả về 200\", () => pm.response.to.have.status(200));",
+                      "",
+                      "const csrfMatch = pm.response.text().match(/name=[\"\\']csrfmiddlewaretoken[\"\\'][^>]*value=[\"\\']([^\"\\']+)[\"\\']/i);",
+                      "pm.test(\"SETUP: lấy được CSRF token\", () => pm.expect(csrfMatch, \"Không tìm thấy CSRF\").to.not.be.null);",
+                      "if (csrfMatch) pm.collectionVariables.set(\"bva_csrf\", csrfMatch[1]);"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{base_url}}/accounts/register/",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "accounts",
+                    "register",
+                    ""
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "04 - POST Logout (session reset)",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "// Đã đăng nhập -> 302 về \"/\", chưa đăng nhập -> 302 về trang login. Cả hai đều là phiên sạch.",
+                      "pm.test(\"CLEANUP: logout trả về 302\", () => pm.response.to.have.status(302));"
+                    ]
+                  }
+                }
+              ],
+              "protocolProfileBehavior": {
+                "followRedirects": false
+              },
+              "request": {
+                "method": "POST",
+                "header": [],
+                "body": {
+                  "mode": "urlencoded",
+                  "urlencoded": [
+                    {
+                      "key": "csrfmiddlewaretoken",
+                      "value": "{{bva_csrf}}",
+                      "type": "text"
+                    }
+                  ]
+                },
+                "url": {
+                  "raw": "{{base_url}}/accounts/logout/",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "accounts",
+                    "logout",
+                    ""
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "05 - GET Login + CSRF",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"SETUP: trang Đăng nhập trả về 200\", () => pm.response.to.have.status(200));",
+                      "pm.test(\"SETUP: đang ở form Đăng nhập\", () => pm.expect(pm.response.text()).to.include('name=\"password\"'));",
+                      "",
+                      "const csrfMatch = pm.response.text().match(/name=[\"\\']csrfmiddlewaretoken[\"\\'][^>]*value=[\"\\']([^\"\\']+)[\"\\']/i);",
+                      "pm.test(\"SETUP: lấy được CSRF token\", () => pm.expect(csrfMatch, \"Không tìm thấy CSRF\").to.not.be.null);",
+                      "if (csrfMatch) pm.collectionVariables.set(\"bva_csrf\", csrfMatch[1]);"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{base_url}}/accounts/login/",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "accounts",
+                    "login",
+                    ""
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "06 - POST Login (verify account not created)",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"BVA-AA-REG-PASS-L129: không đăng nhập được (200)\", () => pm.response.to.have.status(200));",
+                      "pm.test(\"BVA-AA-REG-PASS-L129: tài khoản không tồn tại sau khi bị từ chối\", () => {",
+                      "  pm.expect(pm.response.text()).to.include(\"Please enter a correct username and password\");",
+                      "});"
+                    ]
+                  }
+                }
+              ],
+              "protocolProfileBehavior": {
+                "followRedirects": false
+              },
+              "request": {
+                "method": "POST",
+                "header": [],
+                "body": {
+                  "mode": "urlencoded",
+                  "urlencoded": [
+                    {
+                      "key": "csrfmiddlewaretoken",
+                      "value": "{{bva_csrf}}",
+                      "type": "text"
+                    },
+                    {
+                      "key": "username",
+                      "value": "{{bva_user}}",
+                      "type": "text"
+                    },
+                    {
+                      "key": "password",
+                      "value": "{{bva_password}}",
+                      "type": "text"
+                    }
+                  ]
+                },
+                "url": {
+                  "raw": "{{base_url}}/accounts/login/",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "accounts",
+                    "login",
+                    ""
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "07 - GET Register + CSRF (cleanup)",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"SETUP: trả về 200\", () => pm.response.to.have.status(200));",
+                      "",
+                      "const csrfMatch = pm.response.text().match(/name=[\"\\']csrfmiddlewaretoken[\"\\'][^>]*value=[\"\\']([^\"\\']+)[\"\\']/i);",
+                      "pm.test(\"SETUP: lấy được CSRF token\", () => pm.expect(csrfMatch, \"Không tìm thấy CSRF\").to.not.be.null);",
+                      "if (csrfMatch) pm.collectionVariables.set(\"bva_csrf\", csrfMatch[1]);"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{base_url}}/accounts/register/",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "accounts",
+                    "register",
+                    ""
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "08 - POST Logout (cleanup)",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "// Đã đăng nhập -> 302 về \"/\", chưa đăng nhập -> 302 về trang login. Cả hai đều là phiên sạch.",
+                      "pm.test(\"CLEANUP: logout trả về 302\", () => pm.response.to.have.status(302));"
+                    ]
+                  }
+                }
+              ],
+              "protocolProfileBehavior": {
+                "followRedirects": false
+              },
+              "request": {
+                "method": "POST",
+                "header": [],
+                "body": {
+                  "mode": "urlencoded",
+                  "urlencoded": [
+                    {
+                      "key": "csrfmiddlewaretoken",
+                      "value": "{{bva_csrf}}",
+                      "type": "text"
+                    }
+                  ]
+                },
+                "url": {
+                  "raw": "{{base_url}}/accounts/logout/",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "accounts",
+                    "logout",
+                    ""
+                  ]
+                }
+              },
+              "response": []
+            }
+          ],
+          "description": "Điểm biên: max+ (129)"
+        }
+      ],
+      "description": "Robustness BVA (6n+1, n=1) cho password1/password2 (nhập trùng nhau), miền hợp lệ [8, 128]. min=8 theo MinimumLengthValidator; max=128 là giới hạn đề xuất (SRS và code hiện CHƯA áp dụng), nên L129 dự kiến FAIL cho tới khi bổ sung validator độ dài tối đa."
+    }
+  ],
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "http://127.0.0.1:8000"
+    },
+    {
+      "key": "bva_csrf",
+      "value": ""
+    },
+    {
+      "key": "bva_user",
+      "value": ""
+    },
+    {
+      "key": "bva_email",
+      "value": ""
+    },
+    {
+      "key": "bva_password",
+      "value": ""
+    }
+  ]
+}
