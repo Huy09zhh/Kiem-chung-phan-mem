@@ -4,6 +4,9 @@ from django.contrib.auth.decorators import login_required
 from products.models import Product
 from .models import Cart, CartItem
 
+# Giới hạn trên của PositiveIntegerField (CartItem.quantity), tránh lưu số lượng vượt miền giá trị
+MAX_QUANTITY = 2147483647
+
 
 def get_user_cart(user):
     cart, created = Cart.objects.get_or_create(user=user)
@@ -22,7 +25,7 @@ def cart_add(request, product_id):
         product=product,
     )
 
-    if not created:
+    if not created and cart_item.quantity < MAX_QUANTITY:
         cart_item.quantity += 1
         cart_item.save()
 
@@ -44,8 +47,9 @@ def cart_increase(request, product_id):
     product = get_object_or_404(Product, id=product_id)
 
     cart_item = get_object_or_404(CartItem, cart=cart, product=product)
-    cart_item.quantity += 1
-    cart_item.save()
+    if cart_item.quantity < MAX_QUANTITY:
+        cart_item.quantity += 1
+        cart_item.save()
 
     return redirect('cart_detail')
 

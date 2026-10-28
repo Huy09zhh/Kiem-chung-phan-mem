@@ -25,6 +25,8 @@ scripts:
       setcv('product_b', list[1].id);
       setcv('price_b', parseInt(list[1].price, 10));
       setcv('max_id_plus_1', list[list.length - 1].id + 1);
+      setcv('min_plus_1', list[1].id);
+      setcv('max_minus_1', list[list.length - 2].id);
       setcv('max_id_plus_100', list[list.length - 1].id + 100);
       });
     language: text/javascript

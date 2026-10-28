@@ -55,7 +55,9 @@
 | :--- | :--- | :--- | :--- |
 | `product_id` (biên dưới) | `min_id` | `0` (min − 1, ngoài biên) | 404 |
 | | | `min_id` (đúng biên) | Thêm thành công, `quantity = 1` |
-| `product_id` (biên trên dữ liệu) | `max_id` | `max_id` (đúng biên) | Thêm thành công, `quantity = 1` |
+| | | `min + 1` (id hợp lệ kế trên min) | Thêm thành công, `quantity = 1` |
+| `product_id` (biên trên dữ liệu) | `max_id` | `max − 1` (id hợp lệ kế dưới max) | Thêm thành công, `quantity = 1` |
+| | | `max_id` (đúng biên) | Thêm thành công, `quantity = 1` |
 | | | `max_id + 1` (ngoài biên) | 404 |
 | `product_id` (biên kiểu BIGINT) | 2⁶³ − 1 | `9223372036854775807` | 404 |
 | | | `9223372036854775808` (tràn) | 404, **không được 500** |
@@ -63,11 +65,15 @@
 | | | `2` → 1 | Còn trong giỏ, `quantity = 1` |
 | | | `3` → 2 | `quantity = 2` |
 | `quantity` khi tăng | biên dưới = 1 | `1` → 2 | `quantity = 2` |
+| `quantity` khi tăng | biên trên = 2.147.483.647 (giới hạn `PositiveIntegerField`) | `2147483646` → 2147483647 | `quantity = 2147483647` |
+| | | `2147483647` → ? (vượt biên) | Không vượt 2147483647, không lỗi 500 |
 | Số SP trong giỏ | 0 / 1 / 2 | 0 SP | Thông báo *"Giỏ hàng của bạn đang trống"* |
 | | | 1 SP (A×1) | Tổng = 50.000 |
 | | | 2 SP (A×2, B×1) | Tổng = 130.000 |
 
-> Dữ liệu test: SP A *Bình nước tre* = 50.000đ, SP B *Túi vải canvas* = 30.000đ.
+> Dữ liệu test: SP A *Bình nước tre* = 50.000đ, SP B *Túi vải canvas* = 30.000đ (thêm 2 SP phụ để `min + 1` và `max − 1` là 2 id khác nhau).
+>
+> SRS không quy định số lượng tối đa của 1 SP trong giỏ, nên biên trên của `quantity` lấy theo giới hạn kiểu dữ liệu `CartItem.quantity` (`PositiveIntegerField`: 0 → 2.147.483.647).
 
 ---
 
@@ -110,6 +116,17 @@
 | TC-CART-BVA-11 | Số SP = 1 | A×1 → `GET /cart/` | `total_price = 50.000` | 50.000 | ✅ PASS |
 | TC-CART-BVA-12 | Số SP = 2 | A×2, B×1 → `GET /cart/` | `total_price = 130.000` | 130.000 | ✅ PASS |
 | TC-CART-BVA-13 | Số SP 1 → 0 | A×1 → remove → `GET /cart/` | Thông báo giỏ trống | Đúng như mong đợi | ✅ PASS |
+| TC-CART-BVA-14 | `product_id` | `min + 1` | Thêm thành công, `quantity = 1` | Đúng như mong đợi | ✅ PASS |
+| TC-CART-BVA-15 | `product_id` | `max − 1` | Thêm thành công, `quantity = 1` | Đúng như mong đợi | ✅ PASS |
+| TC-CART-BVA-16 | `quantity` tăng | A×2147483646 → increase | `quantity = 2147483647` | 2147483647 | ✅ PASS |
+| TC-CART-BVA-17 | `quantity` tăng | A×2147483647 → increase | Không vượt 2147483647, không 500 | Trước fix: lưu `2147483648` ❌ · Sau fix: giữ `2147483647` | ✅ PASS (sau fix) |
+| TC-CART-BVA-18 | `quantity` thêm | A×2147483647 → add | Không vượt 2147483647, không 500 | Trước fix: lưu `2147483648` ❌ · Sau fix: giữ `2147483647` | ✅ PASS (sau fix) |
+
+> TC-CART-BVA-16 → 18 chỉ chạy bằng Django TestCase (không thể bấm "+" 2 tỷ lần bằng Postman).
+
+**Bug phát hiện – BUG-CART-01 (đã fix):** `cart_increase` và `cart_add` cộng `quantity += 1` không kiểm tra giới hạn. Khi `quantity = 2147483647`, hệ thống lưu `2147483648`, vượt miền giá trị `PositiveIntegerField` (SQLite lưu im lặng dữ liệu sai; PostgreSQL/MySQL dự kiến báo lỗi integer out of range).
+
+*Cách sửa* ([`cart/views.py`](../cart/views.py)): thêm hằng `MAX_QUANTITY = 2147483647`; `cart_add` và `cart_increase` chỉ tăng khi `quantity < MAX_QUANTITY`, đạt giới hạn thì giữ nguyên và quay về giỏ hàng. Kiểm thử hồi quy: BVA-17, BVA-18 FAIL trước fix → PASS sau fix; các TC còn lại vẫn PASS.
 
 ---
 
@@ -118,14 +135,17 @@
 | Kỹ thuật | Số TC | Số lần chạy (gồm sub-test) | PASS | FAIL |
 | :--- | :---: | :---: | :---: | :---: |
 | Phân hoạch tương đương | 15 | 15 | 15 | 0 |
-| Giá trị biên | 13 | 16 (BVA-06 chạy 4 endpoint) | 13 | 0 |
-| **Tổng** | **28** | **31** | **28** | **0** |
+| Giá trị biên | 18 | 21 (BVA-06 chạy 4 endpoint) | 18 | 0 |
+| **Tổng** | **33** | **36** | **33** | **0** |
+
+> Kết quả sau khi fix BUG-CART-01. Trước fix: 31 PASS, 2 FAIL (BVA-17, BVA-18).
 
 **Nhận xét:**
 - Phân hệ giỏ hàng đáp ứng đúng FR3.1 – FR3.4 và BR03.1 với mọi lớp tương đương và giá trị biên đã chọn.
+- Kiểm thử giá trị biên phát hiện BUG-CART-01 (`quantity` vượt giới hạn kiểu dữ liệu tại biên trên), đã fix và kiểm thử hồi quy PASS.
 - `product_id` vượt giới hạn BIGINT không gây lỗi 500 (Django 6 trả về rỗng cho giá trị ngoài miền số nguyên).
 - Ngoài phạm vi EP/BVA: các endpoint giỏ hàng đổi dữ liệu bằng `GET` (đã được ghi nhận ở BUG-17 trong collection Postman `GreenShop-ShoppingCart`).
-- SRS không quy định số lượng tối đa của một SP trong giỏ, nên chưa có biên trên cho `quantity`. Nên bổ sung giới hạn này vào SRS.
+- SRS không quy định số lượng tối đa của một SP trong giỏ; nên bổ sung giới hạn này vào SRS.
 
 ---
 
@@ -137,8 +157,22 @@
 python manage.py test cart -v 2
 ```
 
+Trước fix:
+
 ```text
-Ran 28 tests in 2.892s
+FAIL: test_bva_17_increase_above_qty_max
+FAIL: test_bva_18_add_above_qty_max
+AssertionError: 2147483648 not less than or equal to 2147483647
+
+Ran 33 tests in 1.499s
+
+FAILED (failures=2)
+```
+
+Sau fix:
+
+```text
+Ran 33 tests in 1.537s
 
 OK
 ```
@@ -151,7 +185,7 @@ Collection: `postman/collections/Green Shop - Shopping Cart (EP-BVA)/` (bản ex
 | :--- | :--- |
 | 00. Chuẩn bị | Lấy cookie `csrftoken`, đăng xuất phiên cũ, lấy `min_id`, `max_id`, id và giá SP A/B từ `/products/api/` |
 | 01. Phân hoạch tương đương | TC-CART-EP-01 → 15 |
-| 02. Giá trị biên | TC-CART-BVA-01 → 13 |
+| 02. Giá trị biên | TC-CART-BVA-01 → 15 |
 
 Request `[setup]` chỉ chuẩn bị dữ liệu; `TC-xx.1` thực hiện thao tác, `TC-xx.2` mở `/cart/` để kiểm tra số lượng / tổng tiền.
 
@@ -163,5 +197,5 @@ npx newman@6.2.1 run GreenShop-ShoppingCart-EP-BVA.postman_collection.json
 ```
 
 ```text
-requests 78 | assertions 72 | failed 0
+requests 84 | assertions 78 | failed 0
 ```

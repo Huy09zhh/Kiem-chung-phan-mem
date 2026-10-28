@@ -12,6 +12,8 @@ from products.models import Product
 from .models import Cart, CartItem
 
 INT64_MAX = 9223372036854775807
+# Giới hạn trên của PositiveIntegerField (CartItem.quantity) theo Django
+QTY_MAX = 2147483647
 
 
 class CartTestBase(TestCase):
@@ -20,6 +22,10 @@ class CartTestBase(TestCase):
         cls.user = User.objects.create_user('cartuser', 'cart@test.com', 'User@12345')
         cls.p_a = Product.objects.create(name='Bình nước tre', price=Decimal('50000'))
         cls.p_b = Product.objects.create(name='Túi vải canvas', price=Decimal('30000'))
+        # Thêm 2 SP để min+1 và max-1 là các id khác nhau
+        Product.objects.create(name='Ống hút cỏ', price=Decimal('20000'))
+        Product.objects.create(name='Xà phòng hữu cơ', price=Decimal('45000'))
+        cls.ids = list(Product.objects.order_by('id').values_list('id', flat=True))
         cls.min_id = Product.objects.order_by('id').first().id
         cls.max_id = Product.objects.order_by('-id').first().id
 
@@ -232,3 +238,43 @@ class CartBoundaryValueTests(CartTestBase):
         self.set_qty(self.p_a, 1)
         self.client.get(f'/cart/remove/{self.p_a.id}/')
         self.assertContains(self.client.get('/cart/'), 'Giỏ hàng của bạn đang trống')
+
+    def test_bva_14_product_id_min_plus_1(self):
+        """TC-CART-BVA-14: product_id = min+1 (id hợp lệ kế trên min) -> thêm thành công."""
+        self.login()
+        pid = self.ids[1]
+        r = self.client.get(f'/cart/add/{pid}/')
+        self.assertRedirects(r, '/cart/', fetch_redirect_response=False)
+        self.assertEqual(self.qty(Product.objects.get(id=pid)), 1)
+
+    def test_bva_15_product_id_max_minus_1(self):
+        """TC-CART-BVA-15: product_id = max-1 (id hợp lệ kế dưới max) -> thêm thành công."""
+        self.login()
+        pid = self.ids[-2]
+        r = self.client.get(f'/cart/add/{pid}/')
+        self.assertRedirects(r, '/cart/', fetch_redirect_response=False)
+        self.assertEqual(self.qty(Product.objects.get(id=pid)), 1)
+
+    def test_bva_16_increase_to_qty_max(self):
+        """TC-CART-BVA-16: Tăng khi quantity = 2147483646 (max-1) -> 2147483647 (max)."""
+        self.login()
+        self.set_qty(self.p_a, QTY_MAX - 1)
+        r = self.client.get(f'/cart/increase/{self.p_a.id}/')
+        self.assertEqual(r.status_code, 302)
+        self.assertEqual(self.qty(self.p_a), QTY_MAX)
+
+    def test_bva_17_increase_above_qty_max(self):
+        """TC-CART-BVA-17: Tăng khi quantity = 2147483647 (max) -> không vượt max, không lỗi 500."""
+        self.login()
+        self.set_qty(self.p_a, QTY_MAX)
+        r = self.client.get(f'/cart/increase/{self.p_a.id}/')
+        self.assertNotEqual(r.status_code, 500)
+        self.assertLessEqual(self.qty(self.p_a), QTY_MAX)
+
+    def test_bva_18_add_above_qty_max(self):
+        """TC-CART-BVA-18: Thêm SP đã có quantity = 2147483647 (max) -> không vượt max, không lỗi 500."""
+        self.login()
+        self.set_qty(self.p_a, QTY_MAX)
+        r = self.client.get(f'/cart/add/{self.p_a.id}/')
+        self.assertNotEqual(r.status_code, 500)
+        self.assertLessEqual(self.qty(self.p_a), QTY_MAX)

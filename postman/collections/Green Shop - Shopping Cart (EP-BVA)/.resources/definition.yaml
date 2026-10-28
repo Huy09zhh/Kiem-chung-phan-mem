@@ -1,6 +1,6 @@
 $kind: collection
 description: |-
-  Kiểm thử hộp đen phân hệ FR3 - Giỏ hàng: Phân hoạch tương đương (TC-CART-EP-01 → 15) và Giá trị biên (TC-CART-BVA-01 → 13).
+  Kiểm thử hộp đen phân hệ FR3 - Giỏ hàng: Phân hoạch tương đương (TC-CART-EP-01 → 15) và Giá trị biên (TC-CART-BVA-01 → 15).
   Tài liệu: docs/TestCase_FR3_Cart_EP_BVA.md
   1. Chạy server: python manage.py runserver
   2. Tạo dữ liệu (1 lần): python manage.py shell -c "exec(open('postman/seed_test_data.py', encoding='utf-8').read())"
@@ -23,6 +23,8 @@ variables:
   csrf_cookie: ""
   max_id_plus_1: ""
   max_id_plus_100: ""
+  min_plus_1: ""
+  max_minus_1: ""
 scripts:
   - type: http:beforeRequest
     code: |-

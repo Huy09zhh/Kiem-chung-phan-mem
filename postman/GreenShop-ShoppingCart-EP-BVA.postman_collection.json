@@ -2,7 +2,7 @@
   "info": {
     "_postman_id": "b925daa8-3c02-5c23-84d3-faeb63954ed2",
     "name": "Green Shop - Shopping Cart (EP-BVA)",
-    "description": "Kiểm thử hộp đen phân hệ FR3 - Giỏ hàng: Phân hoạch tương đương (TC-CART-EP-01 → 15) và Giá trị biên (TC-CART-BVA-01 → 13).\nTài liệu: docs/TestCase_FR3_Cart_EP_BVA.md\n1. Chạy server: python manage.py runserver\n2. Tạo dữ liệu (1 lần): python manage.py shell -c \"exec(open('postman/seed_test_data.py', encoding='utf-8').read())\"\n3. Kiểm tra user1 / user2 trong tab Variables, rồi chạy Collection Runner theo thứ tự folder 00 → 02.\nRequest [setup] chỉ chuẩn bị dữ liệu; request TC-xx.1 thực hiện thao tác, TC-xx.2 mở giỏ hàng để kiểm tra.",
+    "description": "Kiểm thử hộp đen phân hệ FR3 - Giỏ hàng: Phân hoạch tương đương (TC-CART-EP-01 → 15) và Giá trị biên (TC-CART-BVA-01 → 15).\nTài liệu: docs/TestCase_FR3_Cart_EP_BVA.md\n1. Chạy server: python manage.py runserver\n2. Tạo dữ liệu (1 lần): python manage.py shell -c \"exec(open('postman/seed_test_data.py', encoding='utf-8').read())\"\n3. Kiểm tra user1 / user2 trong tab Variables, rồi chạy Collection Runner theo thứ tự folder 00 → 02.\nRequest [setup] chỉ chuẩn bị dữ liệu; request TC-xx.1 thực hiện thao tác, TC-xx.2 mở giỏ hàng để kiểm tra.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "event": [
@@ -106,6 +106,14 @@
     },
     {
       "key": "max_id_plus_100",
+      "value": ""
+    },
+    {
+      "key": "min_plus_1",
+      "value": ""
+    },
+    {
+      "key": "max_minus_1",
       "value": ""
     }
   ],
@@ -233,6 +241,8 @@
                   "setcv('product_b', list[1].id);",
                   "setcv('price_b', parseInt(list[1].price, 10));",
                   "setcv('max_id_plus_1', list[list.length - 1].id + 1);",
+                  "setcv('min_plus_1', list[1].id);",
+                  "setcv('max_minus_1', list[list.length - 2].id);",
                   "setcv('max_id_plus_100', list[list.length - 1].id + 100);",
                   "});"
                 ]
@@ -1389,8 +1399,8 @@
       ]
     },
     {
-      "name": "02. Giá trị biên (TC-CART-BVA-01 → 13)",
-      "description": "Biên của product_id (0, min, max, max+1, 2^63-1, 2^63), quantity khi tăng/giảm (1, 2, 3) và số SP trong giỏ (0, 1, 2).",
+      "name": "02. Giá trị biên (TC-CART-BVA-01 → 15)",
+      "description": "Biên của product_id (0, min, min+1, max-1, max, max+1, 2^63-1, 2^63), quantity khi tăng/giảm (1, 2, 3) và số SP trong giỏ (0, 1, 2).",
       "item": [
         {
           "name": "[setup] Dọn giỏ hàng user1",
@@ -1642,6 +1652,222 @@
           ]
         },
         {
+          "name": "[setup] Dọn giỏ hàng user1 (3)",
+          "protocolProfileBehavior": {
+            "followRedirects": false
+          },
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{base_url}}/cart/"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const html = pm.response.text();",
+                  "const ok = (c, m) => { if (!c) { throw new Error(m); } };",
+                  "const cv = (k) => pm.collectionVariables.get(k);",
+                  "const loc = () => pm.response.headers.get('Location') || '';",
+                  "const inCart = (id) => html.includes('/cart/remove/' + id + '/');",
+                  "const rows = (id) => html.split('/cart/remove/' + id + '/').length - 1;",
+                  "const qtyOf = (id) => { const m = html.match(new RegExp('/cart/decrease/' + id + '/\"[^>]*>[^<]*</a>\\\\s*<span class=\"qty-number\">(\\\\d+)</span>')); return m ? parseInt(m[1], 10) : null; };",
+                  "const total = () => { const m = html.match(/<div class=\"summary-total\">([^<]+)<\\/div>/); return m ? parseInt(m[1].replace(/[^\\d]/g, ''), 10) : null; };",
+                  "",
+                  "pm.test(\"SETUP | Mở giỏ hàng user1 (200)\", function () {",
+                  "ok(pm.response.code === 200, 'Mong đợi HTTP 200, thực tế ' + pm.response.code);",
+                  "});",
+                  "",
+                  "// Xóa mọi sản phẩm đang có trong giỏ bằng pm.sendRequest",
+                  "const base = pm.variables.replaceIn('{{base_url}}');",
+                  "const ids = [...new Set(Array.from(html.matchAll(/\\/cart\\/remove\\/(\\d+)\\//g), (x) => x[1]))];",
+                  "ids.forEach((id) => pm.sendRequest(base + '/cart/remove/' + id + '/', () => {}));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "TC-CART-BVA-14.1 product_id = min + 1",
+          "protocolProfileBehavior": {
+            "followRedirects": false
+          },
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{base_url}}/cart/add/{{min_plus_1}}/"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const html = pm.response.text();",
+                  "const ok = (c, m) => { if (!c) { throw new Error(m); } };",
+                  "const cv = (k) => pm.collectionVariables.get(k);",
+                  "const loc = () => pm.response.headers.get('Location') || '';",
+                  "const inCart = (id) => html.includes('/cart/remove/' + id + '/');",
+                  "const rows = (id) => html.split('/cart/remove/' + id + '/').length - 1;",
+                  "const qtyOf = (id) => { const m = html.match(new RegExp('/cart/decrease/' + id + '/\"[^>]*>[^<]*</a>\\\\s*<span class=\"qty-number\">(\\\\d+)</span>')); return m ? parseInt(m[1], 10) : null; };",
+                  "const total = () => { const m = html.match(/<div class=\"summary-total\">([^<]+)<\\/div>/); return m ? parseInt(m[1].replace(/[^\\d]/g, ''), 10) : null; };",
+                  "",
+                  "pm.test(\"TC-CART-BVA-14 | product_id = min+1 (id hợp lệ kế trên min) → 302 về /cart/\", function () {",
+                  "ok(pm.response.code === 302, 'Mong đợi HTTP 302, thực tế ' + pm.response.code);",
+                  "const exp = '/cart/';",
+                  "ok(loc() === exp, 'Location mong đợi ' + exp + ', thực tế ' + loc());",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "TC-CART-BVA-14.2 Kiểm tra SP min+1 có quantity = 1",
+          "protocolProfileBehavior": {
+            "followRedirects": false
+          },
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{base_url}}/cart/"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const html = pm.response.text();",
+                  "const ok = (c, m) => { if (!c) { throw new Error(m); } };",
+                  "const cv = (k) => pm.collectionVariables.get(k);",
+                  "const loc = () => pm.response.headers.get('Location') || '';",
+                  "const inCart = (id) => html.includes('/cart/remove/' + id + '/');",
+                  "const rows = (id) => html.split('/cart/remove/' + id + '/').length - 1;",
+                  "const qtyOf = (id) => { const m = html.match(new RegExp('/cart/decrease/' + id + '/\"[^>]*>[^<]*</a>\\\\s*<span class=\"qty-number\">(\\\\d+)</span>')); return m ? parseInt(m[1], 10) : null; };",
+                  "const total = () => { const m = html.match(/<div class=\"summary-total\">([^<]+)<\\/div>/); return m ? parseInt(m[1].replace(/[^\\d]/g, ''), 10) : null; };",
+                  "",
+                  "pm.test(\"TC-CART-BVA-14 | SP min+1 có quantity = 1\", function () {",
+                  "ok(pm.response.code === 200, 'Mong đợi HTTP 200, thực tế ' + pm.response.code);",
+                  "const q = qtyOf(cv('min_plus_1'));",
+                  "ok(q === 1, 'Số lượng mong đợi 1, thực tế ' + q);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "[setup] Dọn giỏ hàng user1 (4)",
+          "protocolProfileBehavior": {
+            "followRedirects": false
+          },
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{base_url}}/cart/"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const html = pm.response.text();",
+                  "const ok = (c, m) => { if (!c) { throw new Error(m); } };",
+                  "const cv = (k) => pm.collectionVariables.get(k);",
+                  "const loc = () => pm.response.headers.get('Location') || '';",
+                  "const inCart = (id) => html.includes('/cart/remove/' + id + '/');",
+                  "const rows = (id) => html.split('/cart/remove/' + id + '/').length - 1;",
+                  "const qtyOf = (id) => { const m = html.match(new RegExp('/cart/decrease/' + id + '/\"[^>]*>[^<]*</a>\\\\s*<span class=\"qty-number\">(\\\\d+)</span>')); return m ? parseInt(m[1], 10) : null; };",
+                  "const total = () => { const m = html.match(/<div class=\"summary-total\">([^<]+)<\\/div>/); return m ? parseInt(m[1].replace(/[^\\d]/g, ''), 10) : null; };",
+                  "",
+                  "pm.test(\"SETUP | Mở giỏ hàng user1 (200)\", function () {",
+                  "ok(pm.response.code === 200, 'Mong đợi HTTP 200, thực tế ' + pm.response.code);",
+                  "});",
+                  "",
+                  "// Xóa mọi sản phẩm đang có trong giỏ bằng pm.sendRequest",
+                  "const base = pm.variables.replaceIn('{{base_url}}');",
+                  "const ids = [...new Set(Array.from(html.matchAll(/\\/cart\\/remove\\/(\\d+)\\//g), (x) => x[1]))];",
+                  "ids.forEach((id) => pm.sendRequest(base + '/cart/remove/' + id + '/', () => {}));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "TC-CART-BVA-15.1 product_id = max - 1",
+          "protocolProfileBehavior": {
+            "followRedirects": false
+          },
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{base_url}}/cart/add/{{max_minus_1}}/"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const html = pm.response.text();",
+                  "const ok = (c, m) => { if (!c) { throw new Error(m); } };",
+                  "const cv = (k) => pm.collectionVariables.get(k);",
+                  "const loc = () => pm.response.headers.get('Location') || '';",
+                  "const inCart = (id) => html.includes('/cart/remove/' + id + '/');",
+                  "const rows = (id) => html.split('/cart/remove/' + id + '/').length - 1;",
+                  "const qtyOf = (id) => { const m = html.match(new RegExp('/cart/decrease/' + id + '/\"[^>]*>[^<]*</a>\\\\s*<span class=\"qty-number\">(\\\\d+)</span>')); return m ? parseInt(m[1], 10) : null; };",
+                  "const total = () => { const m = html.match(/<div class=\"summary-total\">([^<]+)<\\/div>/); return m ? parseInt(m[1].replace(/[^\\d]/g, ''), 10) : null; };",
+                  "",
+                  "pm.test(\"TC-CART-BVA-15 | product_id = max-1 (id hợp lệ kế dưới max) → 302 về /cart/\", function () {",
+                  "ok(pm.response.code === 302, 'Mong đợi HTTP 302, thực tế ' + pm.response.code);",
+                  "const exp = '/cart/';",
+                  "ok(loc() === exp, 'Location mong đợi ' + exp + ', thực tế ' + loc());",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "TC-CART-BVA-15.2 Kiểm tra SP max-1 có quantity = 1",
+          "protocolProfileBehavior": {
+            "followRedirects": false
+          },
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{base_url}}/cart/"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const html = pm.response.text();",
+                  "const ok = (c, m) => { if (!c) { throw new Error(m); } };",
+                  "const cv = (k) => pm.collectionVariables.get(k);",
+                  "const loc = () => pm.response.headers.get('Location') || '';",
+                  "const inCart = (id) => html.includes('/cart/remove/' + id + '/');",
+                  "const rows = (id) => html.split('/cart/remove/' + id + '/').length - 1;",
+                  "const qtyOf = (id) => { const m = html.match(new RegExp('/cart/decrease/' + id + '/\"[^>]*>[^<]*</a>\\\\s*<span class=\"qty-number\">(\\\\d+)</span>')); return m ? parseInt(m[1], 10) : null; };",
+                  "const total = () => { const m = html.match(/<div class=\"summary-total\">([^<]+)<\\/div>/); return m ? parseInt(m[1].replace(/[^\\d]/g, ''), 10) : null; };",
+                  "",
+                  "pm.test(\"TC-CART-BVA-15 | SP max-1 có quantity = 1\", function () {",
+                  "ok(pm.response.code === 200, 'Mong đợi HTTP 200, thực tế ' + pm.response.code);",
+                  "const q = qtyOf(cv('max_minus_1'));",
+                  "ok(q === 1, 'Số lượng mong đợi 1, thực tế ' + q);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
           "name": "TC-CART-BVA-04 product_id = max_id + 1",
           "protocolProfileBehavior": {
             "followRedirects": false
@@ -1840,7 +2066,7 @@
           ]
         },
         {
-          "name": "[setup] Dọn giỏ hàng user1 (3)",
+          "name": "[setup] Dọn giỏ hàng user1 (5)",
           "protocolProfileBehavior": {
             "followRedirects": false
           },
@@ -2047,7 +2273,7 @@
           ]
         },
         {
-          "name": "[setup] Dọn giỏ hàng user1 (4)",
+          "name": "[setup] Dọn giỏ hàng user1 (6)",
           "protocolProfileBehavior": {
             "followRedirects": false
           },
