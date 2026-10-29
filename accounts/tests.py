@@ -1,6 +1,8 @@
-from django.test import TestCase, Client
+from django.conf import settings
 from django.contrib.auth.models import User
+from django.test import TestCase, Client
 from django.urls import reverse
+from allauth.socialaccount.models import SocialApp
 
 
 class SCRUM30UsernameProtectionTests(TestCase):
@@ -203,3 +205,41 @@ class SCRUM30UsernameProtectionTests(TestCase):
         response = self.client.get(self.profile_edit_url)
         self.assertEqual(response.status_code, 302)
         self.assertIn('/login', response['Location'])
+
+
+class PasswordLengthBoundaryTests(TestCase):
+    """Kiểm thử SCRUM-33: giới hạn độ dài mật khẩu tối đa 128 ký tự khi đăng ký."""
+
+    def setUp(self):
+        # Database test trống nên cần cấu hình Google OAuth giả để trang đăng ký render được
+        app = SocialApp.objects.create(
+            provider='google', name='Google', client_id='test', secret='test'
+        )
+        if 'django.contrib.sites' in settings.INSTALLED_APPS:
+            from django.contrib.sites.models import Site
+            app.sites.add(Site.objects.get_current())
+
+    def _register(self, username, pw):
+        return self.client.post(reverse('register'), {
+            'username': username,
+            'email': f'{username}@example.com',
+            'password1': pw,
+            'password2': pw,
+        })
+
+    def test_mat_khau_128_ky_tu_duoc_chap_nhan(self):
+        pw = ('Ab1x' * 32)[:128]
+        resp = self._register('pw128', pw)
+        self.assertEqual(resp.status_code, 302)
+
+    def test_mat_khau_129_ky_tu_bi_tu_choi(self):
+        pw = ('Ab1x' * 33)[:129]
+        resp = self._register('pw129', pw)
+        self.assertEqual(resp.status_code, 200)
+        self.assertContains(resp, 'không được dài quá 128')
+        self.assertFalse(User.objects.filter(username='pw129').exists())
+
+    def test_mat_khau_1_trieu_ky_tu_bi_tu_choi(self):
+        resp = self._register('pwlong', 'Ab1x' * 250000)
+        self.assertEqual(resp.status_code, 200)
+        self.assertFalse(User.objects.filter(username='pwlong').exists())
