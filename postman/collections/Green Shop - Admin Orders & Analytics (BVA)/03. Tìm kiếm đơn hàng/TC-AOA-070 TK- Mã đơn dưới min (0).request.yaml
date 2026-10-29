@@ -1,20 +1,10 @@
 $kind: http-request
-name: 'TC-BVA-018 Góp ý: Email "abc" (sai định dạng); các trường khác hợp lệ'
-url: "{{base_url}}/contact/"
-method: POST
-body:
-  type: urlencoded
-  content:
-    form_type: feedback
-    name: "{{bva_name}}"
-    email: "{{bva_email}}"
-    category: tong_the
-    satisfaction: "{{bva_sat}}"
-    message: "{{bva_message}}"
+name: "TC-AOA-070 TK: Mã đơn dưới min (0)"
+url: "{{base_url}}/admin-panel/orders/?keyword=0"
+method: GET
+queryParams:
+  keyword: "0"
 scripts:
-  - type: beforeRequest
-    code: pm.collectionVariables.set('bva_name', 'Nguyễn Văn Á'.padEnd(60,'a')); pm.collectionVariables.set('bva_email', 'abc'); pm.collectionVariables.set('bva_sat', '3'); pm.collectionVariables.set('bva_message', 'Kiểm thử giá trị biên');
-    language: text/javascript
   - type: afterResponse
     code: |-
       const html = pm.response.text();
@@ -28,9 +18,9 @@ scripts:
       const selectedStatus = () => grab(/<option value="(\w+)"\s+selected>/);
       const LABEL = { pending: 'Chờ xử lý', awaiting_transfer: 'Chờ chuyển khoản', paid: 'Đã thanh toán', failed: 'Thanh toán thất bại', confirmed: 'Đã xác nhận', shipping: 'Đang giao', completed: 'Hoàn thành', cancelled: 'Đã hủy' };
 
-      pm.test("TC-BVA-018 | X11", function () {
+      pm.test("TC-AOA-070 | TK-X2", function () {
       ok(pm.response.code < 500, 'Server lỗi ' + pm.response.code);
-      ok(pm.response.code === 200, 'Mong đợi 200 (báo lỗi, không lưu), nhận ' + pm.response.code + ' ' + loc());
+      ok(rowIds().length === 0, 'Mong đợi danh sách rỗng nhưng có ' + rowIds().length + ' đơn');
       });
     language: text/javascript
 settings:

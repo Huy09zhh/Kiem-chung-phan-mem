@@ -1,15 +1,14 @@
 $kind: collection
 description: |-
-  Kiểm thử phân vùng tương đương kết hợp giá trị biên (BVA) cho phân hệ Admin Orders & Analytics.
-  1. Chạy server: python manage.py runserver
-  2. Điền admin_password trong tab Variables (kiểm tra phone_known và search_order_id là dữ liệu có thật).
+  Kiểm thử EP + BVA phân hệ Admin Orders & Analytics (TC-AOA-046 → 070, Tuần 5).
+  1. python manage.py runserver
+  2. Điền admin_password; phone_known phải là SĐT đầy đủ (10 ký tự) của một đơn có thật; đơn #1 và #2 phải tồn tại.
   3. Chạy Collection Runner theo thứ tự folder 00 → 03.
-  TC-BVA Dashboard (0/1/6/7 đơn) kiểm tra thủ công.
+  Mỗi lần chạy tạo thêm bản ghi Liên hệ/Góp ý thử.
 variables:
   base_url: http://127.0.0.1:8000
   admin_username: adminquan
   admin_password: ""
-  search_order_id: "2"
   phone_known: "0912345678"
   run_tag: ""
   csrf_html: ""

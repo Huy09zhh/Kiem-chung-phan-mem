@@ -1,12 +1,12 @@
 $kind: http-request
-name: "TC-BVA-023 Tìm đơn: Từ khóa SĐT 7 ký tự"
+name: "TC-AOA-067 TK: Từ khóa SĐT dưới min (5 ký tự)"
 url: "{{base_url}}/admin-panel/orders/?keyword={{bva_kw}}"
 method: GET
 queryParams:
   keyword: "{{bva_kw}}"
 scripts:
   - type: beforeRequest
-    code: pm.collectionVariables.set('bva_kw', pm.collectionVariables.get('phone_known').substring(0,7));
+    code: pm.collectionVariables.set('bva_kw', pm.collectionVariables.get('phone_known').substring(0,5));
     language: text/javascript
   - type: afterResponse
     code: |-
@@ -21,11 +21,11 @@ scripts:
       const selectedStatus = () => grab(/<option value="(\w+)"\s+selected>/);
       const LABEL = { pending: 'Chờ xử lý', awaiting_transfer: 'Chờ chuyển khoản', paid: 'Đã thanh toán', failed: 'Thanh toán thất bại', confirmed: 'Đã xác nhận', shipping: 'Đang giao', completed: 'Hoàn thành', cancelled: 'Đã hủy' };
 
-      pm.test("TC-BVA-023 | B15", function () {
+      pm.test("TC-AOA-067 | TK-X1", function () {
       ok(pm.response.code < 500, 'Server lỗi ' + pm.response.code);
-      ok(rowIds().length >= 1, 'Mong đợi tìm thấy ít nhất 1 đơn');
+      ok(rowIds().length === 0, 'Mong đợi danh sách rỗng nhưng có ' + rowIds().length + ' đơn');
       });
     language: text/javascript
 settings:
   followRedirects: false
-order: 3000
+order: 4000

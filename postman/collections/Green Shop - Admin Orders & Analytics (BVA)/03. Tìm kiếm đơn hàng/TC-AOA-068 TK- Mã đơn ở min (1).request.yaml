@@ -1,9 +1,9 @@
 $kind: http-request
-name: "TC-BVA-028 Tìm đơn: Mã đơn 999999"
-url: "{{base_url}}/admin-panel/orders/?keyword=999999"
+name: "TC-AOA-068 TK: Mã đơn ở min (1)"
+url: "{{base_url}}/admin-panel/orders/?keyword=1"
 method: GET
 queryParams:
-  keyword: "999999"
+  keyword: "1"
 scripts:
   - type: afterResponse
     code: |-
@@ -18,11 +18,11 @@ scripts:
       const selectedStatus = () => grab(/<option value="(\w+)"\s+selected>/);
       const LABEL = { pending: 'Chờ xử lý', awaiting_transfer: 'Chờ chuyển khoản', paid: 'Đã thanh toán', failed: 'Thanh toán thất bại', confirmed: 'Đã xác nhận', shipping: 'Đang giao', completed: 'Hoàn thành', cancelled: 'Đã hủy' };
 
-      pm.test("TC-BVA-028 | X14", function () {
+      pm.test("TC-AOA-068 | TK-V2, TK-B4", function () {
       ok(pm.response.code < 500, 'Server lỗi ' + pm.response.code);
-      ok(rowIds().length === 0, 'Mong đợi danh sách rỗng nhưng có ' + rowIds().length + ' đơn');
+      const ids = rowIds(); ok(ids.length === 1 && ids[0] === 1, 'Mong đợi chỉ đơn #1, nhận: ' + ids.join(','));
       });
     language: text/javascript
 settings:
   followRedirects: false
-order: 8000
+order: 5000

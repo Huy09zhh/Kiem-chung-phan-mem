@@ -1,19 +1,12 @@
 $kind: http-request
-name: "TC-BVA-004 Liên hệ: Họ tên 119 ký tự; SĐT 19 ký tự; các trường khác hợp lệ"
-url: "{{base_url}}/contact/"
-method: POST
-body:
-  type: urlencoded
-  content:
-    form_type: contact
-    name: "{{bva_name}}"
-    email: "{{bva_email}}"
-    phone: "{{bva_phone}}"
-    subject: tu_van
-    message: "{{bva_message}}"
+name: "TC-AOA-064 TK: Từ khóa SĐT ở nominal (đủ 10 ký tự)"
+url: "{{base_url}}/admin-panel/orders/?keyword={{bva_kw}}"
+method: GET
+queryParams:
+  keyword: "{{bva_kw}}"
 scripts:
   - type: beforeRequest
-    code: pm.collectionVariables.set('bva_name', 'A'.repeat(119)); pm.collectionVariables.set('bva_email', 'bva@example.com'); pm.collectionVariables.set('bva_phone', '1'.repeat(19)); pm.collectionVariables.set('bva_message', 'Kiểm thử giá trị biên');
+    code: pm.collectionVariables.set('bva_kw', pm.collectionVariables.get('phone_known').substring(0,10));
     language: text/javascript
   - type: afterResponse
     code: |-
@@ -28,11 +21,11 @@ scripts:
       const selectedStatus = () => grab(/<option value="(\w+)"\s+selected>/);
       const LABEL = { pending: 'Chờ xử lý', awaiting_transfer: 'Chờ chuyển khoản', paid: 'Đã thanh toán', failed: 'Thanh toán thất bại', confirmed: 'Đã xác nhận', shipping: 'Đang giao', completed: 'Hoàn thành', cancelled: 'Đã hủy' };
 
-      pm.test("TC-BVA-004 | B3, B7", function () {
+      pm.test("TC-AOA-064 | TK-V1, TK-B3", function () {
       ok(pm.response.code < 500, 'Server lỗi ' + pm.response.code);
-      ok(pm.response.code === 302 && loc().indexOf('contact_success=1') >= 0, 'Mong đợi 302 về ?contact_success=1, nhận ' + pm.response.code + ' ' + loc());
+      ok(rowIds().length >= 1, 'Mong đợi tìm thấy ít nhất 1 đơn');
       });
     language: text/javascript
 settings:
   followRedirects: false
-order: 4000
+order: 1000

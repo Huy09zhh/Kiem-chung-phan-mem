@@ -1,5 +1,5 @@
 $kind: http-request
-name: "TC-BVA-014 Góp ý: Họ tên 1 ký tự; mức hài lòng 1; các trường khác hợp lệ"
+name: "TC-AOA-055 GY: Tất cả biến ở giá trị nominal"
 url: "{{base_url}}/contact/"
 method: POST
 body:
@@ -13,7 +13,7 @@ body:
     message: "{{bva_message}}"
 scripts:
   - type: beforeRequest
-    code: pm.collectionVariables.set('bva_name', 'A'); pm.collectionVariables.set('bva_email', ''); pm.collectionVariables.set('bva_sat', '1'); pm.collectionVariables.set('bva_message', 'Kiểm thử giá trị biên');
+    code: pm.collectionVariables.set('bva_name', 'Nguyễn Văn Á'.padEnd(60,'a')); pm.collectionVariables.set('bva_email', ''); pm.collectionVariables.set('bva_sat', '3'); pm.collectionVariables.set('bva_message', 'Kiểm thử giá trị biên');
     language: text/javascript
   - type: afterResponse
     code: |-
@@ -28,11 +28,11 @@ scripts:
       const selectedStatus = () => grab(/<option value="(\w+)"\s+selected>/);
       const LABEL = { pending: 'Chờ xử lý', awaiting_transfer: 'Chờ chuyển khoản', paid: 'Đã thanh toán', failed: 'Thanh toán thất bại', confirmed: 'Đã xác nhận', shipping: 'Đang giao', completed: 'Hoàn thành', cancelled: 'Đã hủy' };
 
-      pm.test("TC-BVA-014 | B10, B12", function () {
+      pm.test("TC-AOA-055 | GY-V1, GY-V2, GY-B3, GY-B8", function () {
       ok(pm.response.code < 500, 'Server lỗi ' + pm.response.code);
       ok(pm.response.code === 302 && loc().indexOf('feedback_success=1') >= 0, 'Mong đợi 302 về ?feedback_success=1, nhận ' + pm.response.code + ' ' + loc());
       });
     language: text/javascript
 settings:
   followRedirects: false
-order: 3000
+order: 1000
