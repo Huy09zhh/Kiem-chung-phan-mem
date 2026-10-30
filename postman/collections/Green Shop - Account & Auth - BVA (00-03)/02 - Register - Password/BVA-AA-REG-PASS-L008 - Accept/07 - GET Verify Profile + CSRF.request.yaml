@@ -1,0 +1,16 @@
+$kind: http-request
+url: '{{base_url}}/accounts/profile/'
+method: GET
+scripts:
+- type: afterResponse
+  code: |-
+    pm.test("VERIFY: profile trả về 200", () => pm.response.to.have.status(200));
+    pm.test("BVA-AA-REG-PASS-L008: đúng tài khoản đang đăng nhập", () => {
+      pm.expect(pm.response.text()).to.include(pm.collectionVariables.get("bva_user"));
+    });
+
+    const csrfMatch = pm.response.text().match(/name=["\']csrfmiddlewaretoken["\'][^>]*value=["\']([^"\']+)["\']/i);
+    pm.test("VERIFY: lấy được CSRF token", () => pm.expect(csrfMatch, "Không tìm thấy CSRF").to.not.be.null);
+    if (csrfMatch) pm.collectionVariables.set("bva_csrf", csrfMatch[1]);
+  language: text/javascript
+order: 7000

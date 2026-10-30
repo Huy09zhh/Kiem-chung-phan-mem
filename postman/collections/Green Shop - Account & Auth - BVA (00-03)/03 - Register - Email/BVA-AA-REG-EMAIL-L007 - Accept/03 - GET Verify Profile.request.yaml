@@ -1,0 +1,12 @@
+$kind: http-request
+url: '{{base_url}}/accounts/profile/'
+method: GET
+scripts:
+- type: afterResponse
+  code: |-
+    const id = pm.collectionVariables.get("bva_case");
+    pm.test(id + ": profile trả về 200", () => pm.response.to.have.status(200));
+    pm.test(id + ": đúng username vừa đăng ký", () => pm.expect(pm.response.text()).to.include(pm.collectionVariables.get("bva_user")));
+    pm.test(id + ": lưu đúng email", () => pm.expect(pm.response.text()).to.include(pm.collectionVariables.get("bva_email")));
+  language: text/javascript
+order: 3000

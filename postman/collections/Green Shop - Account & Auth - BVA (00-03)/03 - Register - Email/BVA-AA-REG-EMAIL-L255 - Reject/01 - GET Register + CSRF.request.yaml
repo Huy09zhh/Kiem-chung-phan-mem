@@ -1,0 +1,15 @@
+$kind: http-request
+url: '{{base_url}}/accounts/register/'
+method: GET
+scripts:
+- type: afterResponse
+  code: |-
+    const html = pm.response.text();
+    const match = html.match(/name=["']csrfmiddlewaretoken["'][^>]*value=["']([^"']+)["']/i);
+    pm.test("SETUP: register trả về 200", () => pm.response.to.have.status(200));
+    pm.test("SETUP: đúng form đăng ký", () => pm.expect(html).to.include('name="password1"'));
+    pm.test("SETUP: lấy được CSRF", () => pm.expect(match).to.not.be.null);
+    if (match) pm.collectionVariables.set("bva_csrf", match[1]);
+    else pm.collectionVariables.unset("bva_csrf");
+  language: text/javascript
+order: 1000

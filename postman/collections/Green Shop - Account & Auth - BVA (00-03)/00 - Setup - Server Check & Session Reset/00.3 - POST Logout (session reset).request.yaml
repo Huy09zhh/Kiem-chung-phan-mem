@@ -1,0 +1,16 @@
+$kind: http-request
+url: '{{base_url}}/accounts/logout/'
+method: POST
+body:
+  type: urlencoded
+  content:
+    csrfmiddlewaretoken: '{{bva_csrf}}'
+scripts:
+- type: afterResponse
+  code: |-
+    // Đã đăng nhập -> 302 về "/", chưa đăng nhập -> 302 về trang login. Cả hai đều là phiên sạch.
+    pm.test("CLEANUP: logout trả về 302", () => pm.response.to.have.status(302));
+  language: text/javascript
+settings:
+  followRedirects: false
+order: 3000

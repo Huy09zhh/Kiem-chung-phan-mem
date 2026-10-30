@@ -1,0 +1,56 @@
+$kind: http-request
+url: '{{base_url}}/accounts/register/'
+method: POST
+body:
+  type: urlencoded
+  content:
+    csrfmiddlewaretoken: '{{bva_csrf}}'
+    username: '{{bva_user}}'
+    email: '{{bva_email}}'
+    password1: '{{bva_password}}'
+    password2: '{{bva_password}}'
+scripts:
+- type: beforeRequest
+  code: |-
+    const stamp = Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
+    function makeLabels(total) {
+      const parts = [];
+      let remaining = total;
+      while (remaining > 0) {
+        let take = Math.min(63, remaining);
+        if (remaining - take === 1) take -= 1;
+        parts.push("d".repeat(take));
+        remaining -= take;
+        if (remaining > 0) remaining -= 1;
+      }
+      return parts.join(".");
+    }
+    function makeEmail(total) {
+      const localLength = 64;
+      const domainLength = total - localLength - 1;
+      const local = ("bva" + stamp + "a".repeat(localLength)).slice(0, localLength);
+      const domain = makeLabels(domainLength - 5) + ".test";
+      const email = local + "@" + domain;
+      if (email.length !== total) throw new Error("Sai độ dài email");
+      return email;
+    }
+    pm.collectionVariables.set("bva_user", "bva_mail_" + stamp);
+    pm.collectionVariables.set("bva_password", "Q7!mT2#x");
+    const pick = () => "abcdefghijklmnopqrstuvwxyz"[Math.floor(Math.random()*26)];
+    pm.collectionVariables.set("bva_email", "a@b.c");
+    pm.collectionVariables.set("bva_case", "BVA-AA-REG-EMAIL-L005");
+    pm.collectionVariables.set("bva_email_length", 5);
+    if (pm.collectionVariables.get("bva_email").length !== 5) throw new Error("Sai độ dài email");
+  language: text/javascript
+- type: afterResponse
+  code: |-
+    const id = pm.collectionVariables.get("bva_case");
+    pm.test(id + ": đúng độ dài dữ liệu", () => pm.expect(pm.collectionVariables.get("bva_email").length).to.eql(Number(pm.collectionVariables.get("bva_email_length"))));
+    pm.test(id + ": REJECT trả về 200", () => pm.response.to.have.status(200));
+    pm.test(id + ": vẫn ở form đăng ký và có lỗi", () => {
+     const html = pm.response.text();
+     pm.expect(html).to.include('name="email"');
+     pm.expect(html).to.include("auth-error");
+    });
+  language: text/javascript
+order: 2000
