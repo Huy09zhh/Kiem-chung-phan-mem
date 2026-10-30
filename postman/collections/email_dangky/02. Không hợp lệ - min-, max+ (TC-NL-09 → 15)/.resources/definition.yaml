@@ -1,0 +1,4 @@
+$kind: collection
+name: "02. Không hợp lệ - min-, max+ (TC-NL-09 → 15)"
+description: "Single fault: chỉ một biến nằm ngoài biên. Phải báo \"Email không hợp lệ\" và không lưu DB. TC-NL-10, 11 tái hiện SCRUM-36."
+order: 3000

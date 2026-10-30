@@ -1,0 +1,4 @@
+$kind: collection
+name: "99. Dọn dữ liệu"
+description: "Xóa email test vừa tạo và đăng xuất admin."
+order: 4000

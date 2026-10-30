@@ -1,0 +1,4 @@
+$kind: collection
+name: "01. Hợp lệ - min, min+, nominal, max-, max (TC-NL-01 → 08)"
+description: "Email nằm trong miền hợp lệ của cả 3 biến: phải qua kiểm tra độ dài, báo chờ xác nhận và chưa lưu DB."
+order: 2000

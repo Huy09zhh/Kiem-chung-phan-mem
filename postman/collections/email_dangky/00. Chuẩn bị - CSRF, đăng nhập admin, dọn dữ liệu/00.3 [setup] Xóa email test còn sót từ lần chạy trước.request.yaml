@@ -1,0 +1,48 @@
+$kind: http-request
+url: "{{base_url}}/admin/contact/newslettersubscriber/"
+method: GET
+scripts:
+  - type: afterResponse
+    code: |-
+      const html = pm.response.text();
+      const ok = (c, m) => { if (!c) { throw new Error(m); } };
+      const cv = (k) => pm.collectionVariables.get(k);
+      const loc = () => pm.response.headers.get('Location') || '';
+      // Lấy id các dòng trong trang admin Đăng ký nhận tin có email trùng khớp chính xác
+      const findIds = (page, email) => { const ids = []; const re = /newslettersubscriber\/(\d+)\/change\/[^"]*">([^<]*)<\/a>/g; let mm; while ((mm = re.exec(page))) { if (mm[2] === email) { ids.push(mm[1]); } } return ids; };
+      const shown = () => ["Đăng ký nhận tin thành công. Cảm ơn bạn!", "Email này đã đăng ký nhận tin trước đó.", "Email không hợp lệ, vui lòng kiểm tra lại.", "Nếu email hợp lệ, chúng tôi đã gửi thư xác nhận. Vui lòng kiểm tra hộp thư để hoàn tất đăng ký.", "Bạn thao tác quá nhanh, vui lòng thử lại sau ít phút."].find((t) => html.includes(t)) || '(không có thông báo)';
+
+      pm.test("SETUP | Mở được trang admin Đăng ký nhận tin (200)", function () {
+      ok(pm.response.code === 200 && html.includes('newslettersubscriber'), 'HTTP ' + pm.response.code + ' – kiểm tra bước đăng nhập admin');
+      });
+
+      // Tìm từng email test trong admin, email nào còn sót thì xóa (POST /<id>/delete/ với post=yes).
+      // Chạy tuần tự từng request: SQLite báo "database is locked" nếu xóa song song.
+      const EMAILS = ["a@b.vn", "ab@b.vn", "a@gs.vn", "khachhang@greenshop.vn", "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa@greenshop.vn", "user@gggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggg.vn", "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa@bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb.bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb.bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb.vn", "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa@bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb.bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb.bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb.vn", "a@b.v", "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa@bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb.bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb.bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb.vn", "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa@bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb.bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb.bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb.bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb.vn", "@greenshop.vn", "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa@greenshop.vn", "user@.vn", "user@gggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggg.vn"];
+      const base = pm.variables.replaceIn('{{base_url}}');
+      const token = cv('csrf_cookie');
+      const deleted = [], errors = [];
+      const send = (req) => new Promise((resolve) => pm.sendRequest(req, (err, res) => resolve(err ? null : res)));
+      (async () => {
+          for (const email of EMAILS) {
+              const res = await send(base + '/admin/contact/newslettersubscriber/?q=' + encodeURIComponent(email));
+              if (!res || res.code !== 200) { errors.push('Không tìm được email ' + email.length + ' ký tự'); continue; }
+              for (const id of findIds(res.text(), email)) {
+                  const r2 = await send({
+                      url: base + '/admin/contact/newslettersubscriber/' + id + '/delete/',
+                      method: 'POST',
+                      header: { 'X-CSRFToken': token, 'Referer': base + '/' },
+                      body: { mode: 'urlencoded', urlencoded: [{ key: 'post', value: 'yes' }] },
+                  });
+                  // Xóa xong admin chuyển hướng về danh sách; sendRequest tự đi theo redirect nên nhận 200
+                  if (r2 && (r2.code === 302 || r2.code === 200) && !findIds(r2.text(), email).length) { deleted.push(id); } else { errors.push('Xóa id ' + id + ' lỗi (HTTP ' + (r2 ? r2.code : '?') + ')'); }
+              }
+          }
+          pm.test('SETUP | Đã xóa ' + deleted.length + ' email test còn sót', function () {
+          ok(errors.length === 0, errors.join('; '));
+          });
+      })();
+    language: text/javascript
+settings:
+  followRedirects: false
+order: 3000
