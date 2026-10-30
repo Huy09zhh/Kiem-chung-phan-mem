@@ -7,6 +7,11 @@ from django.utils.http import url_has_allowed_host_and_scheme
 from django.views.decorators.http import require_POST
 from .models import NewsletterSubscriber
 
+# validate_email của Django cho phép email dài tới 320 ký tự, nên tự chặn theo
+# max_length của model (254) và giới hạn phần trước @ của RFC 5321 (64).
+NEWSLETTER_EMAIL_MAX_LENGTH = NewsletterSubscriber._meta.get_field('email').max_length
+EMAIL_LOCAL_PART_MAX_LENGTH = 64
+
 def contact_page(request):
     categories = Category.objects.all()
     contact_form = ContactForm()
@@ -52,6 +57,9 @@ def newsletter_subscribe(request):
  
     try:
         validate_email(email)
+        if (len(email) > NEWSLETTER_EMAIL_MAX_LENGTH
+                or len(email.rsplit('@', 1)[0]) > EMAIL_LOCAL_PART_MAX_LENGTH):
+            raise ValidationError('Email vượt quá độ dài cho phép.')
     except ValidationError:
         result = 'invalid'
     else:
