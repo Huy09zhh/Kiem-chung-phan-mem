@@ -19,7 +19,11 @@ NEWSLETTER_SALT = 'newsletter-confirm'
 NEWSLETTER_TOKEN_MAX_AGE = 60 * 60 * 48      
 NEWSLETTER_IP_LIMIT = 5                      
 NEWSLETTER_IP_WINDOW = 60 * 10               
-NEWSLETTER_EMAIL_COOLDOWN = 60 * 10          
+NEWSLETTER_EMAIL_COOLDOWN = 60 * 10
+# validate_email của Django cho phép email dài tới 320 ký tự, nên tự chặn theo
+# max_length của model (254) và giới hạn phần trước @ của RFC 5321 (64).
+NEWSLETTER_EMAIL_MAX_LENGTH = NewsletterSubscriber._meta.get_field('email').max_length
+EMAIL_LOCAL_PART_MAX_LENGTH = 64
 
 
 def contact_page(request):
@@ -75,6 +79,9 @@ def newsletter_subscribe(request):
 
     try:
         validate_email(email)
+        if (len(email) > NEWSLETTER_EMAIL_MAX_LENGTH
+                or len(email.rsplit('@', 1)[0]) > EMAIL_LOCAL_PART_MAX_LENGTH):
+            raise ValidationError('Email vượt quá độ dài cho phép.')
     except ValidationError:
         return _back(next_url, 'invalid')
 
