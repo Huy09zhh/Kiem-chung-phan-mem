@@ -1,7 +1,0 @@
-$kind: collection
-variables:
-  base_url: http://127.0.0.1:8000
-  bva_csrf: ''
-  bva_user: ''
-  bva_email: ''
-  bva_password: ''
