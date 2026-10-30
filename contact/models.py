@@ -72,3 +72,13 @@ class NewsletterSubscriber(models.Model):
  
     def __str__(self):
         return self.email
+ 
+    def clean(self):
+        if self.email:
+            self.email = self.email.strip().lower()
+ 
+    def save(self, *args, **kwargs):
+        if self.email:
+            self.email = self.email.strip().lower()
+        super().save(*args, **kwargs)
+ 

@@ -12,6 +12,10 @@ from django.urls import reverse
 from openpyxl import Workbook, load_workbook
 from openpyxl.styles import Alignment, Font
 
+from django.core.exceptions import ValidationError
+from django.db import IntegrityError, transaction
+from django.test import TestCase
+ 
 from .models import NewsletterSubscriber
 from .views import NEWSLETTER_SALT
 
@@ -185,3 +189,21 @@ def write_report(results):
     ws.freeze_panes = 'B2'
 
     wb.save(REPORT_FILE)
+
+class NewsletterEmailCaseTests(TestCase):
+    def test_email_luon_luu_chu_thuong(self):
+        s = NewsletterSubscriber.objects.create(email='An@Shop.vn')
+        self.assertEqual(s.email, 'an@shop.vn')
+ 
+    def test_khong_tao_duoc_ban_ghi_trung_khac_hoa_thuong(self):
+        NewsletterSubscriber.objects.create(email='An@Shop.vn')
+        with self.assertRaises(IntegrityError):
+            with transaction.atomic():
+                NewsletterSubscriber.objects.create(email='an@shop.vn')
+        self.assertEqual(NewsletterSubscriber.objects.count(), 1)
+ 
+    def test_admin_nhap_email_chu_hoa_trung_bi_bao_loi(self):
+        NewsletterSubscriber.objects.create(email='an@shop.vn')
+        s = NewsletterSubscriber(email='AN@Shop.vn')
+        with self.assertRaises(ValidationError):
+            s.full_clean()
