@@ -1,0 +1,29 @@
+$kind: http-request
+name: "TC-AOA-077 Dashboard: tổng % cơ cấu đơn"
+url: "{{base_url}}/admin-panel/dashboard/"
+method: GET
+scripts:
+  - type: afterResponse
+    code: |-
+      const html = pm.response.text();
+      const ok = (c, m) => { if (!c) { throw new Error(m); } };
+      const num = (s) => parseInt(String(s).replace(/[^\d]/g, ''), 10);
+      const grab = (re) => { const m = html.match(re); return m ? m[1] : null; };
+      const rowIds = () => Array.from(html.matchAll(/<td>#(\d+)<\/td>/g), (m) => parseInt(m[1], 10));
+      const loc = () => pm.response.headers.get('Location') || '';
+      const cv = (k) => pm.collectionVariables.get(k);
+      const setcv = (k, v) => pm.collectionVariables.set(k, v);
+      const selectedStatus = () => grab(/<option value="(\w+)"\s+selected>/);
+      const LABEL = { pending: 'Chờ xử lý', awaiting_transfer: 'Chờ chuyển khoản', paid: 'Đã thanh toán', failed: 'Thanh toán thất bại', confirmed: 'Đã xác nhận', shipping: 'Đang giao', completed: 'Hoàn thành', cancelled: 'Đã hủy' };
+
+      pm.test("TC-AOA-077 | Tổng các % trên thanh Cơ cấu đơn hàng phải bằng 100", function () {
+      const m = Array.from(html.matchAll(/(\d+) đơn \((\d+)%\)/g), (x) => ({ n: parseInt(x[1], 10), p: parseInt(x[2], 10) }));
+      ok(m.length > 0, 'Không đọc được các dòng "N đơn (P%)" trên Dashboard');
+      const total = m.reduce((s, x) => s + x.n, 0);
+      const sum = m.reduce((s, x) => s + x.p, 0);
+      ok(total === 0 || sum === 100, 'Tổng % = ' + sum + ' (tổng số đơn ' + total + '), mong đợi 100');
+      });
+    language: text/javascript
+settings:
+  followRedirects: false
+order: 1000

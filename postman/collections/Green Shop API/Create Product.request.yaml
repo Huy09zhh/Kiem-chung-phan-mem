@@ -1,21 +1,13 @@
 $kind: http-request
-url: "{{base_url}}/products/api/"
+url: http://127.0.0.1:8000/products/api/
 method: POST
 body:
   type: json
   content: "{\r
 
-    \    \"name\": \"Update Test Product\",\r
+    \  \"name\": \"Sản phẩm rác test\",\r
 
-    \    \"price\": \"300000\",\r
-
-    \    \"old_price\": \"350000\",\r
-
-    \    \"description\": \"Product for update test\",\r
-
-    \    \"is_featured\": false,\r
-
-    \    \"is_flash_sale\": false\r
+    \  \"price\": 50000\r
 
     }"
 order: 5000
