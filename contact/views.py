@@ -54,8 +54,8 @@ def contact_page(request):
         'categories': categories,
         'contact_form': contact_form,
         'feedback_form': feedback_form,
-        'contact_success': request.GET.get('contact_success') == '1',
-        'feedback_success': request.GET.get('feedback_success') == '1',
+        'contact_success': request.method == 'GET' and request.GET.get('contact_success') == '1',
+        'feedback_success': request.method == 'GET' and request.GET.get('feedback_success') == '1',
     })
 
 

@@ -16,8 +16,138 @@ from django.core.exceptions import ValidationError
 from django.db import IntegrityError, transaction
 from django.test import TestCase
  
-from .models import NewsletterSubscriber
+from .models import ContactMessage, Feedback, NewsletterSubscriber
 from .views import NEWSLETTER_SALT
+
+
+class ContactPhoneValidationTests(TestCase):
+    def post_contact(self, phone):
+        return self.client.post(reverse('contact_page'), {
+            'form_type': 'contact',
+            'name': 'SCRUM-39 Test',
+            'email': 'scrum39@example.test',
+            'phone': phone,
+            'subject': 'tu_van',
+            'message': 'Kiem thu so dien thoai SCRUM-39',
+        })
+
+    def assert_phone_rejected(self, phone):
+        response = self.post_contact(phone)
+        self.assertEqual(response.status_code, 200)
+        self.assertIn('phone', response.context['contact_form'].errors)
+        self.assertContains(response, 'Số điện thoại không hợp lệ.')
+        self.assertEqual(ContactMessage.objects.count(), 0)
+
+    def test_rejects_letters_and_special_characters_without_saving(self):
+        for phone in ('abc!!!@@@', '09123abc78', '091234567!', '+84-912345678'):
+            with self.subTest(phone=phone):
+                self.assert_phone_rejected(phone)
+
+    def test_rejects_invalid_lengths_and_prefixes(self):
+        for phone in (
+            '091234567', '09123456789', '+8491234567', '+849123456789',
+            '84912345678', '+840912345678', '0012345678',
+        ):
+            with self.subTest(phone=phone):
+                self.assert_phone_rejected(phone)
+
+    def test_rejects_non_ascii_digits_and_internal_whitespace(self):
+        for phone in (
+            '\uff10\uff19\uff11\uff12\uff13\uff14\uff15\uff16\uff17\uff18',
+            '0912 345678', '0912\t345678', '0912\n345678',
+        ):
+            with self.subTest(phone=phone):
+                self.assert_phone_rejected(phone)
+
+    def test_accepts_domestic_and_international_numbers(self):
+        for phone in ('0912345678', '+84912345678', ' 0912345678 ', ' +84912345678 '):
+            with self.subTest(phone=phone):
+                response = self.post_contact(phone)
+                self.assertRedirects(response, reverse('contact_page') + '?contact_success=1')
+                self.assertEqual(ContactMessage.objects.first().phone, phone.strip())
+        self.assertEqual(ContactMessage.objects.count(), 4)
+
+    def test_phone_is_optional(self):
+        for phone in ('', '   '):
+            with self.subTest(phone=phone):
+                response = self.post_contact(phone)
+                self.assertRedirects(response, reverse('contact_page') + '?contact_success=1')
+                self.assertEqual(ContactMessage.objects.first().phone, '')
+        self.assertEqual(ContactMessage.objects.count(), 2)
+
+
+class ContactSuccessMessageTests(TestCase):
+    contact_success = 'Gửi liên hệ thành công. Green Shop sẽ phản hồi bạn sớm nhất.'
+    feedback_success = 'Cảm ơn bạn đã gửi góp ý. Phản hồi của bạn rất quan trọng với Green Shop.'
+
+    def setUp(self):
+        self.url = reverse('contact_page')
+        self.contact_data = {
+            'form_type': 'contact', 'name': 'Contact test',
+            'email': 'contact@example.test', 'phone': '0912345678',
+            'subject': 'tu_van', 'message': 'Valid contact',
+        }
+        self.feedback_data = {
+            'form_type': 'feedback', 'name': 'Feedback test', 'email': '',
+            'category': 'website', 'satisfaction': '5', 'message': 'Valid feedback',
+        }
+
+    def assert_no_success_message(self, response):
+        self.assertNotContains(response, self.contact_success)
+        self.assertNotContains(response, self.feedback_success)
+
+    def test_invalid_contact_after_success_only_shows_phone_error(self):
+        success = self.client.post(self.url, self.contact_data)
+        self.assertRedirects(success, self.url + '?contact_success=1')
+        self.assertContains(self.client.get(success.url), self.contact_success)
+
+        response = self.client.post(success.url, {
+            **self.contact_data, 'phone': 'abc!!!@@@',
+        })
+        self.assertEqual(response.status_code, 200)
+        self.assertIn('phone', response.context['contact_form'].errors)
+        self.assertContains(response, 'Số điện thoại không hợp lệ.')
+        self.assert_no_success_message(response)
+        self.assertEqual(ContactMessage.objects.count(), 1)
+        self.assertEqual(ContactMessage.objects.get().phone, '0912345678')
+
+    def test_invalid_feedback_after_success_only_shows_form_error(self):
+        success = self.client.post(self.url, self.feedback_data)
+        self.assertRedirects(success, self.url + '?feedback_success=1')
+        self.assertContains(self.client.get(success.url), self.feedback_success)
+
+        response = self.client.post(success.url, {
+            **self.feedback_data, 'message': '',
+        })
+        self.assertEqual(response.status_code, 200)
+        self.assertIn('message', response.context['feedback_form'].errors)
+        self.assert_no_success_message(response)
+        self.assertEqual(Feedback.objects.count(), 1)
+
+    def test_invalid_post_hides_both_stale_success_flags(self):
+        response = self.client.post(
+            self.url + '?contact_success=1&feedback_success=1',
+            {**self.contact_data, 'phone': 'abc!!!@@@'},
+        )
+        self.assertIn('phone', response.context['contact_form'].errors)
+        self.assert_no_success_message(response)
+        self.assertEqual(ContactMessage.objects.count(), 0)
+
+    def test_valid_posts_with_stale_flags_show_only_current_success(self):
+        for data, flag, message, other_message in (
+            (self.contact_data, 'contact_success', self.contact_success, self.feedback_success),
+            (self.feedback_data, 'feedback_success', self.feedback_success, self.contact_success),
+        ):
+            with self.subTest(form_type=data['form_type']):
+                response = self.client.post(
+                    self.url + '?contact_success=1&feedback_success=1', data,
+                )
+                self.assertRedirects(response, self.url + '?' + flag + '=1')
+                page = self.client.get(response.url)
+                self.assertContains(page, message)
+                self.assertNotContains(page, other_message)
+        self.assertEqual(ContactMessage.objects.count(), 1)
+        self.assertEqual(Feedback.objects.count(), 1)
 
 
 class NewsletterSecurityTests(TestCase):

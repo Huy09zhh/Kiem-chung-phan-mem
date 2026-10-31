@@ -1,3 +1,5 @@
+import re
+
 from django import forms
 from .models import ContactMessage, Feedback
 
@@ -28,6 +30,15 @@ class ContactForm(forms.ModelForm):
                 'rows': 5
             }),
         }
+
+    def clean_phone(self):
+        phone = self.cleaned_data.get('phone', '')
+        if phone and not re.fullmatch(r'(?:0|\+84)[1-9][0-9]{8}', phone):
+            raise forms.ValidationError(
+                'Số điện thoại không hợp lệ. Vui lòng nhập dạng '
+                '0912345678 hoặc +84912345678.'
+            )
+        return phone
 
 
 class FeedbackForm(forms.ModelForm):
