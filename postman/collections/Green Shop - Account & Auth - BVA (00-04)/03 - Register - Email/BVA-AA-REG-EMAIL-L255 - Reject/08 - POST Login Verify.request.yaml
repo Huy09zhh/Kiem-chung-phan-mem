@@ -1,0 +1,18 @@
+$kind: http-request
+url: '{{base_url}}/accounts/login/'
+method: POST
+body:
+  type: urlencoded
+  content:
+    csrfmiddlewaretoken: '{{bva_csrf}}'
+    username: '{{bva_user}}'
+    password: '{{bva_password}}'
+scripts:
+- type: afterResponse
+  code: |-
+    pm.test('HTTP 200',()=>pm.response.to.have.status(200));
+    pm.test('Không đăng nhập bằng dữ liệu bị từ chối',()=>pm.expect(pm.response.text()).to.match(/auth-error(?:-box)?|errorlist/));
+  language: text/javascript
+settings:
+  followRedirects: false
+order: 8000
