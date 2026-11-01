@@ -1,5 +1,5 @@
 workspace:
-  id: ""
+  id: aedebed0-b592-4827-8a07-b598584f7207
 
 # Each entry here maps a local resource to one or more corresponding objects in Postman Cloud
 
@@ -11,6 +11,8 @@ cloudResources:
     ../postman/collections/Green Shop - Products & Search (TC-PS): 58893816-111f01d2-569f-448a-b344-3ee290b9cb88
     ../postman/collections/Green Shop - Account & Auth (TC-AA): 58973177-58340651-07b8-41a7-a551-9b95741991c8
     ../postman/collections/Green Shop - Bổ sung test case BVA (TC-BVA-001 → 031): 51f7ded2-1da5-4b53-9c4b-1b19e1eae154
+    ../postman/collections/Green Shop - Admin Orders & Analytics (BVA): 06341574-6c91-4b38-a89a-eaa922db355f
+    ../postman/collections/Green Shop - Admin Orders & Analytics (test): c6ca7c57-e683-4a22-898b-5b299333bcf0
   environments:
     ../postman/environments/Green Shop - Local.environment.yaml: 58627368-f6f0c653-b7e6-48c9-8070-8c6b791d0215
   globals:
