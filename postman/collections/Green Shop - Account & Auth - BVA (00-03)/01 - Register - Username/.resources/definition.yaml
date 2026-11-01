@@ -1,3 +1,0 @@
-$kind: collection
-description: 'Robustness BVA (6n+1, n=1) cho username: miền hợp lệ [1, 150] (Django User.username max_length=150, required).'
-order: 2000
