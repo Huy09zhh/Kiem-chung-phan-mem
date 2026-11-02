@@ -1,0 +1,29 @@
+$kind: http-request
+name: TC-AOA-039.2 Mọi liên kết chính sách ở footer mở được
+url: '{{base_url}}/chinh-sach/van-chuyen/'
+method: GET
+scripts:
+- type: afterResponse
+  code: |-
+    const html = pm.response.text();
+    const ok = (c, m) => { if (!c) { throw new Error(m); } };
+    const num = (s) => parseInt(String(s).replace(/[^\d]/g, ''), 10);
+    const grab = (re) => { const m = html.match(re); return m ? m[1] : null; };
+    const rowIds = () => Array.from(html.matchAll(/<td>#(\d+)<\/td>/g), (m) => parseInt(m[1], 10));
+    const loc = () => pm.response.headers.get('Location') || '';
+    const cv = (k) => pm.collectionVariables.get(k);
+    const setcv = (k, v) => pm.collectionVariables.set(k, v);
+    const selectedStatus = () => grab(/<option value="(\w+)"\s+selected>/);
+    const LABEL = { pending: 'Chờ xử lý', awaiting_transfer: 'Chờ chuyển khoản', paid: 'Đã thanh toán', failed: 'Thanh toán thất bại', confirmed: 'Đã xác nhận', shipping: 'Đang giao', completed: 'Hoàn thành', cancelled: 'Đã hủy' };
+
+    pm.test('TC-AOA-039.2 | Mỗi liên kết chính sách ở footer trả 200', function (done) {
+     const base = pm.collectionVariables.get('base_url');
+     const links = JSON.parse(pm.collectionVariables.get('policy_links') || '[]');
+     if (!links.length) { return done(new Error('Chưa có danh sách liên kết (chạy 039.1 trước)')); }
+     const bad = []; let left = links.length;
+     links.forEach((l) => pm.sendRequest(base + l, (err, res) => { if (err || !res || res.code !== 200) { bad.push(l + ' -> ' + (res ? res.code : 'lỗi')); } left -= 1; if (left === 0) { done(bad.length ? new Error('Liên kết lỗi: ' + bad.join(', ')) : undefined); } }));
+    });
+  language: text/javascript
+settings:
+  followRedirects: false
+order: 3000

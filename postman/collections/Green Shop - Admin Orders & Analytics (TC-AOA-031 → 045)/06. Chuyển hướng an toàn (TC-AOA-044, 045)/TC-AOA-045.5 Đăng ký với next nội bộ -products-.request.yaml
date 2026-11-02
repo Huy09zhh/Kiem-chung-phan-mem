@@ -1,0 +1,39 @@
+$kind: http-request
+name: TC-AOA-045.5 Đăng ký với next nội bộ /products/
+url: '{{base_url}}/accounts/register/?next=/products/'
+method: POST
+queryParams:
+  next: /products/
+body:
+  type: urlencoded
+  content:
+    username: '{{reg_user}}'
+    email: '{{reg_user}}@example.com'
+    password1: '{{reg_password}}'
+    password2: '{{reg_password}}'
+    csrfmiddlewaretoken: '{{csrf_token_val}}'
+scripts:
+- type: beforeRequest
+  code: pm.collectionVariables.set('reg_user', 'kt' + Date.now());
+  language: text/javascript
+- type: afterResponse
+  code: |-
+    const html = pm.response.text();
+    const ok = (c, m) => { if (!c) { throw new Error(m); } };
+    const num = (s) => parseInt(String(s).replace(/[^\d]/g, ''), 10);
+    const grab = (re) => { const m = html.match(re); return m ? m[1] : null; };
+    const rowIds = () => Array.from(html.matchAll(/<td>#(\d+)<\/td>/g), (m) => parseInt(m[1], 10));
+    const loc = () => pm.response.headers.get('Location') || '';
+    const cv = (k) => pm.collectionVariables.get(k);
+    const setcv = (k, v) => pm.collectionVariables.set(k, v);
+    const selectedStatus = () => grab(/<option value="(\w+)"\s+selected>/);
+    const LABEL = { pending: 'Chờ xử lý', awaiting_transfer: 'Chờ chuyển khoản', paid: 'Đã thanh toán', failed: 'Thanh toán thất bại', confirmed: 'Đã xác nhận', shipping: 'Đang giao', completed: 'Hoàn thành', cancelled: 'Đã hủy' };
+
+    pm.test("TC-AOA-045 | next nội bộ hợp lệ: chuyển đúng trang", function () {
+    ok(pm.response.code === 302, 'Đăng ký không thành công (HTTP ' + pm.response.code + ')');
+    ok(loc().indexOf('/products') >= 0, 'Mong đợi chuyển tới /products/, thực tế: ' + loc());
+    });
+  language: text/javascript
+settings:
+  followRedirects: false
+order: 8000

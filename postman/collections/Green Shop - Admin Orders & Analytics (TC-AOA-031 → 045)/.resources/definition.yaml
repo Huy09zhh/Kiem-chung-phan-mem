@@ -1,0 +1,57 @@
+$kind: collection
+name: Green Shop - Admin Orders & Analytics (TC-AOA-031 → 045)
+description: |-
+  Bộ kiểm thử Tuần 4 (TC-AOA-031 đến 045): hồi quy SCRUM-18/19/20/22/23/28/29, phân quyền và chuyển hướng an toàn.
+
+  Cách chạy:
+  1. Chạy server: python manage.py runserver
+  2. Tab Variables: điền admin_password và customer_password; kiểm tra order_id, final_order_id (đơn Hoàn thành), cancelled_order_id (đơn Đã hủy).
+  3. Chạy cả collection bằng Runner. Folder 05 và 06 đăng nhập bằng tài khoản khách nên để cuối.
+  4. TC-045 tạo tài khoản mới kt<số> mỗi lần chạy; xóa trong admin sau khi chạy.
+variables:
+  base_url: http://127.0.0.1:8000
+  admin_username: adminquan
+  admin_password: ''
+  customer_username: nhan
+  customer_password: ''
+  order_id: '2'
+  final_order_id: '1'
+  cancelled_order_id: '3'
+  reg_password: Kt@Green2026x
+  run_tag: ''
+  csrf_html: ''
+  csrf_token_val: ''
+  csrf_cookie: ''
+  final_status: ''
+  rev_before_035: ''
+  product_cat: ''
+  policy_links: ''
+  settings_form: ''
+  reg_user: ''
+scripts:
+- type: http:beforeRequest
+  code: |-
+    // Tự thêm CSRF cho các request ghi dữ liệu (Django bắt buộc).
+    const m = pm.request.method;
+    pm.request.headers.upsert({ key: 'Referer', value: pm.variables.replaceIn('{{base_url}}') + '/' });
+    if (m !== 'GET' && m !== 'HEAD') {
+        const token = pm.collectionVariables.get('csrf_cookie') || pm.cookies.get('csrftoken') || pm.collectionVariables.get('csrf_html');
+        if (token) {
+            pm.request.headers.upsert({ key: 'X-CSRFToken', value: token });
+            pm.collectionVariables.set('csrf_token_val', token);
+        }
+    }
+  language: text/javascript
+- type: http:afterResponse
+  code: |-
+    // Sau mỗi response: nhớ lại cookie csrftoken mới nhất (Django đổi token sau khi đăng nhập).
+    let tk = null;
+    try { tk = pm.cookies.get('csrftoken'); } catch (e) {}
+    if (!tk) {
+        try {
+            const rc = pm.response.cookies.get('csrftoken');
+            tk = rc && typeof rc === 'object' ? rc.value : rc;
+        } catch (e) {}
+    }
+    if (tk) { pm.collectionVariables.set('csrf_cookie', tk); }
+  language: text/javascript

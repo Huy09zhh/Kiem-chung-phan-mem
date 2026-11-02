@@ -1,0 +1,35 @@
+$kind: http-request
+name: TC-AOA-044.2 Đăng nhập với next=https://evil.com
+url: '{{base_url}}/accounts/login/?next=https://evil.com'
+method: POST
+queryParams:
+  next: https://evil.com
+body:
+  type: urlencoded
+  content:
+    username: '{{customer_username}}'
+    password: '{{customer_password}}'
+    csrfmiddlewaretoken: '{{csrf_token_val}}'
+scripts:
+- type: afterResponse
+  code: |-
+    const html = pm.response.text();
+    const ok = (c, m) => { if (!c) { throw new Error(m); } };
+    const num = (s) => parseInt(String(s).replace(/[^\d]/g, ''), 10);
+    const grab = (re) => { const m = html.match(re); return m ? m[1] : null; };
+    const rowIds = () => Array.from(html.matchAll(/<td>#(\d+)<\/td>/g), (m) => parseInt(m[1], 10));
+    const loc = () => pm.response.headers.get('Location') || '';
+    const cv = (k) => pm.collectionVariables.get(k);
+    const setcv = (k, v) => pm.collectionVariables.set(k, v);
+    const selectedStatus = () => grab(/<option value="(\w+)"\s+selected>/);
+    const LABEL = { pending: 'Chờ xử lý', awaiting_transfer: 'Chờ chuyển khoản', paid: 'Đã thanh toán', failed: 'Thanh toán thất bại', confirmed: 'Đã xác nhận', shipping: 'Đang giao', completed: 'Hoàn thành', cancelled: 'Đã hủy' };
+
+    pm.test("TC-AOA-044 | Không chuyển hướng sang tên miền ngoài", function () {
+    ok(pm.response.code === 302, 'Đăng nhập thất bại (HTTP ' + pm.response.code + '). Kiểm tra customer_username / customer_password');
+    ok(!/evil\.com/i.test(loc()), 'Chuyển hướng ra ngoài: ' + loc());
+    ok(loc().startsWith('/'), 'Location không phải đường dẫn nội bộ: ' + loc());
+    });
+  language: text/javascript
+settings:
+  followRedirects: false
+order: 2000

@@ -1,29 +1,30 @@
 $kind: http-request
-url: "{{base_url}}/admin-panel/orders/?keyword={{accent_name_lower}}"
+name: TC-AOA-073.2 Tìm tên có dấu, viết thường
+url: '{{base_url}}/admin-panel/orders/?keyword={{accent_name_lower}}'
 method: GET
 queryParams:
-  keyword: "{{accent_name_lower}}"
+  keyword: '{{accent_name_lower}}'
 scripts:
-  - type: afterResponse
-    code: |-
-      const html = pm.response.text();
-      const ok = (c, m) => { if (!c) { throw new Error(m); } };
-      const num = (s) => parseInt(String(s).replace(/[^\d]/g, ''), 10);
-      const grab = (re) => { const m = html.match(re); return m ? m[1] : null; };
-      const rowIds = () => Array.from(html.matchAll(/<td>#(\d+)<\/td>/g), (m) => parseInt(m[1], 10));
-      const loc = () => pm.response.headers.get('Location') || '';
-      const cv = (k) => pm.collectionVariables.get(k);
-      const setcv = (k, v) => pm.collectionVariables.set(k, v);
-      const selectedStatus = () => grab(/<option value="(\w+)"\s+selected>/);
-      const LABEL = { pending: 'Chờ xử lý', awaiting_transfer: 'Chờ chuyển khoản', paid: 'Đã thanh toán', failed: 'Thanh toán thất bại', confirmed: 'Đã xác nhận', shipping: 'Đang giao', completed: 'Hoàn thành', cancelled: 'Đã hủy' };
+- type: afterResponse
+  code: |-
+    const html = pm.response.text();
+    const ok = (c, m) => { if (!c) { throw new Error(m); } };
+    const num = (s) => parseInt(String(s).replace(/[^\d]/g, ''), 10);
+    const grab = (re) => { const m = html.match(re); return m ? m[1] : null; };
+    const rowIds = () => Array.from(html.matchAll(/<td>#(\d+)<\/td>/g), (m) => parseInt(m[1], 10));
+    const loc = () => pm.response.headers.get('Location') || '';
+    const cv = (k) => pm.collectionVariables.get(k);
+    const setcv = (k, v) => pm.collectionVariables.set(k, v);
+    const selectedStatus = () => grab(/<option value="(\w+)"\s+selected>/);
+    const LABEL = { pending: 'Chờ xử lý', awaiting_transfer: 'Chờ chuyển khoản', paid: 'Đã thanh toán', failed: 'Thanh toán thất bại', confirmed: 'Đã xác nhận', shipping: 'Đang giao', completed: 'Hoàn thành', cancelled: 'Đã hủy' };
 
-      const proper = parseInt(cv('accent_proper'), 10);
-      const fn = proper > 0 ? pm.test : pm.test.skip;
-      fn('TC-AOA-073.2 | Tìm "nguyễn" (thường) phải ra cùng số đơn như "Nguyễn" (cần có đơn tên tiếng Việt có dấu)', function () {
-        ok(pm.response.code < 500, 'Server lỗi');
-        ok(rowIds().length === proper, 'Viết hoa: ' + proper + ' đơn, viết thường: ' + rowIds().length + ' đơn (tìm kiếm phân biệt hoa/thường với chữ có dấu)');
-      });
-    language: text/javascript
+    const proper = parseInt(cv('accent_proper'), 10);
+    const fn = proper > 0 ? pm.test : pm.test.skip;
+    fn('TC-AOA-073.2 | Tìm "nguyễn" (thường) phải ra cùng số đơn như "Nguyễn" (cần có đơn tên tiếng Việt có dấu)', function () {
+      ok(pm.response.code < 500, 'Server lỗi');
+      ok(rowIds().length === proper, 'Viết hoa: ' + proper + ' đơn, viết thường: ' + rowIds().length + ' đơn (tìm kiếm phân biệt hoa/thường với chữ có dấu)');
+    });
+  language: text/javascript
 settings:
   followRedirects: false
 order: 4000

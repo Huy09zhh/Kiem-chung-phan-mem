@@ -1,38 +1,38 @@
 $kind: http-request
-name: "TC-AOA-071 Liên hệ: SĐT chứa chữ và ký tự đặc biệt"
-url: "{{base_url}}/contact/"
+name: 'TC-AOA-071 Liên hệ: SĐT chứa chữ và ký tự đặc biệt'
+url: '{{base_url}}/contact/'
 method: POST
 body:
   type: urlencoded
   content:
     form_type: contact
-    name: "{{bva_name}}"
+    name: '{{bva_name}}'
     email: bva@example.com
-    phone: "{{bva_phone}}"
+    phone: '{{bva_phone}}'
     subject: tu_van
-    message: "{{bva_message}}"
+    message: '{{bva_message}}'
 scripts:
-  - type: beforeRequest
-    code: pm.collectionVariables.set('bva_name', 'Nguyễn Văn A'); pm.collectionVariables.set('bva_phone', 'abc!!!@@@'); pm.collectionVariables.set('bva_message', 'Kiểm thử');
-    language: text/javascript
-  - type: afterResponse
-    code: |-
-      const html = pm.response.text();
-      const ok = (c, m) => { if (!c) { throw new Error(m); } };
-      const num = (s) => parseInt(String(s).replace(/[^\d]/g, ''), 10);
-      const grab = (re) => { const m = html.match(re); return m ? m[1] : null; };
-      const rowIds = () => Array.from(html.matchAll(/<td>#(\d+)<\/td>/g), (m) => parseInt(m[1], 10));
-      const loc = () => pm.response.headers.get('Location') || '';
-      const cv = (k) => pm.collectionVariables.get(k);
-      const setcv = (k, v) => pm.collectionVariables.set(k, v);
-      const selectedStatus = () => grab(/<option value="(\w+)"\s+selected>/);
-      const LABEL = { pending: 'Chờ xử lý', awaiting_transfer: 'Chờ chuyển khoản', paid: 'Đã thanh toán', failed: 'Thanh toán thất bại', confirmed: 'Đã xác nhận', shipping: 'Đang giao', completed: 'Hoàn thành', cancelled: 'Đã hủy' };
+- type: beforeRequest
+  code: pm.collectionVariables.set('bva_name', 'Nguyễn Văn A'); pm.collectionVariables.set('bva_phone', 'abc!!!@@@'); pm.collectionVariables.set('bva_message', 'Kiểm thử');
+  language: text/javascript
+- type: afterResponse
+  code: |-
+    const html = pm.response.text();
+    const ok = (c, m) => { if (!c) { throw new Error(m); } };
+    const num = (s) => parseInt(String(s).replace(/[^\d]/g, ''), 10);
+    const grab = (re) => { const m = html.match(re); return m ? m[1] : null; };
+    const rowIds = () => Array.from(html.matchAll(/<td>#(\d+)<\/td>/g), (m) => parseInt(m[1], 10));
+    const loc = () => pm.response.headers.get('Location') || '';
+    const cv = (k) => pm.collectionVariables.get(k);
+    const setcv = (k, v) => pm.collectionVariables.set(k, v);
+    const selectedStatus = () => grab(/<option value="(\w+)"\s+selected>/);
+    const LABEL = { pending: 'Chờ xử lý', awaiting_transfer: 'Chờ chuyển khoản', paid: 'Đã thanh toán', failed: 'Thanh toán thất bại', confirmed: 'Đã xác nhận', shipping: 'Đang giao', completed: 'Hoàn thành', cancelled: 'Đã hủy' };
 
-      pm.test("TC-AOA-071 | SĐT \"abc!!!@@@\" phải bị từ chối", function () {
-      ok(pm.response.code < 500, 'Server lỗi ' + pm.response.code);
-      ok(!(pm.response.code === 302 && loc().indexOf('contact_success=1') >= 0), 'Hệ thống chấp nhận SĐT có chữ và ký tự đặc biệt (không kiểm tra định dạng SĐT)');
-      });
-    language: text/javascript
+    pm.test("TC-AOA-071 | SĐT \"abc!!!@@@\" phải bị từ chối", function () {
+    ok(pm.response.code < 500, 'Server lỗi ' + pm.response.code);
+    ok(!(pm.response.code === 302 && loc().indexOf('contact_success=1') >= 0), 'Hệ thống chấp nhận SĐT có chữ và ký tự đặc biệt (không kiểm tra định dạng SĐT)');
+    });
+  language: text/javascript
 settings:
   followRedirects: false
 order: 1000

@@ -1,54 +1,56 @@
 $kind: collection
+name: Green Shop - Admin Orders & Analytics (TC-AOA-071 → 079)
 description: |-
-  Các ca kiểm thử khám phá lỗi (TC-AOA-071 → 079) cho phân hệ Admin Orders & Analytics.
-  1. python manage.py runserver
-  2. Điền admin_password và customer_password; status_order_id là một đơn KHÔNG ở trạng thái cuối (không phải Hoàn thành/Đã hủy).
-  3. Muốn chạy TC-AOA-073 cần có ít nhất một đơn có tên tiếng Việt có dấu (ví dụ Nguyễn Văn A); đổi accent_name_proper / accent_name_lower cho khớp.
-  4. Chạy Collection Runner theo thứ tự folder 00 → 04. Folder 04 phải chạy cuối.
-  Ca FAIL là nghi vấn lỗi cần xác nhận lại bằng tay.
-  Lưu ý: folder 02 tạo 8 bản ghi Liên hệ thử, TC-AOA-072 gửi 1 bản ghi lớn.
+  Khám phá lỗi cho phân hệ Admin Orders & Analytics (TC-AOA-071 đến 079).
+
+  Cách chạy:
+  1. Chạy server: python manage.py runserver
+  2. Tab Variables: điền admin_password, customer_username, customer_password.
+  3. status_order_id phải là một đơn CHƯA ở trạng thái cuối (luồng trạng thái chỉ đi tiến). TC-078 đẩy đơn này lên 'Đang giao'.
+  4. TC-073 cần một đơn có tên khách có dấu (accent_name_proper).
+  5. Folder 04 chạy cuối vì đăng nhập bằng tài khoản khách.
 variables:
   base_url: http://127.0.0.1:8000
   admin_username: adminquan
-  admin_password: ""
+  admin_password: ''
   customer_username: nhan
-  customer_password: ""
-  status_order_id: "2"
-  run_tag: ""
-  orig_status: ""
-  csrf_html: ""
-  csrf_token_val: ""
-  csrf_cookie: ""
+  customer_password: ''
+  status_order_id: '8'
+  run_tag: ''
+  orig_status: ''
+  csrf_html: ''
+  csrf_token_val: ''
+  csrf_cookie: ''
   accent_name_proper: Nguyễn
   accent_name_lower: nguyễn
-  accent_proper: ""
-  bva_name: ""
-  bva_phone: ""
-  bva_message: ""
+  accent_proper: ''
+  bva_name: ''
+  bva_phone: ''
+  bva_message: ''
 scripts:
-  - type: http:beforeRequest
-    code: |-
-      // Tự thêm CSRF cho các request ghi dữ liệu (Django bắt buộc).
-      const m = pm.request.method;
-      pm.request.headers.upsert({ key: 'Referer', value: pm.variables.replaceIn('{{base_url}}') + '/' });
-      if (m !== 'GET' && m !== 'HEAD') {
-          const token = pm.collectionVariables.get('csrf_cookie') || pm.cookies.get('csrftoken') || pm.collectionVariables.get('csrf_html');
-          if (token) {
-              pm.request.headers.upsert({ key: 'X-CSRFToken', value: token });
-              pm.collectionVariables.set('csrf_token_val', token);
-          }
-      }
-    language: text/javascript
-  - type: http:afterResponse
-    code: |-
-      // Sau mỗi response: nhớ lại cookie csrftoken mới nhất (Django đổi token sau khi đăng nhập).
-      let tk = null;
-      try { tk = pm.cookies.get('csrftoken'); } catch (e) {}
-      if (!tk) {
-          try {
-              const rc = pm.response.cookies.get('csrftoken');
-              tk = rc && typeof rc === 'object' ? rc.value : rc;
-          } catch (e) {}
-      }
-      if (tk) { pm.collectionVariables.set('csrf_cookie', tk); }
-    language: text/javascript
+- type: http:beforeRequest
+  code: |-
+    // Tự thêm CSRF cho các request ghi dữ liệu (Django bắt buộc).
+    const m = pm.request.method;
+    pm.request.headers.upsert({ key: 'Referer', value: pm.variables.replaceIn('{{base_url}}') + '/' });
+    if (m !== 'GET' && m !== 'HEAD') {
+        const token = pm.collectionVariables.get('csrf_cookie') || pm.cookies.get('csrftoken') || pm.collectionVariables.get('csrf_html');
+        if (token) {
+            pm.request.headers.upsert({ key: 'X-CSRFToken', value: token });
+            pm.collectionVariables.set('csrf_token_val', token);
+        }
+    }
+  language: text/javascript
+- type: http:afterResponse
+  code: |-
+    // Sau mỗi response: nhớ lại cookie csrftoken mới nhất (Django đổi token sau khi đăng nhập).
+    let tk = null;
+    try { tk = pm.cookies.get('csrftoken'); } catch (e) {}
+    if (!tk) {
+        try {
+            const rc = pm.response.cookies.get('csrftoken');
+            tk = rc && typeof rc === 'object' ? rc.value : rc;
+        } catch (e) {}
+    }
+    if (tk) { pm.collectionVariables.set('csrf_cookie', tk); }
+  language: text/javascript

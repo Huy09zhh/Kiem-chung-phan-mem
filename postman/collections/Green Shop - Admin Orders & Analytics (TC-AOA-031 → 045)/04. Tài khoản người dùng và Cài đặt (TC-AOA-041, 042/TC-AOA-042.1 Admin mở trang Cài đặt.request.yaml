@@ -1,0 +1,23 @@
+$kind: http-request
+name: TC-AOA-042.1 Admin mở trang Cài đặt
+url: '{{base_url}}/admin-panel/settings/'
+method: GET
+scripts:
+- type: afterResponse
+  code: |-
+    const html = pm.response.text();
+    const ok = (c, m) => { if (!c) { throw new Error(m); } };
+    const num = (s) => parseInt(String(s).replace(/[^\d]/g, ''), 10);
+    const grab = (re) => { const m = html.match(re); return m ? m[1] : null; };
+    const rowIds = () => Array.from(html.matchAll(/<td>#(\d+)<\/td>/g), (m) => parseInt(m[1], 10));
+    const loc = () => pm.response.headers.get('Location') || '';
+    const cv = (k) => pm.collectionVariables.get(k);
+    const setcv = (k, v) => pm.collectionVariables.set(k, v);
+    const selectedStatus = () => grab(/<option value="(\w+)"\s+selected>/);
+    const LABEL = { pending: 'Chờ xử lý', awaiting_transfer: 'Chờ chuyển khoản', paid: 'Đã thanh toán', failed: 'Thanh toán thất bại', confirmed: 'Đã xác nhận', shipping: 'Đang giao', completed: 'Hoàn thành', cancelled: 'Đã hủy' };
+
+    pm.test('TC-AOA-042.1 | Trang Cài đặt mở được', function () { ok(pm.response.code === 200, 'HTTP ' + pm.response.code);  const fields = []; const formHtml = (html.match(/<form[^>]*method=["']post["'][\s\S]*?<\/form>/i) || [''])[0]; Array.from(formHtml.matchAll(/<input[^>]*>/gi)).forEach((m) => { const t = m[0]; const n = (t.match(/name="([^"]+)"/) || [])[1]; if (!n || n === 'csrfmiddlewaretoken') { return; } const type = ((t.match(/type="([^"]+)"/) || [])[1] || 'text').toLowerCase(); const v = (t.match(/value="([^"]*)"/) || [])[1] || ''; if (type === 'checkbox' || type === 'radio') { if (/\schecked/.test(t)) { fields.push([n, v || 'on']); } } else if (type !== 'submit' && type !== 'button' && type !== 'file') { fields.push([n, v]); } }); Array.from(formHtml.matchAll(/<textarea[^>]*name="([^"]+)"[^>]*>([\s\S]*?)<\/textarea>/gi)).forEach((m) => fields.push([m[1], m[2].trim()])); Array.from(formHtml.matchAll(/<select[^>]*name="([^"]+)"[^>]*>([\s\S]*?)<\/select>/gi)).forEach((m) => { const sel = (m[2].match(/<option[^>]*value="([^"]*)"[^>]*selected/) || m[2].match(/<option[^>]*value="([^"]*)"/) || [])[1]; if (sel !== undefined) { fields.push([m[1], sel]); } });  setcv('settings_form', JSON.stringify(fields)); });
+  language: text/javascript
+settings:
+  followRedirects: false
+order: 2000
