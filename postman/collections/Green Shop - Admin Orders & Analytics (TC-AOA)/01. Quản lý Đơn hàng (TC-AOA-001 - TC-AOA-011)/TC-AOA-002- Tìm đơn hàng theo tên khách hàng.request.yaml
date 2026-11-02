@@ -1,0 +1,18 @@
+$kind: http-request
+name: "TC-AOA-002: Tìm đơn hàng theo tên khách hàng"
+url: "{{base_url}}/admin-panel/orders/?keyword=Tran+Thi+B"
+method: GET
+queryParams:
+  keyword: Tran+Thi+B
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test('TC-AOA-002: Status 200 OK', function () {
+          pm.response.to.have.status(200);
+      });
+      pm.test('TC-AOA-002: Kết quả chứa tên khách hàng tìm kiếm', function () {
+          pm.expect(pm.response.text()).to.include('Tran Thi B');
+      });
+    language: text/javascript
+settings: {}
+order: 2000

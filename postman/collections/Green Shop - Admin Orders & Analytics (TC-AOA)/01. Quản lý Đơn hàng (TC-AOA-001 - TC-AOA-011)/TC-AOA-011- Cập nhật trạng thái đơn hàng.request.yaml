@@ -1,0 +1,21 @@
+$kind: http-request
+name: "TC-AOA-011: Cập nhật trạng thái đơn hàng"
+url: "{{base_url}}/admin-panel/orders/{{order_id}}/status/"
+method: POST
+headers:
+  Referer: "{{base_url}}/admin-panel/orders/{{order_id}}/"
+body:
+  type: urlencoded
+  content:
+    status: shipping
+    next: detail
+    csrfmiddlewaretoken: "{{csrf_token}}"
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test('TC-AOA-011: Cập nhật trạng thái thành công (200 hoặc 302)', function () {
+          pm.expect(pm.response.code).to.be.oneOf([200, 302]);
+      });
+    language: text/javascript
+settings: {}
+order: 11000

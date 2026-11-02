@@ -1,0 +1,21 @@
+$kind: http-request
+name: "TC-AOA-009: Mở chi tiết đơn hàng tồn tại"
+url: "{{base_url}}/admin-panel/orders/{{order_id}}/"
+method: GET
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test('TC-AOA-009: Status 200 OK', function () {
+          pm.response.to.have.status(200);
+      });
+      pm.test('TC-AOA-009: Hiển thị trang Chi tiết đơn hàng', function () {
+          pm.expect(pm.response.text()).to.include('Chi tiết đơn hàng');
+      });
+      const html = pm.response.text();
+      const match = html.match(/name="csrfmiddlewaretoken" value="([^"]+)"/);
+      if (match && match[1]) {
+          pm.collectionVariables.set('csrf_token', match[1]);
+      }
+    language: text/javascript
+settings: {}
+order: 9000

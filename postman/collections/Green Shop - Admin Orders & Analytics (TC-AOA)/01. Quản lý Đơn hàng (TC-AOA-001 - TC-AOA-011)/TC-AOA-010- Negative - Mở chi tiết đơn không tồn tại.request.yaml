@@ -1,0 +1,13 @@
+$kind: http-request
+name: "TC-AOA-010: Negative - Mở chi tiết đơn không tồn tại (999999)"
+url: "{{base_url}}/admin-panel/orders/999999/"
+method: GET
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test('TC-AOA-010: Bắt đúng mã lỗi 404 Not Found', function () {
+          pm.response.to.have.status(404);
+      });
+    language: text/javascript
+settings: {}
+order: 10000

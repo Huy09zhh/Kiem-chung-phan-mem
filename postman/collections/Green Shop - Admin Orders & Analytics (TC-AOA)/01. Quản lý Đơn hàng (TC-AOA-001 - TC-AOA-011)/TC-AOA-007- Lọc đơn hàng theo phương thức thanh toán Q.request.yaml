@@ -1,0 +1,18 @@
+$kind: http-request
+name: "TC-AOA-007: Lọc đơn hàng theo phương thức thanh toán QR"
+url: "{{base_url}}/admin-panel/orders/?payment_method=qr"
+method: GET
+queryParams:
+  payment_method: qr
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test('TC-AOA-007: Status 200 OK', function () {
+          pm.response.to.have.status(200);
+      });
+      pm.test('TC-AOA-007: Hiển thị đơn thanh toán QR', function () {
+          pm.expect(pm.response.text()).to.include('Chuyển khoản bằng QR');
+      });
+    language: text/javascript
+settings: {}
+order: 7000

@@ -1,0 +1,18 @@
+$kind: http-request
+url: "{{base_url}}/accounts/login/"
+method: GET
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test('Trang login mở thành công (200 OK)', function () {
+          pm.response.to.have.status(200);
+      });
+      const html = pm.response.text();
+      const match = html.match(/name="csrfmiddlewaretoken" value="([^"]+)"/);
+      if (match && match[1]) {
+          pm.collectionVariables.set('csrf_token', match[1]);
+          console.log('CSRF Token captured:', match[1]);
+      }
+    language: text/javascript
+settings: {}
+order: 1000

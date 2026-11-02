@@ -1,0 +1,18 @@
+$kind: http-request
+name: "TC-AOA-005: Negative - Tìm mã đơn không tồn tại"
+url: "{{base_url}}/admin-panel/orders/?keyword=999999"
+method: GET
+queryParams:
+  keyword: "999999"
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test('TC-AOA-005: Status 200 OK (Không sập lỗi 500)', function () {
+          pm.response.to.have.status(200);
+      });
+      pm.test('TC-AOA-005: Báo Chưa có đơn hàng nào', function () {
+          pm.expect(pm.response.text()).to.include('Chưa có đơn hàng nào.');
+      });
+    language: text/javascript
+settings: {}
+order: 5000
