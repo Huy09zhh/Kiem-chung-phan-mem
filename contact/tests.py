@@ -1,7 +1,8 @@
 import re
 import time
-from datetime import datetime
+from datetime import datetime, timedelta
 from pathlib import Path
+from unittest.mock import patch
 from urllib.parse import parse_qs, urlparse
 
 from django.conf import settings
@@ -9,6 +10,7 @@ from django.core import mail, signing
 from django.core.cache import cache
 from django.test import Client, TestCase
 from django.urls import reverse
+from django.utils import timezone
 from openpyxl import Workbook, load_workbook
 from openpyxl.styles import Alignment, Font
 
@@ -21,6 +23,9 @@ from .views import NEWSLETTER_SALT
 
 
 class ContactPhoneValidationTests(TestCase):
+    def setUp(self):
+        cache.clear()
+
     def post_contact(self, phone):
         return self.client.post(reverse('contact_page'), {
             'form_type': 'contact',
@@ -81,6 +86,7 @@ class ContactSuccessMessageTests(TestCase):
     feedback_success = 'Cảm ơn bạn đã gửi góp ý. Phản hồi của bạn rất quan trọng với Green Shop.'
 
     def setUp(self):
+        cache.clear()
         self.url = reverse('contact_page')
         self.contact_data = {
             'form_type': 'contact', 'name': 'Contact test',
@@ -202,9 +208,9 @@ INVALID_MESSAGE = 'Email không hợp lệ, vui lòng kiểm tra lại.'
 CONFIRM_LINK = re.compile(r'https?://\S+/newsletter/confirm/\S+/')
 
 
-def load_test_cases():
+def load_test_cases(path=TESTCASE_FILE):
     """Đọc sheet "Test case": dòng có ô đầu là "STT" là tiêu đề, các dòng sau là dữ liệu."""
-    ws = load_workbook(TESTCASE_FILE, read_only=True)['Test case']
+    ws = load_workbook(path, read_only=True)['Test case']
     rows = ws.iter_rows(values_only=True)
     header = next(row for row in rows if row and row[0] == 'STT')
     cases = [dict(zip(header, row)) for row in rows if row and row[1]]
@@ -300,15 +306,15 @@ REPORT_COLUMNS = [
 ]
 
 
-def write_report(results):
+def write_report(results, columns=REPORT_COLUMNS, path=REPORT_FILE):
     wb = Workbook()
     ws = wb.active
     ws.title = 'Report'
-    ws.append([title for title, _, _ in REPORT_COLUMNS])
+    ws.append([title for title, _, _ in columns])
     for r in results:
-        ws.append([r[key] for _, key, _ in REPORT_COLUMNS])
+        ws.append([r[key] for _, key, _ in columns])
 
-    for column, (title, _, width) in zip(ws.columns, REPORT_COLUMNS):
+    for column, (title, _, width) in zip(ws.columns, columns):
         ws.column_dimensions[column[0].column_letter].width = width
         for cell in column:
             cell.alignment = Alignment(horizontal='left' if title == 'email' else 'center')
@@ -318,7 +324,135 @@ def write_report(results):
         cell.font = Font(bold=True)
     ws.freeze_panes = 'B2'
 
-    wb.save(REPORT_FILE)
+    wb.save(path)
+
+
+# ---------------------------------------------------------------------------
+# SCRUM-41 - Giới hạn tần suất gửi form Liên hệ: Phân hoạch tương đương (EP) & Giá trị biên (BVA).
+# Input : docs/lienhe_gioihan_testcase.xlsx (sheet "Test case")
+# Output: docs/lienhe_gioihan_report.xlsx
+# Chạy: python manage.py test contact.tests.ContactRateLimitTests -v 2
+
+RATE_LIMIT_TESTCASE_FILE = DOCS_DIR / 'lienhe_gioihan_testcase.xlsx'
+RATE_LIMIT_REPORT_FILE = DOCS_DIR / 'lienhe_gioihan_report.xlsx'
+RATE_LIMIT_MESSAGE = 'Bạn gửi quá nhanh, vui lòng thử lại sau'
+
+_CONTACT_DATA = {
+    'form_type': 'contact', 'name': 'SCRUM-41 Test', 'email': 'scrum41@example.test',
+    'phone': '0912345678', 'subject': 'tu_van', 'message': 'Kiem thu gioi han SCRUM-41',
+}
+RATE_LIMIT_ACTIONS = {
+    'Liên hệ hợp lệ': _CONTACT_DATA,
+    'Liên hệ sai dữ liệu': {**_CONTACT_DATA, 'phone': 'abc!!!@@@'},
+    'Góp ý hợp lệ': {
+        'form_type': 'feedback', 'name': 'SCRUM-41 Test', 'email': 'scrum41@example.test',
+        'category': 'website', 'satisfaction': '5', 'message': 'Kiem thu gioi han SCRUM-41',
+    },
+}
+# Thứ tự kiểm tra sai dữ liệu và giới hạn không được ticket quy định, nên cả hai phản hồi đều đúng
+RATE_LIMIT_ALLOWED_OUTCOMES = {
+    'Chấp nhận': {'Chấp nhận'},
+    'Bị chặn': {'Bị chặn'},
+    'Lỗi dữ liệu': {'Lỗi dữ liệu', 'Bị chặn'},
+}
+
+
+class ContactRateLimitTests(TestCase):
+    """Mỗi dòng trong sheet "Test case" sinh ra một test_TC_LH_xx."""
+
+    results = []
+
+    def setUp(self):
+        cache.clear()
+        self.client = Client(raise_request_exception=False)
+        # Đồng hồ đứng yên để thời gian chờ chính xác đến từng giây; self.elapsed là số giây đã trôi qua
+        self.elapsed = 0
+        base_time, base_now = time.time(), timezone.now()
+        for target, clock in (
+            ('time.time', lambda: base_time + self.elapsed),
+            ('django.utils.timezone.now', lambda: base_now + timedelta(seconds=self.elapsed)),
+        ):
+            patcher = patch(target, clock)
+            patcher.start()
+            self.addCleanup(patcher.stop)
+
+    def send(self, client, action, index, case, ip, **extra):
+        if action == 'Mở trang (GET)':
+            return client.get(reverse('contact_page'), REMOTE_ADDR=ip, **extra)
+        data = RATE_LIMIT_ACTIONS[action]
+        if case['Dữ liệu mỗi lần'] == 'Khác nhau':
+            data = {**data, 'email': f'scrum41.{index}@example.test', 'message': f'{data["message"]} {index}'}
+        return client.post(reverse('contact_page'), data, REMOTE_ADDR=ip, **extra)
+
+    def run_case(self, case):
+        for i in range(case['Số lần trước đó']):
+            self.send(self.client, case['Thao tác trước đó'], i, case, case['IP trước đó'])
+        self.elapsed = case['Thời gian chờ (giây)']
+
+        action = case['Thao tác kiểm tra']
+        client = Client(raise_request_exception=False) if case['Phiên kiểm tra'] == 'Phiên mới' else self.client
+        extra = {'HTTP_X_FORWARDED_FOR': case['X-Forwarded-For']} if case['X-Forwarded-For'] else {}
+        started_at = datetime.now()
+        for i in range(case['Số lần kiểm tra']):
+            start = time.perf_counter()
+            response = self.send(client, action, 100 + i, case, case['IP kiểm tra'], follow=True, **extra)
+            duration_ms = (time.perf_counter() - start) * 1000
+
+        content = response.content.decode()
+        success = (ContactSuccessMessageTests.feedback_success if action == 'Góp ý hợp lệ'
+                   else ContactSuccessMessageTests.contact_success)
+        if success in content:
+            actual = 'Khác' if RATE_LIMIT_MESSAGE in content else 'Chấp nhận'
+        elif RATE_LIMIT_MESSAGE in content:
+            actual = 'Bị chặn'
+        else:
+            actual = 'Lỗi dữ liệu' if 'class="form-error"' in content else 'Khác'
+        contacts, feedbacks = ContactMessage.objects.count(), Feedback.objects.count()
+
+        expected = case['Kết quả mong đợi']
+        passed = (actual in RATE_LIMIT_ALLOWED_OUTCOMES[expected]
+                  and contacts == case['Liên hệ mong đợi'] and feedbacks == case['Góp ý mong đợi'])
+        self.results.append({
+            **case, 'Lan_Gui': case['Số lần trước đó'] + case['Số lần kiểm tra'],
+            'Actual': actual, 'Lien_He_Thuc_Te': contacts, 'Gop_Y_Thuc_Te': feedbacks,
+            'Status': 'PASS' if passed else 'FAIL',
+            'Thoi_Gian_Chay': started_at.strftime('%d/%m/%Y %H:%M'), 'Thoi_Luong_ms': round(duration_ms, 3),
+        })
+
+        self.assertTrue(passed, f'{case["Mã TC"]}: mong đợi "{expected}" với {case["Liên hệ mong đợi"]} liên hệ, '
+                                f'{case["Góp ý mong đợi"]} góp ý; thực tế "{actual}" với {contacts} liên hệ, '
+                                f'{feedbacks} góp ý (HTTP {response.status_code})')
+
+    @classmethod
+    def tearDownClass(cls):
+        super().tearDownClass()
+        if cls.results:
+            write_report(sorted(cls.results, key=lambda r: r['STT']),
+                         RATE_LIMIT_REPORT_COLUMNS, RATE_LIMIT_REPORT_FILE)
+
+
+for _case in load_test_cases(RATE_LIMIT_TESTCASE_FILE):
+    setattr(ContactRateLimitTests, f'test_{_case["Mã TC"].replace("-", "_")}', make_test(_case))
+
+
+# (tiêu đề cột report, cột tương ứng trong sheet "Test case" hoặc trong kết quả chạy, độ rộng)
+RATE_LIMIT_REPORT_COLUMNS = [
+    ('TC_ID', 'Mã TC', 11),
+    ('Ten_Test_Case', 'Tên test case', 50),
+    ('Tong_So_Lan', 'Lan_Gui', 12),
+    ('Cho_Giay', 'Thời gian chờ (giây)', 10),
+    ('Expected', 'Kết quả mong đợi', 13),
+    ('Actual', 'Actual', 13),
+    ('Lien_He_Mong_Doi', 'Liên hệ mong đợi', 18),
+    ('Lien_He_Thuc_Te', 'Lien_He_Thuc_Te', 17),
+    ('Gop_Y_Mong_Doi', 'Góp ý mong đợi', 16),
+    ('Gop_Y_Thuc_Te', 'Gop_Y_Thuc_Te', 15),
+    ('Status', 'Status', 9),
+    ('Tags', 'Tag được bao phủ', 16),
+    ('Thoi_Gian_Chay', 'Thoi_Gian_Chay', 18),
+    ('Thoi_Luong_ms', 'Thoi_Luong_ms', 15),
+]
+
 
 class NewsletterEmailCaseTests(TestCase):
     def test_email_luon_luu_chu_thuong(self):

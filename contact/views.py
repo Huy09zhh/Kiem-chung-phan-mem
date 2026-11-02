@@ -24,6 +24,21 @@ NEWSLETTER_EMAIL_COOLDOWN = 60 * 10
 # max_length của model (254) và giới hạn phần trước @ của RFC 5321 (64).
 NEWSLETTER_EMAIL_MAX_LENGTH = NewsletterSubscriber._meta.get_field('email').max_length
 EMAIL_LOCAL_PART_MAX_LENGTH = 64
+CONTACT_IP_LIMIT = 5
+CONTACT_IP_WINDOW = 60 * 10
+CONTACT_LIMIT_MESSAGE = 'Bạn gửi quá nhanh, vui lòng thử lại sau'
+
+
+def _ip_limit_exceeded(request, scope, limit, window):
+    ip = request.META.get('REMOTE_ADDR', 'unknown')
+    ip_key = f'{scope}_ip_{ip}'
+    cache.add(ip_key, 0, window)
+    try:
+        count = cache.incr(ip_key)
+    except ValueError:
+        cache.set(ip_key, 1, window)
+        count = 1
+    return count > limit
 
 
 def contact_page(request):
@@ -39,8 +54,11 @@ def contact_page(request):
             feedback_form = FeedbackForm()
 
             if contact_form.is_valid():
-                contact_form.save()
-                return redirect('/contact/?contact_success=1')
+                if _ip_limit_exceeded(request, 'contact', CONTACT_IP_LIMIT, CONTACT_IP_WINDOW):
+                    contact_form.add_error(None, CONTACT_LIMIT_MESSAGE)
+                else:
+                    contact_form.save()
+                    return redirect('/contact/?contact_success=1')
 
         elif form_type == 'feedback':
             feedback_form = FeedbackForm(request.POST)
@@ -85,15 +103,7 @@ def newsletter_subscribe(request):
     except ValidationError:
         return _back(next_url, 'invalid')
 
-    ip = request.META.get('REMOTE_ADDR', 'unknown')
-    ip_key = f'newsletter_ip_{ip}'
-    cache.add(ip_key, 0, NEWSLETTER_IP_WINDOW)
-    try:
-        count = cache.incr(ip_key)
-    except ValueError:
-        cache.set(ip_key, 1, NEWSLETTER_IP_WINDOW)
-        count = 1
-    if count > NEWSLETTER_IP_LIMIT:
+    if _ip_limit_exceeded(request, 'newsletter', NEWSLETTER_IP_LIMIT, NEWSLETTER_IP_WINDOW):
         return _back(next_url, 'limited')
 
     already = NewsletterSubscriber.objects.filter(email=email, is_confirmed=True).exists()
