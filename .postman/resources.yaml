@@ -5,14 +5,14 @@ workspace:
 
 cloudResources:
   collections:
-    ../postman/collections/Green Shop - Admin Orders & Analytics (TC-AOA): 58627368-5b4cdf38-a493-4448-a148-f419e9dd06ea
     ../postman/collections/Green Shop API: 58627368-cfe57e43-8f55-40d3-821e-203978456a76
-    ../postman/collections/Green Shop - Admin Orders & Analytics (Sprint 2- TC-AOA-016 →: 9b7e36c1-9f26-4df6-a550-3f7bdfcfa687
     ../postman/collections/Green Shop - Products & Search (TC-PS): 58893816-111f01d2-569f-448a-b344-3ee290b9cb88
     ../postman/collections/Green Shop - Account & Auth (TC-AA): 58973177-58340651-07b8-41a7-a551-9b95741991c8
     ../postman/collections/Green Shop - Bổ sung test case BVA (TC-BVA-001 → 031): 51f7ded2-1da5-4b53-9c4b-1b19e1eae154
-    ../postman/collections/Green Shop - Admin Orders & Analytics (BVA): 06341574-6c91-4b38-a89a-eaa922db355f
-    ../postman/collections/Green Shop - Admin Orders & Analytics (test): c6ca7c57-e683-4a22-898b-5b299333bcf0
+    ../postman/collections/Green Shop - Admin Orders & Analytics (TC-AOA-001 → 015): 58627368-5b4cdf38-a493-4448-a148-f419e9dd06ea
+    ../postman/collections/Green Shop - Admin Orders & Analytics (TC-AOA-071 → 079): 39d368eb-aa5e-4963-a540-67a77586d063
+    ../postman/collections/Green Shop - Admin Orders & Analytics (BVA TC-AOA-046 → 070): 06341574-6c91-4b38-a89a-eaa922db355f
+    ../postman/collections/Green Shop - Admin Orders & Analytics (TC-AOA-016 → 030)-1: 51188784-7e5a-44a9-8bd6-7a79de9a7fd3
   environments:
     ../postman/environments/Green Shop - Local.environment.yaml: 58627368-f6f0c653-b7e6-48c9-8070-8c6b791d0215
   globals:
