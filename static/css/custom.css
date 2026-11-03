@@ -81,6 +81,8 @@
     border-radius: 8px;
     border: none;
     outline: none;
+    color: #1f2937;
+    background-color: #ffffff;
 }
 
 .footer-form button {
