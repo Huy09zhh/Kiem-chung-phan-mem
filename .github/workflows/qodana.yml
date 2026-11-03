@@ -1,4 +1,3 @@
-
 name: Qodana Code Quality
 
 on:
@@ -7,6 +6,7 @@ on:
       - tuan-2
       - tuan-3
       - tuan-4
+      - tuan-5
       - main
 
   pull_request:
@@ -14,6 +14,7 @@ on:
       - tuan-2
       - tuan-3
       - tuan-4
+      - tuan-5
       - main
 
   workflow_dispatch:
