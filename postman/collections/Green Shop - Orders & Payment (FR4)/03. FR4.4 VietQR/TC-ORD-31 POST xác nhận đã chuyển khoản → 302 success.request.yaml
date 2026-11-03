@@ -1,0 +1,25 @@
+$kind: http-request
+url: "{{base_url}}/orders/qr/{{qr_order_id}}/confirm/"
+method: POST
+body:
+  type: urlencoded
+  content:
+    csrfmiddlewaretoken: "{{csrf_token}}"
+scripts:
+  - type: beforeRequest
+    code: |-
+      const t = pm.cookies.get('csrftoken');
+      if (t) { pm.collectionVariables.set('csrf_token', t); }
+    language: text/javascript
+  - type: afterResponse
+    code: |-
+      pm.test('TC-ORD-31 | Confirm chuyển trang success', function () {
+        pm.expect(pm.response.code).to.eql(302);
+        const loc = pm.response.headers.get('Location') || '';
+        const m = loc.match(/\/orders\/success\/(\d+)\//);
+        pm.expect(m, 'Location thực tế: ' + loc).to.not.be.null;
+      });
+    language: text/javascript
+settings:
+  followRedirects: false
+order: 3000

@@ -1,0 +1,21 @@
+$kind: http-request
+url: "{{base_url}}/accounts/login/"
+method: POST
+body:
+  type: urlencoded
+  content:
+    csrfmiddlewaretoken: "{{csrf_token}}"
+    username: "{{username}}"
+    password: "{{password}}"
+scripts:
+  - type: beforeRequest
+    code: |-
+      const t = pm.cookies.get('csrftoken');
+      if (t) { pm.collectionVariables.set('csrf_token', t); }
+    language: text/javascript
+  - type: afterResponse
+    code: pm.test('Đăng nhập thành công (302)', function () { pm.expect(pm.response.code).to.eql(302); });
+    language: text/javascript
+settings:
+  followRedirects: false
+order: 2000

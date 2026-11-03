@@ -1,0 +1,29 @@
+$kind: http-request
+name: TC-ORD-28 POST lần 2 khi giỏ đã rỗng → về /cart/
+url: "{{base_url}}/orders/checkout/"
+method: POST
+body:
+  type: urlencoded
+  content:
+    csrfmiddlewaretoken: "{{csrf_token}}"
+    full_name: Trần Đình Đức
+    phone: "0901234567"
+    address: 12 Nguyễn Huệ, Quận 1, TP.HCM
+    note: Giao giờ hành chính
+    payment_method: cod
+scripts:
+  - type: beforeRequest
+    code: |-
+      const t = pm.cookies.get('csrftoken');
+      if (t) { pm.collectionVariables.set('csrf_token', t); }
+    language: text/javascript
+  - type: afterResponse
+    code: |-
+      pm.test('TC-ORD-28 | Không tạo đơn thứ 2, chuyển /cart/', function () {
+        pm.expect(pm.response.code).to.eql(302);
+        pm.expect(pm.response.headers.get('Location')).to.eql('/cart/');
+      });
+    language: text/javascript
+settings:
+  followRedirects: false
+order: 3000
