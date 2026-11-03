@@ -1,0 +1,45 @@
+$kind: collection
+name: Green Shop - Admin Orders & Analytics (Chuyển trạng thái đơn TC-AOA-088 → 101)
+description: |-
+  Kiểm thử chuyển đổi trạng thái đơn hàng (TC-AOA-088 → 101).
+  1. python manage.py runserver
+  2. Điền admin_password. flow_order_id và cancel_order_id là HAI đơn CHƯA ở trạng thái cuối (không phải Hoàn thành / Đã hủy). Mỗi lần chạy hai đơn này bị đưa về trạng thái cuối nên lần sau cần hai đơn mới.
+  3. Run collection theo thứ tự folder 00 → 03.
+  TC-AOA-098 (đổi lùi trạng thái) có thể FAIL: nghi lỗi hệ thống không kiểm soát luồng.
+variables:
+  base_url: http://127.0.0.1:8000
+  admin_username: adminquan
+  admin_password: ""
+  flow_order_id: "8"
+  cancel_order_id: "10"
+  run_tag: ""
+  csrf_html: ""
+  csrf_token_val: ""
+  csrf_cookie: ""
+scripts:
+  - type: http:beforeRequest
+    code: |-
+      // Tự thêm CSRF cho các request ghi dữ liệu (Django bắt buộc).
+      const m = pm.request.method;
+      pm.request.headers.upsert({ key: 'Referer', value: pm.variables.replaceIn('{{base_url}}') + '/' });
+      if (m !== 'GET' && m !== 'HEAD') {
+          const token = pm.collectionVariables.get('csrf_cookie') || pm.cookies.get('csrftoken') || pm.collectionVariables.get('csrf_html');
+          if (token) {
+              pm.request.headers.upsert({ key: 'X-CSRFToken', value: token });
+              pm.collectionVariables.set('csrf_token_val', token);
+          }
+      }
+    language: text/javascript
+  - type: http:afterResponse
+    code: |-
+      // Sau mỗi response: nhớ lại cookie csrftoken mới nhất (Django đổi token sau khi đăng nhập).
+      let tk = null;
+      try { tk = pm.cookies.get('csrftoken'); } catch (e) {}
+      if (!tk) {
+          try {
+              const rc = pm.response.cookies.get('csrftoken');
+              tk = rc && typeof rc === 'object' ? rc.value : rc;
+          } catch (e) {}
+      }
+      if (tk) { pm.collectionVariables.set('csrf_cookie', tk); }
+    language: text/javascript

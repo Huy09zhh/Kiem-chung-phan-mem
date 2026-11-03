@@ -1,0 +1,44 @@
+$kind: collection
+name: "Green Shop - Admin Orders & Analytics (Tìm kiếm đơn: biên trên TC-AOA-080 → 087)"
+description: "Bổ sung các giá trị biên phía trên cho chức năng Tìm kiếm đơn hàng: SĐT 19/20/21 ký tự, mã đơn nominal, max-, max, max+. Điền admin_password rồi Run collection."
+variables:
+  base_url: http://127.0.0.1:8000
+  admin_username: adminquan
+  admin_password: ""
+  run_tag: ""
+  csrf_html: ""
+  csrf_token_val: ""
+  csrf_cookie: ""
+  max_order_id: ""
+  order_ids_json: ""
+  kw_nominal: ""
+  kw_max_minus1: ""
+  kw_max: ""
+  kw_max_plus1: ""
+scripts:
+  - type: http:beforeRequest
+    code: |-
+      // Tự thêm CSRF cho các request ghi dữ liệu (Django bắt buộc).
+      const m = pm.request.method;
+      pm.request.headers.upsert({ key: 'Referer', value: pm.variables.replaceIn('{{base_url}}') + '/' });
+      if (m !== 'GET' && m !== 'HEAD') {
+          const token = pm.collectionVariables.get('csrf_cookie') || pm.cookies.get('csrftoken') || pm.collectionVariables.get('csrf_html');
+          if (token) {
+              pm.request.headers.upsert({ key: 'X-CSRFToken', value: token });
+              pm.collectionVariables.set('csrf_token_val', token);
+          }
+      }
+    language: text/javascript
+  - type: http:afterResponse
+    code: |-
+      // Sau mỗi response: nhớ lại cookie csrftoken mới nhất (Django đổi token sau khi đăng nhập).
+      let tk = null;
+      try { tk = pm.cookies.get('csrftoken'); } catch (e) {}
+      if (!tk) {
+          try {
+              const rc = pm.response.cookies.get('csrftoken');
+              tk = rc && typeof rc === 'object' ? rc.value : rc;
+          } catch (e) {}
+      }
+      if (tk) { pm.collectionVariables.set('csrf_cookie', tk); }
+    language: text/javascript

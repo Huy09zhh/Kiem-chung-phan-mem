@@ -1,0 +1,29 @@
+$kind: http-request
+url: "{{base_url}}/admin-panel/orders/?keyword=09123456781234567890"
+method: GET
+queryParams:
+  keyword: "09123456781234567890"
+scripts:
+  - type: afterResponse
+    code: |-
+      const html = pm.response.text();
+      const ok = (c, m) => { if (!c) { throw new Error(m); } };
+      const num = (s) => parseInt(String(s).replace(/[^\d]/g, ''), 10);
+      const grab = (re) => { const m = html.match(re); return m ? m[1] : null; };
+      const rowIds = () => Array.from(html.matchAll(/<td>#(\d+)<\/td>/g), (m) => parseInt(m[1], 10));
+      const loc = () => pm.response.headers.get('Location') || '';
+      const cv = (k) => pm.collectionVariables.get(k);
+      const setcv = (k, v) => pm.collectionVariables.set(k, v);
+      const selectedStatus = () => grab(/<option value="(\w+)"\s+selected>/);
+      const LABEL = { pending: 'Chờ xử lý', awaiting_transfer: 'Chờ chuyển khoản', paid: 'Đã thanh toán', failed: 'Thanh toán thất bại', confirmed: 'Đã xác nhận', shipping: 'Đang giao', completed: 'Hoàn thành', cancelled: 'Đã hủy' };
+
+      pm.test("TC-AOA-083 | Từ khóa SĐT 21 ký tự: xử lý an toàn, danh sách rỗng", function () {
+      ok(pm.response.code === 200, 'HTTP ' + pm.response.code);
+      ok(!/Server Error|Traceback/i.test(html), 'Trang báo lỗi máy chủ');
+      const ids = rowIds();
+      ok(ids.length === 0, 'Mong đợi danh sách rỗng (không có đơn nào có SĐT dài 21 ký tự), thực tế: [' + ids.join(', ') + ']');
+      });
+    language: text/javascript
+settings:
+  followRedirects: false
+order: 4000

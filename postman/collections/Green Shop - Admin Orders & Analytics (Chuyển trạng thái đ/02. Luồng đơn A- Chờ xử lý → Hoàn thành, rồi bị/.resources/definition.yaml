@@ -1,0 +1,3 @@
+$kind: collection
+name: "02. Luồng đơn A: Chờ xử lý → Hoàn thành, rồi bị khoá (TC-AOA-088 → 090, 094, 095)"
+order: 3000
