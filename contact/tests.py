@@ -471,3 +471,67 @@ class NewsletterEmailCaseTests(TestCase):
         s = NewsletterSubscriber(email='AN@Shop.vn')
         with self.assertRaises(ValidationError):
             s.full_clean()
+
+
+class ContactMessageLengthValidationTests(TestCase):
+    """
+    Kiểm thử SCRUM-40: Giới hạn trường message (Nội dung) tối đa 2.000 ký tự.
+    - Hợp lệ: ngắn (1 ký tự, bình thường), đúng 2.000 ký tự -> Lưu thành công.
+    - Không hợp lệ: 2.001 ký tự, 1.000.000 ký tự -> Bị từ chối, hiển thị lỗi, không lưu DB.
+    """
+
+    def setUp(self):
+        cache.clear()
+        self.url = reverse('contact_page')
+        self.base_data = {
+            'form_type': 'contact',
+            'name': 'Nguyễn Văn A',
+            'email': 'nguyenvana@example.com',
+            'phone': '0912345678',
+            'subject': 'tu_van',
+        }
+
+    def test_message_short_valid_is_accepted(self):
+        for msg in ('A', 'Xin chào shop, tôi cần tư vấn sản phẩm rau hữu cơ.'):
+            with self.subTest(msg=msg):
+                data = {**self.base_data, 'message': msg}
+                response = self.client.post(self.url, data)
+                self.assertRedirects(response, self.url + '?contact_success=1')
+                self.assertTrue(ContactMessage.objects.filter(message=msg).exists())
+
+    def test_message_boundary_exact_2000_chars_is_accepted(self):
+        msg_2000 = 'A' * 2000
+        data = {**self.base_data, 'message': msg_2000}
+        response = self.client.post(self.url, data)
+        self.assertRedirects(response, self.url + '?contact_success=1')
+        self.assertEqual(ContactMessage.objects.filter(name='Nguyễn Văn A').count(), 1)
+        saved = ContactMessage.objects.get(name='Nguyễn Văn A')
+        self.assertEqual(len(saved.message), 2000)
+
+    def test_message_boundary_2001_chars_is_rejected(self):
+        msg_2001 = 'A' * 2001
+        data = {**self.base_data, 'message': msg_2001}
+        response = self.client.post(self.url, data)
+        self.assertEqual(response.status_code, 200)
+        self.assertIn('message', response.context['contact_form'].errors)
+        self.assertContains(response, 'Nội dung không được dài quá 2000 ký tự.')
+        self.assertEqual(ContactMessage.objects.count(), 0)
+
+    def test_message_1_million_chars_is_rejected(self):
+        msg_1m = 'A' * 1_000_000
+        data = {**self.base_data, 'message': msg_1m}
+        response = self.client.post(self.url, data)
+        self.assertEqual(response.status_code, 200)
+        self.assertIn('message', response.context['contact_form'].errors)
+        self.assertContains(response, 'Nội dung không được dài quá 2000 ký tự.')
+        self.assertEqual(ContactMessage.objects.count(), 0)
+
+    def test_invalid_data_not_saved_and_valid_submissions_still_work(self):
+        bad_response = self.client.post(self.url, {**self.base_data, 'message': 'B' * 2500})
+        self.assertEqual(bad_response.status_code, 200)
+        self.assertEqual(ContactMessage.objects.count(), 0)
+
+        good_response = self.client.post(self.url, {**self.base_data, 'message': 'Nội dung hợp lệ'})
+        self.assertRedirects(good_response, self.url + '?contact_success=1')
+        self.assertEqual(ContactMessage.objects.count(), 1)
+        self.assertEqual(ContactMessage.objects.first().message, 'Nội dung hợp lệ')

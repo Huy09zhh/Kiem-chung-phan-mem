@@ -1,7 +1,11 @@
 import re
 
 from django import forms
+from django.core.validators import MaxLengthValidator
 from .models import ContactMessage, Feedback
+
+MAX_MESSAGE_LENGTH = 2000
+MESSAGE_MAX_LENGTH_ERROR = f'Nội dung không được dài quá {MAX_MESSAGE_LENGTH} ký tự.'
 
 
 class ContactForm(forms.ModelForm):
@@ -27,9 +31,19 @@ class ContactForm(forms.ModelForm):
             'message': forms.Textarea(attrs={
                 'class': 'contact-input contact-textarea',
                 'placeholder': 'Nhập nội dung liên hệ của bạn...',
-                'rows': 5
+                'rows': 5,
+                'maxlength': MAX_MESSAGE_LENGTH,
             }),
         }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields['message'].validators.append(
+            MaxLengthValidator(
+                MAX_MESSAGE_LENGTH,
+                message=MESSAGE_MAX_LENGTH_ERROR,
+            )
+        )
 
     def clean_phone(self):
         phone = self.cleaned_data.get('phone', '')
@@ -39,6 +53,12 @@ class ContactForm(forms.ModelForm):
                 '0912345678 hoặc +84912345678.'
             )
         return phone
+
+    def clean_message(self):
+        message = self.cleaned_data.get('message', '')
+        if len(message) > MAX_MESSAGE_LENGTH:
+            raise forms.ValidationError(MESSAGE_MAX_LENGTH_ERROR)
+        return message
 
 
 class FeedbackForm(forms.ModelForm):
