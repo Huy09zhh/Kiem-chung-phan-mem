@@ -1,0 +1,8 @@
+$kind: http-request
+url: "{{base_url}}/orders/mock/{{mock_order_id}}"
+method: GET
+scripts:
+  - type: afterResponse
+    code: pm.test('TC-ORD-37 | Trang Sandbox trả 200 (không phải 500)', function () { pm.expect(pm.response.code).to.eql(200); });
+    language: text/javascript
+order: 2000

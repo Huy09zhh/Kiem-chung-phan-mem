@@ -140,6 +140,12 @@
                     <button type="submit" class="qr-btn">Tôi đã chuyển khoản</button>
                 </form>
                 <a href="{% url 'cart_detail' %}" class="qr-btn-outline">Quay lại giỏ hàng</a>
+                <a href="{% url 'orders:my_orders' %}">Xem đơn hàng của tôi</a>
+
+                <form method="post" action="{% url 'orders:cancel_qr_order' order.id %}">
+                    {% csrf_token %}
+                    <button type="submit">Hủy đơn</button>
+                </form>
             </div>
         </div>
     </div>

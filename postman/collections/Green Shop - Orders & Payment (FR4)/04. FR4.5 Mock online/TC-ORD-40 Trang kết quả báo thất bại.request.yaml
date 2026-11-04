@@ -1,0 +1,14 @@
+$kind: http-request
+url: "{{base_url}}/orders/success/{{mock_order_id_2}}"
+method: GET
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test('Trang kết quả 200', function () { pm.expect(pm.response.code).to.eql(200); });
+      pm.test('TC-ORD-40 | Không hiện "Đặt hàng thành công", có thông báo thất bại', function () {
+        const h = pm.response.text();
+        pm.expect(h).to.not.include('Đặt hàng thành công');
+        pm.expect(h.toLowerCase()).to.include('thất bại');
+      });
+    language: text/javascript
+order: 7000

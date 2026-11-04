@@ -1,0 +1,33 @@
+$kind: http-request
+url: "{{base_url}}/orders/checkout/"
+method: POST
+body:
+  type: urlencoded
+  content:
+    csrfmiddlewaretoken: "{{csrf_token}}"
+    full_name: Trần Đình Đức
+    phone: "0901234567"
+    address: 12 Nguyễn Huệ, Quận 1, TP.HCM
+    note: Giao giờ hành chính
+    payment_method: mock
+scripts:
+  - type: beforeRequest
+    code: |-
+      // Bảo đảm giỏ hàng có ít nhất 1 sản phẩm trước khi đặt hàng
+      pm.sendRequest({ url: pm.collectionVariables.get('base_url') + '/cart/add/' + pm.collectionVariables.get('product_id') + '/', method: 'GET' }, function () {});
+      const t = pm.cookies.get('csrftoken');
+      if (t) { pm.collectionVariables.set('csrf_token', t); }
+    language: text/javascript
+  - type: afterResponse
+    code: |-
+      pm.test('Tạo đơn Mock #2', function () {
+        pm.expect(pm.response.code).to.eql(302);
+        const loc = pm.response.headers.get('Location') || '';
+        const m = loc.match(/\/orders\/mock\/(\d+)\//);
+        pm.expect(m, 'Location thực tế: ' + loc).to.not.be.null;
+        pm.collectionVariables.set('mock_order_id_2', m[1]);
+      });
+    language: text/javascript
+settings:
+  followRedirects: false
+order: 5000

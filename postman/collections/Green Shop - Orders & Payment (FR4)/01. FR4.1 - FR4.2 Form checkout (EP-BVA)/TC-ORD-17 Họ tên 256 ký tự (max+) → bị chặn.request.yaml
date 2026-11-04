@@ -1,0 +1,30 @@
+$kind: http-request
+url: "{{base_url}}/orders/checkout/"
+method: POST
+body:
+  type: urlencoded
+  content:
+    csrfmiddlewaretoken: "{{csrf_token}}"
+    full_name: "{{long_name_256}}"
+    phone: "0901234567"
+    address: 12 Nguyễn Huệ, Quận 1, TP.HCM
+    note: Giao giờ hành chính
+    payment_method: cod
+scripts:
+  - type: beforeRequest
+    code: |-
+      // Bảo đảm giỏ hàng có ít nhất 1 sản phẩm trước khi đặt hàng
+      pm.sendRequest({ url: pm.collectionVariables.get('base_url') + '/cart/add/' + pm.collectionVariables.get('product_id') + '/', method: 'GET' }, function () {});
+      const t = pm.cookies.get('csrftoken');
+      if (t) { pm.collectionVariables.set('csrf_token', t); }
+      pm.collectionVariables.set('long_name_256', 'a'.repeat(256));
+    language: text/javascript
+  - type: afterResponse
+    code: |-
+      pm.test('TC-ORD-17 | Họ tên 256 ký tự bị chặn', function () {
+        pm.expect(pm.response.code, 'Phải trả 200 (hiển thị lại form + cảnh báo), thực tế ' + pm.response.code).to.eql(200);
+      });
+    language: text/javascript
+settings:
+  followRedirects: false
+order: 5000
