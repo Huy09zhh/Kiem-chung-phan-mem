@@ -1,0 +1,46 @@
+$kind: collection
+description: |-
+  Kiểm thử SCRUM-36 – độ dài email ở form "Đăng ký nhận tin" (footer): Phân hoạch tương đương & Giá trị biên (TC-NL-01 → 15).
+  Tài liệu: docs/email_dangky_testcase.xlsx (sheet "Test case").
+  1. Chạy server: python manage.py runserver
+  2. Tạo admin (1 lần): python manage.py shell -c "exec(open('postman/seed_test_data.py', encoding='utf-8').read())"
+  3. Kiểm tra admin_username / admin_password trong tab Variables, rồi chạy Collection Runner theo thứ tự folder 00 → 99.
+  TC-xx.1 gửi email qua form; TC-xx.2 mở Django admin (mục Đăng ký nhận tin) kiểm tra email có được lưu không.
+  Folder 00 và 99 tự xóa các email test còn sót nên chạy lại nhiều lần vẫn cho cùng kết quả.
+  Luồng SCRUM-34: email hợp lệ chỉ được gửi thư xác nhận (?newsletter=pending), chưa lưu DB cho tới khi bấm link. Mỗi IP gửi tối đa 5 lần / 10 phút, quá thì báo ?newsletter=limited. Kiểm tra độ dài chạy trước giới hạn này, nên ca hợp lệ chấp nhận pending hoặc limited, ca không hợp lệ luôn phải là invalid.
+variables:
+  base_url: "http://127.0.0.1:8000"
+  admin_username: "admin"
+  admin_password: "Admin@12345"
+  csrf_html: ""
+  csrf_token_val: ""
+  csrf_cookie: ""
+  nl_email: ""
+  nl_email_q: ""
+scripts:
+  - type: http:beforeRequest
+    code: |-
+      // Tự thêm CSRF cho các request ghi dữ liệu (Django bắt buộc).
+      const m = pm.request.method;
+      pm.request.headers.upsert({ key: 'Referer', value: pm.variables.replaceIn('{{base_url}}') + '/' });
+      if (m !== 'GET' && m !== 'HEAD') {
+          const token = pm.collectionVariables.get('csrf_cookie') || pm.cookies.get('csrftoken') || pm.collectionVariables.get('csrf_html');
+          if (token) {
+              pm.request.headers.upsert({ key: 'X-CSRFToken', value: token });
+              pm.collectionVariables.set('csrf_token_val', token);
+          }
+      }
+    language: text/javascript
+  - type: http:afterResponse
+    code: |-
+      // Sau mỗi response: nhớ lại cookie csrftoken mới nhất (Django đổi token sau khi đăng nhập).
+      let tk = null;
+      try { tk = pm.cookies.get('csrftoken'); } catch (e) {}
+      if (!tk) {
+          try {
+              const rc = pm.response.cookies.get('csrftoken');
+              tk = rc && typeof rc === 'object' ? rc.value : rc;
+          } catch (e) {}
+      }
+      if (tk) { pm.collectionVariables.set('csrf_cookie', tk); }
+    language: text/javascript

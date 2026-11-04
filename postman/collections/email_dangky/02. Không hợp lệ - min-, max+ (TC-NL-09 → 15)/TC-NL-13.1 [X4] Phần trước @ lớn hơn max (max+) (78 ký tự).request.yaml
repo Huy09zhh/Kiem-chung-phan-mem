@@ -1,0 +1,40 @@
+$kind: http-request
+url: "{{base_url}}/contact/newsletter/"
+method: POST
+body:
+  type: urlencoded
+  content:
+    email: "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa@greenshop.vn"
+    next: "/"
+scripts:
+  - type: afterResponse
+    code: |-
+      const html = pm.response.text();
+      const ok = (c, m) => { if (!c) { throw new Error(m); } };
+      const cv = (k) => pm.collectionVariables.get(k);
+      const loc = () => pm.response.headers.get('Location') || '';
+      // Lấy id các dòng trong trang admin Đăng ký nhận tin có email trùng khớp chính xác
+      const findIds = (page, email) => { const ids = []; const re = /newslettersubscriber\/(\d+)\/change\/[^"]*">([^<]*)<\/a>/g; let mm; while ((mm = re.exec(page))) { if (mm[2] === email) { ids.push(mm[1]); } } return ids; };
+      const shown = () => ["Đăng ký nhận tin thành công. Cảm ơn bạn!", "Email này đã đăng ký nhận tin trước đó.", "Email không hợp lệ, vui lòng kiểm tra lại.", "Nếu email hợp lệ, chúng tôi đã gửi thư xác nhận. Vui lòng kiểm tra hộp thư để hoàn tất đăng ký.", "Bạn thao tác quá nhanh, vui lòng thử lại sau ít phút."].find((t) => html.includes(t)) || '(không có thông báo)';
+
+      const email = pm.request.body.urlencoded.get('email');
+      pm.collectionVariables.set('nl_email', email);
+      pm.collectionVariables.set('nl_email_q', encodeURIComponent(email));
+      const at = email.lastIndexOf('@');
+      const labels = email.slice(at + 1).split('.').slice(0, -1).map((l) => l.length).join(', ');
+
+      pm.test("TC-NL-13 | Dữ liệu đúng thiết kế: tổng 78, trước @ 65, nhãn 9", function () {
+      ok(email.length === 78 && at === 65 && labels === '9', 'Thực tế: tổng ' + email.length + ', trước @ ' + at + ', nhãn ' + labels);
+      });
+
+      pm.test("TC-NL-13 | Không lỗi server (200 sau khi chuyển hướng)", function () {
+      ok(pm.response.code === 200, 'Mong đợi HTTP 200, thực tế ' + pm.response.code);
+      });
+
+      pm.test("TC-NL-13 | Không hợp lệ: hiển thị \"Email không hợp lệ, vui lòng kiểm tra lại.\"", function () {
+      ok(html.includes("Email không hợp lệ, vui lòng kiểm tra lại."), 'Thực tế hiển thị: ' + shown());
+      });
+    language: text/javascript
+settings:
+  followRedirects: true
+order: 9000

@@ -11,4 +11,6 @@ urlpatterns = [
     path('mock/<int:order_id>/', views.mock_payment, name='mock_payment'),
     path('mock/<int:order_id>/success/', views.mock_payment_success, name='mock_payment_success'),
     path('mock/<int:order_id>/fail/', views.mock_payment_fail, name='mock_payment_fail'),
+    path('my/', views.my_orders, name='my_orders'),
+    path('<int:order_id>/cancel/', views.cancel_qr_order, name='cancel_qr_order'),
 ]

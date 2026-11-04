@@ -1,0 +1,1846 @@
+{
+  "info": {
+    "_postman_id": "af1b3bc8-ad3d-5d49-a724-cddc9bff337e",
+    "name": "email_dangky",
+    "description": "Kiểm thử SCRUM-36 – độ dài email ở form \"Đăng ký nhận tin\" (footer): Phân hoạch tương đương & Giá trị biên (TC-NL-01 → 15).\nTài liệu: docs/email_dangky_testcase.xlsx (sheet \"Test case\").\n1. Chạy server: python manage.py runserver\n2. Tạo admin (1 lần): python manage.py shell -c \"exec(open('postman/seed_test_data.py', encoding='utf-8').read())\"\n3. Kiểm tra admin_username / admin_password trong tab Variables, rồi chạy Collection Runner theo thứ tự folder 00 → 99.\nTC-xx.1 gửi email qua form; TC-xx.2 mở Django admin (mục Đăng ký nhận tin) kiểm tra email có được lưu không.\nFolder 00 và 99 tự xóa các email test còn sót nên chạy lại nhiều lần vẫn cho cùng kết quả.\nLuồng SCRUM-34: email hợp lệ chỉ được gửi thư xác nhận (?newsletter=pending), chưa lưu DB cho tới khi bấm link. Mỗi IP gửi tối đa 5 lần / 10 phút, quá thì báo ?newsletter=limited. Kiểm tra độ dài chạy trước giới hạn này, nên ca hợp lệ chấp nhận pending hoặc limited, ca không hợp lệ luôn phải là invalid.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "event": [
+    {
+      "listen": "prerequest",
+      "script": {
+        "type": "text/javascript",
+        "exec": [
+          "// Tự thêm CSRF cho các request ghi dữ liệu (Django bắt buộc).",
+          "const m = pm.request.method;",
+          "pm.request.headers.upsert({ key: 'Referer', value: pm.variables.replaceIn('{{base_url}}') + '/' });",
+          "if (m !== 'GET' && m !== 'HEAD') {",
+          "    const token = pm.collectionVariables.get('csrf_cookie') || pm.cookies.get('csrftoken') || pm.collectionVariables.get('csrf_html');",
+          "    if (token) {",
+          "        pm.request.headers.upsert({ key: 'X-CSRFToken', value: token });",
+          "        pm.collectionVariables.set('csrf_token_val', token);",
+          "    }",
+          "}"
+        ]
+      }
+    },
+    {
+      "listen": "test",
+      "script": {
+        "type": "text/javascript",
+        "exec": [
+          "// Sau mỗi response: nhớ lại cookie csrftoken mới nhất (Django đổi token sau khi đăng nhập).",
+          "let tk = null;",
+          "try { tk = pm.cookies.get('csrftoken'); } catch (e) {}",
+          "if (!tk) {",
+          "    try {",
+          "        const rc = pm.response.cookies.get('csrftoken');",
+          "        tk = rc && typeof rc === 'object' ? rc.value : rc;",
+          "    } catch (e) {}",
+          "}",
+          "if (tk) { pm.collectionVariables.set('csrf_cookie', tk); }"
+        ]
+      }
+    }
+  ],
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "http://127.0.0.1:8000"
+    },
+    {
+      "key": "admin_username",
+      "value": "admin"
+    },
+    {
+      "key": "admin_password",
+      "value": "Admin@12345"
+    },
+    {
+      "key": "csrf_html",
+      "value": ""
+    },
+    {
+      "key": "csrf_token_val",
+      "value": ""
+    },
+    {
+      "key": "csrf_cookie",
+      "value": ""
+    },
+    {
+      "key": "nl_email",
+      "value": ""
+    },
+    {
+      "key": "nl_email_q",
+      "value": ""
+    }
+  ],
+  "item": [
+    {
+      "name": "00. Chuẩn bị - CSRF, đăng nhập admin, dọn dữ liệu",
+      "description": "Chạy đầu tiên. Lấy cookie csrftoken, đăng nhập Django admin và xóa email test còn sót.",
+      "item": [
+        {
+          "name": "00.1 GET trang liên hệ (lấy cookie csrftoken)",
+          "protocolProfileBehavior": {
+            "followRedirects": false
+          },
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{base_url}}/contact/"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const html = pm.response.text();",
+                  "const ok = (c, m) => { if (!c) { throw new Error(m); } };",
+                  "const cv = (k) => pm.collectionVariables.get(k);",
+                  "const loc = () => pm.response.headers.get('Location') || '';",
+                  "// Lấy id các dòng trong trang admin Đăng ký nhận tin có email trùng khớp chính xác",
+                  "const findIds = (page, email) => { const ids = []; const re = /newslettersubscriber\\/(\\d+)\\/change\\/[^\"]*\">([^<]*)<\\/a>/g; let mm; while ((mm = re.exec(page))) { if (mm[2] === email) { ids.push(mm[1]); } } return ids; };",
+                  "const shown = () => [\"Đăng ký nhận tin thành công. Cảm ơn bạn!\", \"Email này đã đăng ký nhận tin trước đó.\", \"Email không hợp lệ, vui lòng kiểm tra lại.\", \"Nếu email hợp lệ, chúng tôi đã gửi thư xác nhận. Vui lòng kiểm tra hộp thư để hoàn tất đăng ký.\", \"Bạn thao tác quá nhanh, vui lòng thử lại sau ít phút.\"].find((t) => html.includes(t)) || '(không có thông báo)';",
+                  "",
+                  "pm.test(\"PRE | Trang /contact/ mở được (200)\", function () {",
+                  "ok(pm.response.code === 200, 'Mong đợi HTTP 200, thực tế ' + pm.response.code);",
+                  "const mm = html.match(/name=[\"']csrfmiddlewaretoken[\"'][^>]*value=[\"']([^\"']+)[\"']/);",
+                  "if (mm) { pm.collectionVariables.set('csrf_html', mm[1]); }",
+                  "});",
+                  "",
+                  "pm.test(\"PRE | Có cookie csrftoken\", function () {",
+                  "ok(pm.cookies.has('csrftoken'), 'Chưa có cookie csrftoken; kiểm tra server đang chạy ở base_url');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "00.2 [setup] Đăng nhập Django admin",
+          "protocolProfileBehavior": {
+            "followRedirects": false
+          },
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": "{{base_url}}/admin/login/?next=/admin/",
+            "body": {
+              "mode": "urlencoded",
+              "urlencoded": [
+                {
+                  "key": "username",
+                  "value": "{{admin_username}}",
+                  "type": "text"
+                },
+                {
+                  "key": "password",
+                  "value": "{{admin_password}}",
+                  "type": "text"
+                },
+                {
+                  "key": "next",
+                  "value": "/admin/",
+                  "type": "text"
+                },
+                {
+                  "key": "csrfmiddlewaretoken",
+                  "value": "{{csrf_token_val}}",
+                  "type": "text"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const html = pm.response.text();",
+                  "const ok = (c, m) => { if (!c) { throw new Error(m); } };",
+                  "const cv = (k) => pm.collectionVariables.get(k);",
+                  "const loc = () => pm.response.headers.get('Location') || '';",
+                  "// Lấy id các dòng trong trang admin Đăng ký nhận tin có email trùng khớp chính xác",
+                  "const findIds = (page, email) => { const ids = []; const re = /newslettersubscriber\\/(\\d+)\\/change\\/[^\"]*\">([^<]*)<\\/a>/g; let mm; while ((mm = re.exec(page))) { if (mm[2] === email) { ids.push(mm[1]); } } return ids; };",
+                  "const shown = () => [\"Đăng ký nhận tin thành công. Cảm ơn bạn!\", \"Email này đã đăng ký nhận tin trước đó.\", \"Email không hợp lệ, vui lòng kiểm tra lại.\", \"Nếu email hợp lệ, chúng tôi đã gửi thư xác nhận. Vui lòng kiểm tra hộp thư để hoàn tất đăng ký.\", \"Bạn thao tác quá nhanh, vui lòng thử lại sau ít phút.\"].find((t) => html.includes(t)) || '(không có thông báo)';",
+                  "",
+                  "pm.test(\"SETUP | Đăng nhập admin thành công (302 → /admin/)\", function () {",
+                  "ok(pm.response.code === 302 && loc().endsWith('/admin/'), 'HTTP ' + pm.response.code + ' – kiểm tra admin_username / admin_password trong tab Variables');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "00.3 [setup] Xóa email test còn sót từ lần chạy trước",
+          "protocolProfileBehavior": {
+            "followRedirects": false
+          },
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{base_url}}/admin/contact/newslettersubscriber/"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const html = pm.response.text();",
+                  "const ok = (c, m) => { if (!c) { throw new Error(m); } };",
+                  "const cv = (k) => pm.collectionVariables.get(k);",
+                  "const loc = () => pm.response.headers.get('Location') || '';",
+                  "// Lấy id các dòng trong trang admin Đăng ký nhận tin có email trùng khớp chính xác",
+                  "const findIds = (page, email) => { const ids = []; const re = /newslettersubscriber\\/(\\d+)\\/change\\/[^\"]*\">([^<]*)<\\/a>/g; let mm; while ((mm = re.exec(page))) { if (mm[2] === email) { ids.push(mm[1]); } } return ids; };",
+                  "const shown = () => [\"Đăng ký nhận tin thành công. Cảm ơn bạn!\", \"Email này đã đăng ký nhận tin trước đó.\", \"Email không hợp lệ, vui lòng kiểm tra lại.\", \"Nếu email hợp lệ, chúng tôi đã gửi thư xác nhận. Vui lòng kiểm tra hộp thư để hoàn tất đăng ký.\", \"Bạn thao tác quá nhanh, vui lòng thử lại sau ít phút.\"].find((t) => html.includes(t)) || '(không có thông báo)';",
+                  "",
+                  "pm.test(\"SETUP | Mở được trang admin Đăng ký nhận tin (200)\", function () {",
+                  "ok(pm.response.code === 200 && html.includes('newslettersubscriber'), 'HTTP ' + pm.response.code + ' – kiểm tra bước đăng nhập admin');",
+                  "});",
+                  "",
+                  "// Tìm từng email test trong admin, email nào còn sót thì xóa (POST /<id>/delete/ với post=yes).",
+                  "// Chạy tuần tự từng request: SQLite báo \"database is locked\" nếu xóa song song.",
+                  "const EMAILS = [\"a@b.vn\", \"ab@b.vn\", \"a@gs.vn\", \"khachhang@greenshop.vn\", \"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa@greenshop.vn\", \"user@gggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggg.vn\", \"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa@bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb.bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb.bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb.vn\", \"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa@bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb.bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb.bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb.vn\", \"a@b.v\", \"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa@bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb.bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb.bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb.vn\", \"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa@bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb.bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb.bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb.bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb.vn\", \"@greenshop.vn\", \"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa@greenshop.vn\", \"user@.vn\", \"user@gggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggg.vn\"];",
+                  "const base = pm.variables.replaceIn('{{base_url}}');",
+                  "const token = cv('csrf_cookie');",
+                  "const deleted = [], errors = [];",
+                  "const send = (req) => new Promise((resolve) => pm.sendRequest(req, (err, res) => resolve(err ? null : res)));",
+                  "(async () => {",
+                  "    for (const email of EMAILS) {",
+                  "        const res = await send(base + '/admin/contact/newslettersubscriber/?q=' + encodeURIComponent(email));",
+                  "        if (!res || res.code !== 200) { errors.push('Không tìm được email ' + email.length + ' ký tự'); continue; }",
+                  "        for (const id of findIds(res.text(), email)) {",
+                  "            const r2 = await send({",
+                  "                url: base + '/admin/contact/newslettersubscriber/' + id + '/delete/',",
+                  "                method: 'POST',",
+                  "                header: { 'X-CSRFToken': token, 'Referer': base + '/' },",
+                  "                body: { mode: 'urlencoded', urlencoded: [{ key: 'post', value: 'yes' }] },",
+                  "            });",
+                  "            // Xóa xong admin chuyển hướng về danh sách; sendRequest tự đi theo redirect nên nhận 200",
+                  "            if (r2 && (r2.code === 302 || r2.code === 200) && !findIds(r2.text(), email).length) { deleted.push(id); } else { errors.push('Xóa id ' + id + ' lỗi (HTTP ' + (r2 ? r2.code : '?') + ')'); }",
+                  "        }",
+                  "    }",
+                  "    pm.test('SETUP | Đã xóa ' + deleted.length + ' email test còn sót', function () {",
+                  "    ok(errors.length === 0, errors.join('; '));",
+                  "    });",
+                  "})();"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "01. Hợp lệ - min, min+, nominal, max-, max (TC-NL-01 → 08)",
+      "description": "Email nằm trong miền hợp lệ của cả 3 biến: phải qua kiểm tra độ dài, báo chờ xác nhận và chưa lưu DB.",
+      "item": [
+        {
+          "name": "TC-NL-01.1 [V1 V2 V3 B1 B6 B11] Tất cả biến tại min (6 ký tự)",
+          "protocolProfileBehavior": {
+            "followRedirects": true
+          },
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": "{{base_url}}/contact/newsletter/",
+            "body": {
+              "mode": "urlencoded",
+              "urlencoded": [
+                {
+                  "key": "email",
+                  "value": "a@b.vn",
+                  "type": "text"
+                },
+                {
+                  "key": "next",
+                  "value": "/",
+                  "type": "text"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const html = pm.response.text();",
+                  "const ok = (c, m) => { if (!c) { throw new Error(m); } };",
+                  "const cv = (k) => pm.collectionVariables.get(k);",
+                  "const loc = () => pm.response.headers.get('Location') || '';",
+                  "// Lấy id các dòng trong trang admin Đăng ký nhận tin có email trùng khớp chính xác",
+                  "const findIds = (page, email) => { const ids = []; const re = /newslettersubscriber\\/(\\d+)\\/change\\/[^\"]*\">([^<]*)<\\/a>/g; let mm; while ((mm = re.exec(page))) { if (mm[2] === email) { ids.push(mm[1]); } } return ids; };",
+                  "const shown = () => [\"Đăng ký nhận tin thành công. Cảm ơn bạn!\", \"Email này đã đăng ký nhận tin trước đó.\", \"Email không hợp lệ, vui lòng kiểm tra lại.\", \"Nếu email hợp lệ, chúng tôi đã gửi thư xác nhận. Vui lòng kiểm tra hộp thư để hoàn tất đăng ký.\", \"Bạn thao tác quá nhanh, vui lòng thử lại sau ít phút.\"].find((t) => html.includes(t)) || '(không có thông báo)';",
+                  "",
+                  "const email = pm.request.body.urlencoded.get('email');",
+                  "pm.collectionVariables.set('nl_email', email);",
+                  "pm.collectionVariables.set('nl_email_q', encodeURIComponent(email));",
+                  "const at = email.lastIndexOf('@');",
+                  "const labels = email.slice(at + 1).split('.').slice(0, -1).map((l) => l.length).join(', ');",
+                  "",
+                  "pm.test(\"TC-NL-01 | Dữ liệu đúng thiết kế: tổng 6, trước @ 1, nhãn 1\", function () {",
+                  "ok(email.length === 6 && at === 1 && labels === '1', 'Thực tế: tổng ' + email.length + ', trước @ ' + at + ', nhãn ' + labels);",
+                  "});",
+                  "",
+                  "pm.test(\"TC-NL-01 | Không lỗi server (200 sau khi chuyển hướng)\", function () {",
+                  "ok(pm.response.code === 200, 'Mong đợi HTTP 200, thực tế ' + pm.response.code);",
+                  "});",
+                  "",
+                  "pm.test(\"TC-NL-01 | Hợp lệ: qua kiểm tra độ dài - báo chờ xác nhận (hoặc giới hạn tần suất)\", function () {",
+                  "ok(html.includes(\"Nếu email hợp lệ, chúng tôi đã gửi thư xác nhận. Vui lòng kiểm tra hộp thư để hoàn tất đăng ký.\") || html.includes(\"Bạn thao tác quá nhanh, vui lòng thử lại sau ít phút.\"), 'Thực tế hiển thị: ' + shown());",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "TC-NL-01.2 Kiểm tra admin - email chưa được lưu (chờ xác nhận)",
+          "protocolProfileBehavior": {
+            "followRedirects": false
+          },
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{base_url}}/admin/contact/newslettersubscriber/?q={{nl_email_q}}"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const html = pm.response.text();",
+                  "const ok = (c, m) => { if (!c) { throw new Error(m); } };",
+                  "const cv = (k) => pm.collectionVariables.get(k);",
+                  "const loc = () => pm.response.headers.get('Location') || '';",
+                  "// Lấy id các dòng trong trang admin Đăng ký nhận tin có email trùng khớp chính xác",
+                  "const findIds = (page, email) => { const ids = []; const re = /newslettersubscriber\\/(\\d+)\\/change\\/[^\"]*\">([^<]*)<\\/a>/g; let mm; while ((mm = re.exec(page))) { if (mm[2] === email) { ids.push(mm[1]); } } return ids; };",
+                  "const shown = () => [\"Đăng ký nhận tin thành công. Cảm ơn bạn!\", \"Email này đã đăng ký nhận tin trước đó.\", \"Email không hợp lệ, vui lòng kiểm tra lại.\", \"Nếu email hợp lệ, chúng tôi đã gửi thư xác nhận. Vui lòng kiểm tra hộp thư để hoàn tất đăng ký.\", \"Bạn thao tác quá nhanh, vui lòng thử lại sau ít phút.\"].find((t) => html.includes(t)) || '(không có thông báo)';",
+                  "",
+                  "const ids = findIds(html, cv('nl_email'));",
+                  "",
+                  "pm.test(\"TC-NL-01 | Mở được trang admin (200)\", function () {",
+                  "ok(pm.response.code === 200, 'HTTP ' + pm.response.code);",
+                  "});",
+                  "",
+                  "pm.test(\"TC-NL-01 | Admin: email chưa được lưu (chờ bấm link xác nhận)\", function () {",
+                  "ok(ids.length === 0, 'Email đã có trong DB (id ' + ids.join(', ') + ') dù chưa xác nhận');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "TC-NL-02.1 [V1 V2 V3 B2 B7 B11] Tổng độ dài và phần trước @ tại min+ (7 ký tự)",
+          "protocolProfileBehavior": {
+            "followRedirects": true
+          },
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": "{{base_url}}/contact/newsletter/",
+            "body": {
+              "mode": "urlencoded",
+              "urlencoded": [
+                {
+                  "key": "email",
+                  "value": "ab@b.vn",
+                  "type": "text"
+                },
+                {
+                  "key": "next",
+                  "value": "/",
+                  "type": "text"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const html = pm.response.text();",
+                  "const ok = (c, m) => { if (!c) { throw new Error(m); } };",
+                  "const cv = (k) => pm.collectionVariables.get(k);",
+                  "const loc = () => pm.response.headers.get('Location') || '';",
+                  "// Lấy id các dòng trong trang admin Đăng ký nhận tin có email trùng khớp chính xác",
+                  "const findIds = (page, email) => { const ids = []; const re = /newslettersubscriber\\/(\\d+)\\/change\\/[^\"]*\">([^<]*)<\\/a>/g; let mm; while ((mm = re.exec(page))) { if (mm[2] === email) { ids.push(mm[1]); } } return ids; };",
+                  "const shown = () => [\"Đăng ký nhận tin thành công. Cảm ơn bạn!\", \"Email này đã đăng ký nhận tin trước đó.\", \"Email không hợp lệ, vui lòng kiểm tra lại.\", \"Nếu email hợp lệ, chúng tôi đã gửi thư xác nhận. Vui lòng kiểm tra hộp thư để hoàn tất đăng ký.\", \"Bạn thao tác quá nhanh, vui lòng thử lại sau ít phút.\"].find((t) => html.includes(t)) || '(không có thông báo)';",
+                  "",
+                  "const email = pm.request.body.urlencoded.get('email');",
+                  "pm.collectionVariables.set('nl_email', email);",
+                  "pm.collectionVariables.set('nl_email_q', encodeURIComponent(email));",
+                  "const at = email.lastIndexOf('@');",
+                  "const labels = email.slice(at + 1).split('.').slice(0, -1).map((l) => l.length).join(', ');",
+                  "",
+                  "pm.test(\"TC-NL-02 | Dữ liệu đúng thiết kế: tổng 7, trước @ 2, nhãn 1\", function () {",
+                  "ok(email.length === 7 && at === 2 && labels === '1', 'Thực tế: tổng ' + email.length + ', trước @ ' + at + ', nhãn ' + labels);",
+                  "});",
+                  "",
+                  "pm.test(\"TC-NL-02 | Không lỗi server (200 sau khi chuyển hướng)\", function () {",
+                  "ok(pm.response.code === 200, 'Mong đợi HTTP 200, thực tế ' + pm.response.code);",
+                  "});",
+                  "",
+                  "pm.test(\"TC-NL-02 | Hợp lệ: qua kiểm tra độ dài - báo chờ xác nhận (hoặc giới hạn tần suất)\", function () {",
+                  "ok(html.includes(\"Nếu email hợp lệ, chúng tôi đã gửi thư xác nhận. Vui lòng kiểm tra hộp thư để hoàn tất đăng ký.\") || html.includes(\"Bạn thao tác quá nhanh, vui lòng thử lại sau ít phút.\"), 'Thực tế hiển thị: ' + shown());",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "TC-NL-02.2 Kiểm tra admin - email chưa được lưu (chờ xác nhận)",
+          "protocolProfileBehavior": {
+            "followRedirects": false
+          },
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{base_url}}/admin/contact/newslettersubscriber/?q={{nl_email_q}}"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const html = pm.response.text();",
+                  "const ok = (c, m) => { if (!c) { throw new Error(m); } };",
+                  "const cv = (k) => pm.collectionVariables.get(k);",
+                  "const loc = () => pm.response.headers.get('Location') || '';",
+                  "// Lấy id các dòng trong trang admin Đăng ký nhận tin có email trùng khớp chính xác",
+                  "const findIds = (page, email) => { const ids = []; const re = /newslettersubscriber\\/(\\d+)\\/change\\/[^\"]*\">([^<]*)<\\/a>/g; let mm; while ((mm = re.exec(page))) { if (mm[2] === email) { ids.push(mm[1]); } } return ids; };",
+                  "const shown = () => [\"Đăng ký nhận tin thành công. Cảm ơn bạn!\", \"Email này đã đăng ký nhận tin trước đó.\", \"Email không hợp lệ, vui lòng kiểm tra lại.\", \"Nếu email hợp lệ, chúng tôi đã gửi thư xác nhận. Vui lòng kiểm tra hộp thư để hoàn tất đăng ký.\", \"Bạn thao tác quá nhanh, vui lòng thử lại sau ít phút.\"].find((t) => html.includes(t)) || '(không có thông báo)';",
+                  "",
+                  "const ids = findIds(html, cv('nl_email'));",
+                  "",
+                  "pm.test(\"TC-NL-02 | Mở được trang admin (200)\", function () {",
+                  "ok(pm.response.code === 200, 'HTTP ' + pm.response.code);",
+                  "});",
+                  "",
+                  "pm.test(\"TC-NL-02 | Admin: email chưa được lưu (chờ bấm link xác nhận)\", function () {",
+                  "ok(ids.length === 0, 'Email đã có trong DB (id ' + ids.join(', ') + ') dù chưa xác nhận');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "TC-NL-03.1 [V1 V2 V3 B2 B6 B12] Nhãn tên miền tại min+ (7 ký tự)",
+          "protocolProfileBehavior": {
+            "followRedirects": true
+          },
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": "{{base_url}}/contact/newsletter/",
+            "body": {
+              "mode": "urlencoded",
+              "urlencoded": [
+                {
+                  "key": "email",
+                  "value": "a@gs.vn",
+                  "type": "text"
+                },
+                {
+                  "key": "next",
+                  "value": "/",
+                  "type": "text"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const html = pm.response.text();",
+                  "const ok = (c, m) => { if (!c) { throw new Error(m); } };",
+                  "const cv = (k) => pm.collectionVariables.get(k);",
+                  "const loc = () => pm.response.headers.get('Location') || '';",
+                  "// Lấy id các dòng trong trang admin Đăng ký nhận tin có email trùng khớp chính xác",
+                  "const findIds = (page, email) => { const ids = []; const re = /newslettersubscriber\\/(\\d+)\\/change\\/[^\"]*\">([^<]*)<\\/a>/g; let mm; while ((mm = re.exec(page))) { if (mm[2] === email) { ids.push(mm[1]); } } return ids; };",
+                  "const shown = () => [\"Đăng ký nhận tin thành công. Cảm ơn bạn!\", \"Email này đã đăng ký nhận tin trước đó.\", \"Email không hợp lệ, vui lòng kiểm tra lại.\", \"Nếu email hợp lệ, chúng tôi đã gửi thư xác nhận. Vui lòng kiểm tra hộp thư để hoàn tất đăng ký.\", \"Bạn thao tác quá nhanh, vui lòng thử lại sau ít phút.\"].find((t) => html.includes(t)) || '(không có thông báo)';",
+                  "",
+                  "const email = pm.request.body.urlencoded.get('email');",
+                  "pm.collectionVariables.set('nl_email', email);",
+                  "pm.collectionVariables.set('nl_email_q', encodeURIComponent(email));",
+                  "const at = email.lastIndexOf('@');",
+                  "const labels = email.slice(at + 1).split('.').slice(0, -1).map((l) => l.length).join(', ');",
+                  "",
+                  "pm.test(\"TC-NL-03 | Dữ liệu đúng thiết kế: tổng 7, trước @ 1, nhãn 2\", function () {",
+                  "ok(email.length === 7 && at === 1 && labels === '2', 'Thực tế: tổng ' + email.length + ', trước @ ' + at + ', nhãn ' + labels);",
+                  "});",
+                  "",
+                  "pm.test(\"TC-NL-03 | Không lỗi server (200 sau khi chuyển hướng)\", function () {",
+                  "ok(pm.response.code === 200, 'Mong đợi HTTP 200, thực tế ' + pm.response.code);",
+                  "});",
+                  "",
+                  "pm.test(\"TC-NL-03 | Hợp lệ: qua kiểm tra độ dài - báo chờ xác nhận (hoặc giới hạn tần suất)\", function () {",
+                  "ok(html.includes(\"Nếu email hợp lệ, chúng tôi đã gửi thư xác nhận. Vui lòng kiểm tra hộp thư để hoàn tất đăng ký.\") || html.includes(\"Bạn thao tác quá nhanh, vui lòng thử lại sau ít phút.\"), 'Thực tế hiển thị: ' + shown());",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "TC-NL-03.2 Kiểm tra admin - email chưa được lưu (chờ xác nhận)",
+          "protocolProfileBehavior": {
+            "followRedirects": false
+          },
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{base_url}}/admin/contact/newslettersubscriber/?q={{nl_email_q}}"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const html = pm.response.text();",
+                  "const ok = (c, m) => { if (!c) { throw new Error(m); } };",
+                  "const cv = (k) => pm.collectionVariables.get(k);",
+                  "const loc = () => pm.response.headers.get('Location') || '';",
+                  "// Lấy id các dòng trong trang admin Đăng ký nhận tin có email trùng khớp chính xác",
+                  "const findIds = (page, email) => { const ids = []; const re = /newslettersubscriber\\/(\\d+)\\/change\\/[^\"]*\">([^<]*)<\\/a>/g; let mm; while ((mm = re.exec(page))) { if (mm[2] === email) { ids.push(mm[1]); } } return ids; };",
+                  "const shown = () => [\"Đăng ký nhận tin thành công. Cảm ơn bạn!\", \"Email này đã đăng ký nhận tin trước đó.\", \"Email không hợp lệ, vui lòng kiểm tra lại.\", \"Nếu email hợp lệ, chúng tôi đã gửi thư xác nhận. Vui lòng kiểm tra hộp thư để hoàn tất đăng ký.\", \"Bạn thao tác quá nhanh, vui lòng thử lại sau ít phút.\"].find((t) => html.includes(t)) || '(không có thông báo)';",
+                  "",
+                  "const ids = findIds(html, cv('nl_email'));",
+                  "",
+                  "pm.test(\"TC-NL-03 | Mở được trang admin (200)\", function () {",
+                  "ok(pm.response.code === 200, 'HTTP ' + pm.response.code);",
+                  "});",
+                  "",
+                  "pm.test(\"TC-NL-03 | Admin: email chưa được lưu (chờ bấm link xác nhận)\", function () {",
+                  "ok(ids.length === 0, 'Email đã có trong DB (id ' + ids.join(', ') + ') dù chưa xác nhận');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "TC-NL-04.1 [V1 V2 V3 B3 B8 B13] Tất cả biến tại nominal (22 ký tự)",
+          "protocolProfileBehavior": {
+            "followRedirects": true
+          },
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": "{{base_url}}/contact/newsletter/",
+            "body": {
+              "mode": "urlencoded",
+              "urlencoded": [
+                {
+                  "key": "email",
+                  "value": "khachhang@greenshop.vn",
+                  "type": "text"
+                },
+                {
+                  "key": "next",
+                  "value": "/",
+                  "type": "text"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const html = pm.response.text();",
+                  "const ok = (c, m) => { if (!c) { throw new Error(m); } };",
+                  "const cv = (k) => pm.collectionVariables.get(k);",
+                  "const loc = () => pm.response.headers.get('Location') || '';",
+                  "// Lấy id các dòng trong trang admin Đăng ký nhận tin có email trùng khớp chính xác",
+                  "const findIds = (page, email) => { const ids = []; const re = /newslettersubscriber\\/(\\d+)\\/change\\/[^\"]*\">([^<]*)<\\/a>/g; let mm; while ((mm = re.exec(page))) { if (mm[2] === email) { ids.push(mm[1]); } } return ids; };",
+                  "const shown = () => [\"Đăng ký nhận tin thành công. Cảm ơn bạn!\", \"Email này đã đăng ký nhận tin trước đó.\", \"Email không hợp lệ, vui lòng kiểm tra lại.\", \"Nếu email hợp lệ, chúng tôi đã gửi thư xác nhận. Vui lòng kiểm tra hộp thư để hoàn tất đăng ký.\", \"Bạn thao tác quá nhanh, vui lòng thử lại sau ít phút.\"].find((t) => html.includes(t)) || '(không có thông báo)';",
+                  "",
+                  "const email = pm.request.body.urlencoded.get('email');",
+                  "pm.collectionVariables.set('nl_email', email);",
+                  "pm.collectionVariables.set('nl_email_q', encodeURIComponent(email));",
+                  "const at = email.lastIndexOf('@');",
+                  "const labels = email.slice(at + 1).split('.').slice(0, -1).map((l) => l.length).join(', ');",
+                  "",
+                  "pm.test(\"TC-NL-04 | Dữ liệu đúng thiết kế: tổng 22, trước @ 9, nhãn 9\", function () {",
+                  "ok(email.length === 22 && at === 9 && labels === '9', 'Thực tế: tổng ' + email.length + ', trước @ ' + at + ', nhãn ' + labels);",
+                  "});",
+                  "",
+                  "pm.test(\"TC-NL-04 | Không lỗi server (200 sau khi chuyển hướng)\", function () {",
+                  "ok(pm.response.code === 200, 'Mong đợi HTTP 200, thực tế ' + pm.response.code);",
+                  "});",
+                  "",
+                  "pm.test(\"TC-NL-04 | Hợp lệ: qua kiểm tra độ dài - báo chờ xác nhận (hoặc giới hạn tần suất)\", function () {",
+                  "ok(html.includes(\"Nếu email hợp lệ, chúng tôi đã gửi thư xác nhận. Vui lòng kiểm tra hộp thư để hoàn tất đăng ký.\") || html.includes(\"Bạn thao tác quá nhanh, vui lòng thử lại sau ít phút.\"), 'Thực tế hiển thị: ' + shown());",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "TC-NL-04.2 Kiểm tra admin - email chưa được lưu (chờ xác nhận)",
+          "protocolProfileBehavior": {
+            "followRedirects": false
+          },
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{base_url}}/admin/contact/newslettersubscriber/?q={{nl_email_q}}"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const html = pm.response.text();",
+                  "const ok = (c, m) => { if (!c) { throw new Error(m); } };",
+                  "const cv = (k) => pm.collectionVariables.get(k);",
+                  "const loc = () => pm.response.headers.get('Location') || '';",
+                  "// Lấy id các dòng trong trang admin Đăng ký nhận tin có email trùng khớp chính xác",
+                  "const findIds = (page, email) => { const ids = []; const re = /newslettersubscriber\\/(\\d+)\\/change\\/[^\"]*\">([^<]*)<\\/a>/g; let mm; while ((mm = re.exec(page))) { if (mm[2] === email) { ids.push(mm[1]); } } return ids; };",
+                  "const shown = () => [\"Đăng ký nhận tin thành công. Cảm ơn bạn!\", \"Email này đã đăng ký nhận tin trước đó.\", \"Email không hợp lệ, vui lòng kiểm tra lại.\", \"Nếu email hợp lệ, chúng tôi đã gửi thư xác nhận. Vui lòng kiểm tra hộp thư để hoàn tất đăng ký.\", \"Bạn thao tác quá nhanh, vui lòng thử lại sau ít phút.\"].find((t) => html.includes(t)) || '(không có thông báo)';",
+                  "",
+                  "const ids = findIds(html, cv('nl_email'));",
+                  "",
+                  "pm.test(\"TC-NL-04 | Mở được trang admin (200)\", function () {",
+                  "ok(pm.response.code === 200, 'HTTP ' + pm.response.code);",
+                  "});",
+                  "",
+                  "pm.test(\"TC-NL-04 | Admin: email chưa được lưu (chờ bấm link xác nhận)\", function () {",
+                  "ok(ids.length === 0, 'Email đã có trong DB (id ' + ids.join(', ') + ') dù chưa xác nhận');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "TC-NL-05.1 [V1 V2 V3 B9 B13] Phần trước @ tại max- (76 ký tự)",
+          "protocolProfileBehavior": {
+            "followRedirects": true
+          },
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": "{{base_url}}/contact/newsletter/",
+            "body": {
+              "mode": "urlencoded",
+              "urlencoded": [
+                {
+                  "key": "email",
+                  "value": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa@greenshop.vn",
+                  "type": "text"
+                },
+                {
+                  "key": "next",
+                  "value": "/",
+                  "type": "text"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const html = pm.response.text();",
+                  "const ok = (c, m) => { if (!c) { throw new Error(m); } };",
+                  "const cv = (k) => pm.collectionVariables.get(k);",
+                  "const loc = () => pm.response.headers.get('Location') || '';",
+                  "// Lấy id các dòng trong trang admin Đăng ký nhận tin có email trùng khớp chính xác",
+                  "const findIds = (page, email) => { const ids = []; const re = /newslettersubscriber\\/(\\d+)\\/change\\/[^\"]*\">([^<]*)<\\/a>/g; let mm; while ((mm = re.exec(page))) { if (mm[2] === email) { ids.push(mm[1]); } } return ids; };",
+                  "const shown = () => [\"Đăng ký nhận tin thành công. Cảm ơn bạn!\", \"Email này đã đăng ký nhận tin trước đó.\", \"Email không hợp lệ, vui lòng kiểm tra lại.\", \"Nếu email hợp lệ, chúng tôi đã gửi thư xác nhận. Vui lòng kiểm tra hộp thư để hoàn tất đăng ký.\", \"Bạn thao tác quá nhanh, vui lòng thử lại sau ít phút.\"].find((t) => html.includes(t)) || '(không có thông báo)';",
+                  "",
+                  "const email = pm.request.body.urlencoded.get('email');",
+                  "pm.collectionVariables.set('nl_email', email);",
+                  "pm.collectionVariables.set('nl_email_q', encodeURIComponent(email));",
+                  "const at = email.lastIndexOf('@');",
+                  "const labels = email.slice(at + 1).split('.').slice(0, -1).map((l) => l.length).join(', ');",
+                  "",
+                  "pm.test(\"TC-NL-05 | Dữ liệu đúng thiết kế: tổng 76, trước @ 63, nhãn 9\", function () {",
+                  "ok(email.length === 76 && at === 63 && labels === '9', 'Thực tế: tổng ' + email.length + ', trước @ ' + at + ', nhãn ' + labels);",
+                  "});",
+                  "",
+                  "pm.test(\"TC-NL-05 | Không lỗi server (200 sau khi chuyển hướng)\", function () {",
+                  "ok(pm.response.code === 200, 'Mong đợi HTTP 200, thực tế ' + pm.response.code);",
+                  "});",
+                  "",
+                  "pm.test(\"TC-NL-05 | Hợp lệ: qua kiểm tra độ dài - báo chờ xác nhận (hoặc giới hạn tần suất)\", function () {",
+                  "ok(html.includes(\"Nếu email hợp lệ, chúng tôi đã gửi thư xác nhận. Vui lòng kiểm tra hộp thư để hoàn tất đăng ký.\") || html.includes(\"Bạn thao tác quá nhanh, vui lòng thử lại sau ít phút.\"), 'Thực tế hiển thị: ' + shown());",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "TC-NL-05.2 Kiểm tra admin - email chưa được lưu (chờ xác nhận)",
+          "protocolProfileBehavior": {
+            "followRedirects": false
+          },
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{base_url}}/admin/contact/newslettersubscriber/?q={{nl_email_q}}"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const html = pm.response.text();",
+                  "const ok = (c, m) => { if (!c) { throw new Error(m); } };",
+                  "const cv = (k) => pm.collectionVariables.get(k);",
+                  "const loc = () => pm.response.headers.get('Location') || '';",
+                  "// Lấy id các dòng trong trang admin Đăng ký nhận tin có email trùng khớp chính xác",
+                  "const findIds = (page, email) => { const ids = []; const re = /newslettersubscriber\\/(\\d+)\\/change\\/[^\"]*\">([^<]*)<\\/a>/g; let mm; while ((mm = re.exec(page))) { if (mm[2] === email) { ids.push(mm[1]); } } return ids; };",
+                  "const shown = () => [\"Đăng ký nhận tin thành công. Cảm ơn bạn!\", \"Email này đã đăng ký nhận tin trước đó.\", \"Email không hợp lệ, vui lòng kiểm tra lại.\", \"Nếu email hợp lệ, chúng tôi đã gửi thư xác nhận. Vui lòng kiểm tra hộp thư để hoàn tất đăng ký.\", \"Bạn thao tác quá nhanh, vui lòng thử lại sau ít phút.\"].find((t) => html.includes(t)) || '(không có thông báo)';",
+                  "",
+                  "const ids = findIds(html, cv('nl_email'));",
+                  "",
+                  "pm.test(\"TC-NL-05 | Mở được trang admin (200)\", function () {",
+                  "ok(pm.response.code === 200, 'HTTP ' + pm.response.code);",
+                  "});",
+                  "",
+                  "pm.test(\"TC-NL-05 | Admin: email chưa được lưu (chờ bấm link xác nhận)\", function () {",
+                  "ok(ids.length === 0, 'Email đã có trong DB (id ' + ids.join(', ') + ') dù chưa xác nhận');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "TC-NL-06.1 [V1 V2 V3 B14] Nhãn tên miền tại max- (70 ký tự)",
+          "protocolProfileBehavior": {
+            "followRedirects": true
+          },
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": "{{base_url}}/contact/newsletter/",
+            "body": {
+              "mode": "urlencoded",
+              "urlencoded": [
+                {
+                  "key": "email",
+                  "value": "user@gggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggg.vn",
+                  "type": "text"
+                },
+                {
+                  "key": "next",
+                  "value": "/",
+                  "type": "text"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const html = pm.response.text();",
+                  "const ok = (c, m) => { if (!c) { throw new Error(m); } };",
+                  "const cv = (k) => pm.collectionVariables.get(k);",
+                  "const loc = () => pm.response.headers.get('Location') || '';",
+                  "// Lấy id các dòng trong trang admin Đăng ký nhận tin có email trùng khớp chính xác",
+                  "const findIds = (page, email) => { const ids = []; const re = /newslettersubscriber\\/(\\d+)\\/change\\/[^\"]*\">([^<]*)<\\/a>/g; let mm; while ((mm = re.exec(page))) { if (mm[2] === email) { ids.push(mm[1]); } } return ids; };",
+                  "const shown = () => [\"Đăng ký nhận tin thành công. Cảm ơn bạn!\", \"Email này đã đăng ký nhận tin trước đó.\", \"Email không hợp lệ, vui lòng kiểm tra lại.\", \"Nếu email hợp lệ, chúng tôi đã gửi thư xác nhận. Vui lòng kiểm tra hộp thư để hoàn tất đăng ký.\", \"Bạn thao tác quá nhanh, vui lòng thử lại sau ít phút.\"].find((t) => html.includes(t)) || '(không có thông báo)';",
+                  "",
+                  "const email = pm.request.body.urlencoded.get('email');",
+                  "pm.collectionVariables.set('nl_email', email);",
+                  "pm.collectionVariables.set('nl_email_q', encodeURIComponent(email));",
+                  "const at = email.lastIndexOf('@');",
+                  "const labels = email.slice(at + 1).split('.').slice(0, -1).map((l) => l.length).join(', ');",
+                  "",
+                  "pm.test(\"TC-NL-06 | Dữ liệu đúng thiết kế: tổng 70, trước @ 4, nhãn 62\", function () {",
+                  "ok(email.length === 70 && at === 4 && labels === '62', 'Thực tế: tổng ' + email.length + ', trước @ ' + at + ', nhãn ' + labels);",
+                  "});",
+                  "",
+                  "pm.test(\"TC-NL-06 | Không lỗi server (200 sau khi chuyển hướng)\", function () {",
+                  "ok(pm.response.code === 200, 'Mong đợi HTTP 200, thực tế ' + pm.response.code);",
+                  "});",
+                  "",
+                  "pm.test(\"TC-NL-06 | Hợp lệ: qua kiểm tra độ dài - báo chờ xác nhận (hoặc giới hạn tần suất)\", function () {",
+                  "ok(html.includes(\"Nếu email hợp lệ, chúng tôi đã gửi thư xác nhận. Vui lòng kiểm tra hộp thư để hoàn tất đăng ký.\") || html.includes(\"Bạn thao tác quá nhanh, vui lòng thử lại sau ít phút.\"), 'Thực tế hiển thị: ' + shown());",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "TC-NL-06.2 Kiểm tra admin - email chưa được lưu (chờ xác nhận)",
+          "protocolProfileBehavior": {
+            "followRedirects": false
+          },
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{base_url}}/admin/contact/newslettersubscriber/?q={{nl_email_q}}"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const html = pm.response.text();",
+                  "const ok = (c, m) => { if (!c) { throw new Error(m); } };",
+                  "const cv = (k) => pm.collectionVariables.get(k);",
+                  "const loc = () => pm.response.headers.get('Location') || '';",
+                  "// Lấy id các dòng trong trang admin Đăng ký nhận tin có email trùng khớp chính xác",
+                  "const findIds = (page, email) => { const ids = []; const re = /newslettersubscriber\\/(\\d+)\\/change\\/[^\"]*\">([^<]*)<\\/a>/g; let mm; while ((mm = re.exec(page))) { if (mm[2] === email) { ids.push(mm[1]); } } return ids; };",
+                  "const shown = () => [\"Đăng ký nhận tin thành công. Cảm ơn bạn!\", \"Email này đã đăng ký nhận tin trước đó.\", \"Email không hợp lệ, vui lòng kiểm tra lại.\", \"Nếu email hợp lệ, chúng tôi đã gửi thư xác nhận. Vui lòng kiểm tra hộp thư để hoàn tất đăng ký.\", \"Bạn thao tác quá nhanh, vui lòng thử lại sau ít phút.\"].find((t) => html.includes(t)) || '(không có thông báo)';",
+                  "",
+                  "const ids = findIds(html, cv('nl_email'));",
+                  "",
+                  "pm.test(\"TC-NL-06 | Mở được trang admin (200)\", function () {",
+                  "ok(pm.response.code === 200, 'HTTP ' + pm.response.code);",
+                  "});",
+                  "",
+                  "pm.test(\"TC-NL-06 | Admin: email chưa được lưu (chờ bấm link xác nhận)\", function () {",
+                  "ok(ids.length === 0, 'Email đã có trong DB (id ' + ids.join(', ') + ') dù chưa xác nhận');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "TC-NL-07.1 [V1 V2 V3 B4 B10 B15] Tổng độ dài tại max- (253 ký tự)",
+          "protocolProfileBehavior": {
+            "followRedirects": true
+          },
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": "{{base_url}}/contact/newsletter/",
+            "body": {
+              "mode": "urlencoded",
+              "urlencoded": [
+                {
+                  "key": "email",
+                  "value": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa@bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb.bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb.bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb.vn",
+                  "type": "text"
+                },
+                {
+                  "key": "next",
+                  "value": "/",
+                  "type": "text"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const html = pm.response.text();",
+                  "const ok = (c, m) => { if (!c) { throw new Error(m); } };",
+                  "const cv = (k) => pm.collectionVariables.get(k);",
+                  "const loc = () => pm.response.headers.get('Location') || '';",
+                  "// Lấy id các dòng trong trang admin Đăng ký nhận tin có email trùng khớp chính xác",
+                  "const findIds = (page, email) => { const ids = []; const re = /newslettersubscriber\\/(\\d+)\\/change\\/[^\"]*\">([^<]*)<\\/a>/g; let mm; while ((mm = re.exec(page))) { if (mm[2] === email) { ids.push(mm[1]); } } return ids; };",
+                  "const shown = () => [\"Đăng ký nhận tin thành công. Cảm ơn bạn!\", \"Email này đã đăng ký nhận tin trước đó.\", \"Email không hợp lệ, vui lòng kiểm tra lại.\", \"Nếu email hợp lệ, chúng tôi đã gửi thư xác nhận. Vui lòng kiểm tra hộp thư để hoàn tất đăng ký.\", \"Bạn thao tác quá nhanh, vui lòng thử lại sau ít phút.\"].find((t) => html.includes(t)) || '(không có thông báo)';",
+                  "",
+                  "const email = pm.request.body.urlencoded.get('email');",
+                  "pm.collectionVariables.set('nl_email', email);",
+                  "pm.collectionVariables.set('nl_email_q', encodeURIComponent(email));",
+                  "const at = email.lastIndexOf('@');",
+                  "const labels = email.slice(at + 1).split('.').slice(0, -1).map((l) => l.length).join(', ');",
+                  "",
+                  "pm.test(\"TC-NL-07 | Dữ liệu đúng thiết kế: tổng 253, trước @ 64, nhãn 63, 63, 57\", function () {",
+                  "ok(email.length === 253 && at === 64 && labels === '63, 63, 57', 'Thực tế: tổng ' + email.length + ', trước @ ' + at + ', nhãn ' + labels);",
+                  "});",
+                  "",
+                  "pm.test(\"TC-NL-07 | Không lỗi server (200 sau khi chuyển hướng)\", function () {",
+                  "ok(pm.response.code === 200, 'Mong đợi HTTP 200, thực tế ' + pm.response.code);",
+                  "});",
+                  "",
+                  "pm.test(\"TC-NL-07 | Hợp lệ: qua kiểm tra độ dài - báo chờ xác nhận (hoặc giới hạn tần suất)\", function () {",
+                  "ok(html.includes(\"Nếu email hợp lệ, chúng tôi đã gửi thư xác nhận. Vui lòng kiểm tra hộp thư để hoàn tất đăng ký.\") || html.includes(\"Bạn thao tác quá nhanh, vui lòng thử lại sau ít phút.\"), 'Thực tế hiển thị: ' + shown());",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "TC-NL-07.2 Kiểm tra admin - email chưa được lưu (chờ xác nhận)",
+          "protocolProfileBehavior": {
+            "followRedirects": false
+          },
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{base_url}}/admin/contact/newslettersubscriber/?q={{nl_email_q}}"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const html = pm.response.text();",
+                  "const ok = (c, m) => { if (!c) { throw new Error(m); } };",
+                  "const cv = (k) => pm.collectionVariables.get(k);",
+                  "const loc = () => pm.response.headers.get('Location') || '';",
+                  "// Lấy id các dòng trong trang admin Đăng ký nhận tin có email trùng khớp chính xác",
+                  "const findIds = (page, email) => { const ids = []; const re = /newslettersubscriber\\/(\\d+)\\/change\\/[^\"]*\">([^<]*)<\\/a>/g; let mm; while ((mm = re.exec(page))) { if (mm[2] === email) { ids.push(mm[1]); } } return ids; };",
+                  "const shown = () => [\"Đăng ký nhận tin thành công. Cảm ơn bạn!\", \"Email này đã đăng ký nhận tin trước đó.\", \"Email không hợp lệ, vui lòng kiểm tra lại.\", \"Nếu email hợp lệ, chúng tôi đã gửi thư xác nhận. Vui lòng kiểm tra hộp thư để hoàn tất đăng ký.\", \"Bạn thao tác quá nhanh, vui lòng thử lại sau ít phút.\"].find((t) => html.includes(t)) || '(không có thông báo)';",
+                  "",
+                  "const ids = findIds(html, cv('nl_email'));",
+                  "",
+                  "pm.test(\"TC-NL-07 | Mở được trang admin (200)\", function () {",
+                  "ok(pm.response.code === 200, 'HTTP ' + pm.response.code);",
+                  "});",
+                  "",
+                  "pm.test(\"TC-NL-07 | Admin: email chưa được lưu (chờ bấm link xác nhận)\", function () {",
+                  "ok(ids.length === 0, 'Email đã có trong DB (id ' + ids.join(', ') + ') dù chưa xác nhận');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "TC-NL-08.1 [V1 V2 V3 B5 B10 B15] Tất cả biến tại max (254 ký tự)",
+          "protocolProfileBehavior": {
+            "followRedirects": true
+          },
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": "{{base_url}}/contact/newsletter/",
+            "body": {
+              "mode": "urlencoded",
+              "urlencoded": [
+                {
+                  "key": "email",
+                  "value": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa@bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb.bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb.bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb.vn",
+                  "type": "text"
+                },
+                {
+                  "key": "next",
+                  "value": "/",
+                  "type": "text"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const html = pm.response.text();",
+                  "const ok = (c, m) => { if (!c) { throw new Error(m); } };",
+                  "const cv = (k) => pm.collectionVariables.get(k);",
+                  "const loc = () => pm.response.headers.get('Location') || '';",
+                  "// Lấy id các dòng trong trang admin Đăng ký nhận tin có email trùng khớp chính xác",
+                  "const findIds = (page, email) => { const ids = []; const re = /newslettersubscriber\\/(\\d+)\\/change\\/[^\"]*\">([^<]*)<\\/a>/g; let mm; while ((mm = re.exec(page))) { if (mm[2] === email) { ids.push(mm[1]); } } return ids; };",
+                  "const shown = () => [\"Đăng ký nhận tin thành công. Cảm ơn bạn!\", \"Email này đã đăng ký nhận tin trước đó.\", \"Email không hợp lệ, vui lòng kiểm tra lại.\", \"Nếu email hợp lệ, chúng tôi đã gửi thư xác nhận. Vui lòng kiểm tra hộp thư để hoàn tất đăng ký.\", \"Bạn thao tác quá nhanh, vui lòng thử lại sau ít phút.\"].find((t) => html.includes(t)) || '(không có thông báo)';",
+                  "",
+                  "const email = pm.request.body.urlencoded.get('email');",
+                  "pm.collectionVariables.set('nl_email', email);",
+                  "pm.collectionVariables.set('nl_email_q', encodeURIComponent(email));",
+                  "const at = email.lastIndexOf('@');",
+                  "const labels = email.slice(at + 1).split('.').slice(0, -1).map((l) => l.length).join(', ');",
+                  "",
+                  "pm.test(\"TC-NL-08 | Dữ liệu đúng thiết kế: tổng 254, trước @ 64, nhãn 63, 63, 58\", function () {",
+                  "ok(email.length === 254 && at === 64 && labels === '63, 63, 58', 'Thực tế: tổng ' + email.length + ', trước @ ' + at + ', nhãn ' + labels);",
+                  "});",
+                  "",
+                  "pm.test(\"TC-NL-08 | Không lỗi server (200 sau khi chuyển hướng)\", function () {",
+                  "ok(pm.response.code === 200, 'Mong đợi HTTP 200, thực tế ' + pm.response.code);",
+                  "});",
+                  "",
+                  "pm.test(\"TC-NL-08 | Hợp lệ: qua kiểm tra độ dài - báo chờ xác nhận (hoặc giới hạn tần suất)\", function () {",
+                  "ok(html.includes(\"Nếu email hợp lệ, chúng tôi đã gửi thư xác nhận. Vui lòng kiểm tra hộp thư để hoàn tất đăng ký.\") || html.includes(\"Bạn thao tác quá nhanh, vui lòng thử lại sau ít phút.\"), 'Thực tế hiển thị: ' + shown());",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "TC-NL-08.2 Kiểm tra admin - email chưa được lưu (chờ xác nhận)",
+          "protocolProfileBehavior": {
+            "followRedirects": false
+          },
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{base_url}}/admin/contact/newslettersubscriber/?q={{nl_email_q}}"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const html = pm.response.text();",
+                  "const ok = (c, m) => { if (!c) { throw new Error(m); } };",
+                  "const cv = (k) => pm.collectionVariables.get(k);",
+                  "const loc = () => pm.response.headers.get('Location') || '';",
+                  "// Lấy id các dòng trong trang admin Đăng ký nhận tin có email trùng khớp chính xác",
+                  "const findIds = (page, email) => { const ids = []; const re = /newslettersubscriber\\/(\\d+)\\/change\\/[^\"]*\">([^<]*)<\\/a>/g; let mm; while ((mm = re.exec(page))) { if (mm[2] === email) { ids.push(mm[1]); } } return ids; };",
+                  "const shown = () => [\"Đăng ký nhận tin thành công. Cảm ơn bạn!\", \"Email này đã đăng ký nhận tin trước đó.\", \"Email không hợp lệ, vui lòng kiểm tra lại.\", \"Nếu email hợp lệ, chúng tôi đã gửi thư xác nhận. Vui lòng kiểm tra hộp thư để hoàn tất đăng ký.\", \"Bạn thao tác quá nhanh, vui lòng thử lại sau ít phút.\"].find((t) => html.includes(t)) || '(không có thông báo)';",
+                  "",
+                  "const ids = findIds(html, cv('nl_email'));",
+                  "",
+                  "pm.test(\"TC-NL-08 | Mở được trang admin (200)\", function () {",
+                  "ok(pm.response.code === 200, 'HTTP ' + pm.response.code);",
+                  "});",
+                  "",
+                  "pm.test(\"TC-NL-08 | Admin: email chưa được lưu (chờ bấm link xác nhận)\", function () {",
+                  "ok(ids.length === 0, 'Email đã có trong DB (id ' + ids.join(', ') + ') dù chưa xác nhận');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "02. Không hợp lệ - min-, max+ (TC-NL-09 → 15)",
+      "description": "Single fault: chỉ một biến nằm ngoài biên. Phải báo \"Email không hợp lệ\" và không lưu DB. TC-NL-10, 11 tái hiện SCRUM-36.",
+      "item": [
+        {
+          "name": "TC-NL-09.1 [X1] Tổng độ dài nhỏ hơn min (min-) (5 ký tự)",
+          "protocolProfileBehavior": {
+            "followRedirects": true
+          },
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": "{{base_url}}/contact/newsletter/",
+            "body": {
+              "mode": "urlencoded",
+              "urlencoded": [
+                {
+                  "key": "email",
+                  "value": "a@b.v",
+                  "type": "text"
+                },
+                {
+                  "key": "next",
+                  "value": "/",
+                  "type": "text"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const html = pm.response.text();",
+                  "const ok = (c, m) => { if (!c) { throw new Error(m); } };",
+                  "const cv = (k) => pm.collectionVariables.get(k);",
+                  "const loc = () => pm.response.headers.get('Location') || '';",
+                  "// Lấy id các dòng trong trang admin Đăng ký nhận tin có email trùng khớp chính xác",
+                  "const findIds = (page, email) => { const ids = []; const re = /newslettersubscriber\\/(\\d+)\\/change\\/[^\"]*\">([^<]*)<\\/a>/g; let mm; while ((mm = re.exec(page))) { if (mm[2] === email) { ids.push(mm[1]); } } return ids; };",
+                  "const shown = () => [\"Đăng ký nhận tin thành công. Cảm ơn bạn!\", \"Email này đã đăng ký nhận tin trước đó.\", \"Email không hợp lệ, vui lòng kiểm tra lại.\", \"Nếu email hợp lệ, chúng tôi đã gửi thư xác nhận. Vui lòng kiểm tra hộp thư để hoàn tất đăng ký.\", \"Bạn thao tác quá nhanh, vui lòng thử lại sau ít phút.\"].find((t) => html.includes(t)) || '(không có thông báo)';",
+                  "",
+                  "const email = pm.request.body.urlencoded.get('email');",
+                  "pm.collectionVariables.set('nl_email', email);",
+                  "pm.collectionVariables.set('nl_email_q', encodeURIComponent(email));",
+                  "const at = email.lastIndexOf('@');",
+                  "const labels = email.slice(at + 1).split('.').slice(0, -1).map((l) => l.length).join(', ');",
+                  "",
+                  "pm.test(\"TC-NL-09 | Dữ liệu đúng thiết kế: tổng 5, trước @ 1, nhãn 1\", function () {",
+                  "ok(email.length === 5 && at === 1 && labels === '1', 'Thực tế: tổng ' + email.length + ', trước @ ' + at + ', nhãn ' + labels);",
+                  "});",
+                  "",
+                  "pm.test(\"TC-NL-09 | Không lỗi server (200 sau khi chuyển hướng)\", function () {",
+                  "ok(pm.response.code === 200, 'Mong đợi HTTP 200, thực tế ' + pm.response.code);",
+                  "});",
+                  "",
+                  "pm.test(\"TC-NL-09 | Không hợp lệ: hiển thị \\\"Email không hợp lệ, vui lòng kiểm tra lại.\\\"\", function () {",
+                  "ok(html.includes(\"Email không hợp lệ, vui lòng kiểm tra lại.\"), 'Thực tế hiển thị: ' + shown());",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "TC-NL-09.2 Kiểm tra admin - email không được lưu",
+          "protocolProfileBehavior": {
+            "followRedirects": false
+          },
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{base_url}}/admin/contact/newslettersubscriber/?q={{nl_email_q}}"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const html = pm.response.text();",
+                  "const ok = (c, m) => { if (!c) { throw new Error(m); } };",
+                  "const cv = (k) => pm.collectionVariables.get(k);",
+                  "const loc = () => pm.response.headers.get('Location') || '';",
+                  "// Lấy id các dòng trong trang admin Đăng ký nhận tin có email trùng khớp chính xác",
+                  "const findIds = (page, email) => { const ids = []; const re = /newslettersubscriber\\/(\\d+)\\/change\\/[^\"]*\">([^<]*)<\\/a>/g; let mm; while ((mm = re.exec(page))) { if (mm[2] === email) { ids.push(mm[1]); } } return ids; };",
+                  "const shown = () => [\"Đăng ký nhận tin thành công. Cảm ơn bạn!\", \"Email này đã đăng ký nhận tin trước đó.\", \"Email không hợp lệ, vui lòng kiểm tra lại.\", \"Nếu email hợp lệ, chúng tôi đã gửi thư xác nhận. Vui lòng kiểm tra hộp thư để hoàn tất đăng ký.\", \"Bạn thao tác quá nhanh, vui lòng thử lại sau ít phút.\"].find((t) => html.includes(t)) || '(không có thông báo)';",
+                  "",
+                  "const ids = findIds(html, cv('nl_email'));",
+                  "",
+                  "pm.test(\"TC-NL-09 | Mở được trang admin (200)\", function () {",
+                  "ok(pm.response.code === 200, 'HTTP ' + pm.response.code);",
+                  "});",
+                  "",
+                  "pm.test(\"TC-NL-09 | Admin: email KHÔNG được lưu\", function () {",
+                  "ok(ids.length === 0, 'Email bị lưu vào DB (id ' + ids.join(', ') + ')');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "TC-NL-10.1 [X2] Tổng độ dài lớn hơn max (max+) (255 ký tự)",
+          "protocolProfileBehavior": {
+            "followRedirects": true
+          },
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": "{{base_url}}/contact/newsletter/",
+            "body": {
+              "mode": "urlencoded",
+              "urlencoded": [
+                {
+                  "key": "email",
+                  "value": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa@bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb.bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb.bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb.vn",
+                  "type": "text"
+                },
+                {
+                  "key": "next",
+                  "value": "/",
+                  "type": "text"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const html = pm.response.text();",
+                  "const ok = (c, m) => { if (!c) { throw new Error(m); } };",
+                  "const cv = (k) => pm.collectionVariables.get(k);",
+                  "const loc = () => pm.response.headers.get('Location') || '';",
+                  "// Lấy id các dòng trong trang admin Đăng ký nhận tin có email trùng khớp chính xác",
+                  "const findIds = (page, email) => { const ids = []; const re = /newslettersubscriber\\/(\\d+)\\/change\\/[^\"]*\">([^<]*)<\\/a>/g; let mm; while ((mm = re.exec(page))) { if (mm[2] === email) { ids.push(mm[1]); } } return ids; };",
+                  "const shown = () => [\"Đăng ký nhận tin thành công. Cảm ơn bạn!\", \"Email này đã đăng ký nhận tin trước đó.\", \"Email không hợp lệ, vui lòng kiểm tra lại.\", \"Nếu email hợp lệ, chúng tôi đã gửi thư xác nhận. Vui lòng kiểm tra hộp thư để hoàn tất đăng ký.\", \"Bạn thao tác quá nhanh, vui lòng thử lại sau ít phút.\"].find((t) => html.includes(t)) || '(không có thông báo)';",
+                  "",
+                  "const email = pm.request.body.urlencoded.get('email');",
+                  "pm.collectionVariables.set('nl_email', email);",
+                  "pm.collectionVariables.set('nl_email_q', encodeURIComponent(email));",
+                  "const at = email.lastIndexOf('@');",
+                  "const labels = email.slice(at + 1).split('.').slice(0, -1).map((l) => l.length).join(', ');",
+                  "",
+                  "pm.test(\"TC-NL-10 | Dữ liệu đúng thiết kế: tổng 255, trước @ 64, nhãn 63, 63, 59\", function () {",
+                  "ok(email.length === 255 && at === 64 && labels === '63, 63, 59', 'Thực tế: tổng ' + email.length + ', trước @ ' + at + ', nhãn ' + labels);",
+                  "});",
+                  "",
+                  "pm.test(\"TC-NL-10 | Không lỗi server (200 sau khi chuyển hướng)\", function () {",
+                  "ok(pm.response.code === 200, 'Mong đợi HTTP 200, thực tế ' + pm.response.code);",
+                  "});",
+                  "",
+                  "pm.test(\"TC-NL-10 | Không hợp lệ: hiển thị \\\"Email không hợp lệ, vui lòng kiểm tra lại.\\\"\", function () {",
+                  "ok(html.includes(\"Email không hợp lệ, vui lòng kiểm tra lại.\"), 'Thực tế hiển thị: ' + shown());",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "TC-NL-10.2 Kiểm tra admin - email không được lưu",
+          "protocolProfileBehavior": {
+            "followRedirects": false
+          },
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{base_url}}/admin/contact/newslettersubscriber/?q={{nl_email_q}}"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const html = pm.response.text();",
+                  "const ok = (c, m) => { if (!c) { throw new Error(m); } };",
+                  "const cv = (k) => pm.collectionVariables.get(k);",
+                  "const loc = () => pm.response.headers.get('Location') || '';",
+                  "// Lấy id các dòng trong trang admin Đăng ký nhận tin có email trùng khớp chính xác",
+                  "const findIds = (page, email) => { const ids = []; const re = /newslettersubscriber\\/(\\d+)\\/change\\/[^\"]*\">([^<]*)<\\/a>/g; let mm; while ((mm = re.exec(page))) { if (mm[2] === email) { ids.push(mm[1]); } } return ids; };",
+                  "const shown = () => [\"Đăng ký nhận tin thành công. Cảm ơn bạn!\", \"Email này đã đăng ký nhận tin trước đó.\", \"Email không hợp lệ, vui lòng kiểm tra lại.\", \"Nếu email hợp lệ, chúng tôi đã gửi thư xác nhận. Vui lòng kiểm tra hộp thư để hoàn tất đăng ký.\", \"Bạn thao tác quá nhanh, vui lòng thử lại sau ít phút.\"].find((t) => html.includes(t)) || '(không có thông báo)';",
+                  "",
+                  "const ids = findIds(html, cv('nl_email'));",
+                  "",
+                  "pm.test(\"TC-NL-10 | Mở được trang admin (200)\", function () {",
+                  "ok(pm.response.code === 200, 'HTTP ' + pm.response.code);",
+                  "});",
+                  "",
+                  "pm.test(\"TC-NL-10 | Admin: email KHÔNG được lưu\", function () {",
+                  "ok(ids.length === 0, 'Email bị lưu vào DB (id ' + ids.join(', ') + ')');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "TC-NL-11.1 [X2] Tái hiện SCRUM-36 - email 300 ký tự (300 ký tự)",
+          "protocolProfileBehavior": {
+            "followRedirects": true
+          },
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": "{{base_url}}/contact/newsletter/",
+            "body": {
+              "mode": "urlencoded",
+              "urlencoded": [
+                {
+                  "key": "email",
+                  "value": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa@bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb.bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb.bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb.bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb.vn",
+                  "type": "text"
+                },
+                {
+                  "key": "next",
+                  "value": "/",
+                  "type": "text"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const html = pm.response.text();",
+                  "const ok = (c, m) => { if (!c) { throw new Error(m); } };",
+                  "const cv = (k) => pm.collectionVariables.get(k);",
+                  "const loc = () => pm.response.headers.get('Location') || '';",
+                  "// Lấy id các dòng trong trang admin Đăng ký nhận tin có email trùng khớp chính xác",
+                  "const findIds = (page, email) => { const ids = []; const re = /newslettersubscriber\\/(\\d+)\\/change\\/[^\"]*\">([^<]*)<\\/a>/g; let mm; while ((mm = re.exec(page))) { if (mm[2] === email) { ids.push(mm[1]); } } return ids; };",
+                  "const shown = () => [\"Đăng ký nhận tin thành công. Cảm ơn bạn!\", \"Email này đã đăng ký nhận tin trước đó.\", \"Email không hợp lệ, vui lòng kiểm tra lại.\", \"Nếu email hợp lệ, chúng tôi đã gửi thư xác nhận. Vui lòng kiểm tra hộp thư để hoàn tất đăng ký.\", \"Bạn thao tác quá nhanh, vui lòng thử lại sau ít phút.\"].find((t) => html.includes(t)) || '(không có thông báo)';",
+                  "",
+                  "const email = pm.request.body.urlencoded.get('email');",
+                  "pm.collectionVariables.set('nl_email', email);",
+                  "pm.collectionVariables.set('nl_email_q', encodeURIComponent(email));",
+                  "const at = email.lastIndexOf('@');",
+                  "const labels = email.slice(at + 1).split('.').slice(0, -1).map((l) => l.length).join(', ');",
+                  "",
+                  "pm.test(\"TC-NL-11 | Dữ liệu đúng thiết kế: tổng 300, trước @ 64, nhãn 63, 63, 63, 40\", function () {",
+                  "ok(email.length === 300 && at === 64 && labels === '63, 63, 63, 40', 'Thực tế: tổng ' + email.length + ', trước @ ' + at + ', nhãn ' + labels);",
+                  "});",
+                  "",
+                  "pm.test(\"TC-NL-11 | Không lỗi server (200 sau khi chuyển hướng)\", function () {",
+                  "ok(pm.response.code === 200, 'Mong đợi HTTP 200, thực tế ' + pm.response.code);",
+                  "});",
+                  "",
+                  "pm.test(\"TC-NL-11 | Không hợp lệ: hiển thị \\\"Email không hợp lệ, vui lòng kiểm tra lại.\\\"\", function () {",
+                  "ok(html.includes(\"Email không hợp lệ, vui lòng kiểm tra lại.\"), 'Thực tế hiển thị: ' + shown());",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "TC-NL-11.2 Kiểm tra admin - email không được lưu",
+          "protocolProfileBehavior": {
+            "followRedirects": false
+          },
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{base_url}}/admin/contact/newslettersubscriber/?q={{nl_email_q}}"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const html = pm.response.text();",
+                  "const ok = (c, m) => { if (!c) { throw new Error(m); } };",
+                  "const cv = (k) => pm.collectionVariables.get(k);",
+                  "const loc = () => pm.response.headers.get('Location') || '';",
+                  "// Lấy id các dòng trong trang admin Đăng ký nhận tin có email trùng khớp chính xác",
+                  "const findIds = (page, email) => { const ids = []; const re = /newslettersubscriber\\/(\\d+)\\/change\\/[^\"]*\">([^<]*)<\\/a>/g; let mm; while ((mm = re.exec(page))) { if (mm[2] === email) { ids.push(mm[1]); } } return ids; };",
+                  "const shown = () => [\"Đăng ký nhận tin thành công. Cảm ơn bạn!\", \"Email này đã đăng ký nhận tin trước đó.\", \"Email không hợp lệ, vui lòng kiểm tra lại.\", \"Nếu email hợp lệ, chúng tôi đã gửi thư xác nhận. Vui lòng kiểm tra hộp thư để hoàn tất đăng ký.\", \"Bạn thao tác quá nhanh, vui lòng thử lại sau ít phút.\"].find((t) => html.includes(t)) || '(không có thông báo)';",
+                  "",
+                  "const ids = findIds(html, cv('nl_email'));",
+                  "",
+                  "pm.test(\"TC-NL-11 | Mở được trang admin (200)\", function () {",
+                  "ok(pm.response.code === 200, 'HTTP ' + pm.response.code);",
+                  "});",
+                  "",
+                  "pm.test(\"TC-NL-11 | Admin: email KHÔNG được lưu\", function () {",
+                  "ok(ids.length === 0, 'Email bị lưu vào DB (id ' + ids.join(', ') + ')');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "TC-NL-12.1 [X3] Phần trước @ rỗng (min-) (13 ký tự)",
+          "protocolProfileBehavior": {
+            "followRedirects": true
+          },
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": "{{base_url}}/contact/newsletter/",
+            "body": {
+              "mode": "urlencoded",
+              "urlencoded": [
+                {
+                  "key": "email",
+                  "value": "@greenshop.vn",
+                  "type": "text"
+                },
+                {
+                  "key": "next",
+                  "value": "/",
+                  "type": "text"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const html = pm.response.text();",
+                  "const ok = (c, m) => { if (!c) { throw new Error(m); } };",
+                  "const cv = (k) => pm.collectionVariables.get(k);",
+                  "const loc = () => pm.response.headers.get('Location') || '';",
+                  "// Lấy id các dòng trong trang admin Đăng ký nhận tin có email trùng khớp chính xác",
+                  "const findIds = (page, email) => { const ids = []; const re = /newslettersubscriber\\/(\\d+)\\/change\\/[^\"]*\">([^<]*)<\\/a>/g; let mm; while ((mm = re.exec(page))) { if (mm[2] === email) { ids.push(mm[1]); } } return ids; };",
+                  "const shown = () => [\"Đăng ký nhận tin thành công. Cảm ơn bạn!\", \"Email này đã đăng ký nhận tin trước đó.\", \"Email không hợp lệ, vui lòng kiểm tra lại.\", \"Nếu email hợp lệ, chúng tôi đã gửi thư xác nhận. Vui lòng kiểm tra hộp thư để hoàn tất đăng ký.\", \"Bạn thao tác quá nhanh, vui lòng thử lại sau ít phút.\"].find((t) => html.includes(t)) || '(không có thông báo)';",
+                  "",
+                  "const email = pm.request.body.urlencoded.get('email');",
+                  "pm.collectionVariables.set('nl_email', email);",
+                  "pm.collectionVariables.set('nl_email_q', encodeURIComponent(email));",
+                  "const at = email.lastIndexOf('@');",
+                  "const labels = email.slice(at + 1).split('.').slice(0, -1).map((l) => l.length).join(', ');",
+                  "",
+                  "pm.test(\"TC-NL-12 | Dữ liệu đúng thiết kế: tổng 13, trước @ 0, nhãn 9\", function () {",
+                  "ok(email.length === 13 && at === 0 && labels === '9', 'Thực tế: tổng ' + email.length + ', trước @ ' + at + ', nhãn ' + labels);",
+                  "});",
+                  "",
+                  "pm.test(\"TC-NL-12 | Không lỗi server (200 sau khi chuyển hướng)\", function () {",
+                  "ok(pm.response.code === 200, 'Mong đợi HTTP 200, thực tế ' + pm.response.code);",
+                  "});",
+                  "",
+                  "pm.test(\"TC-NL-12 | Không hợp lệ: hiển thị \\\"Email không hợp lệ, vui lòng kiểm tra lại.\\\"\", function () {",
+                  "ok(html.includes(\"Email không hợp lệ, vui lòng kiểm tra lại.\"), 'Thực tế hiển thị: ' + shown());",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "TC-NL-12.2 Kiểm tra admin - email không được lưu",
+          "protocolProfileBehavior": {
+            "followRedirects": false
+          },
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{base_url}}/admin/contact/newslettersubscriber/?q={{nl_email_q}}"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const html = pm.response.text();",
+                  "const ok = (c, m) => { if (!c) { throw new Error(m); } };",
+                  "const cv = (k) => pm.collectionVariables.get(k);",
+                  "const loc = () => pm.response.headers.get('Location') || '';",
+                  "// Lấy id các dòng trong trang admin Đăng ký nhận tin có email trùng khớp chính xác",
+                  "const findIds = (page, email) => { const ids = []; const re = /newslettersubscriber\\/(\\d+)\\/change\\/[^\"]*\">([^<]*)<\\/a>/g; let mm; while ((mm = re.exec(page))) { if (mm[2] === email) { ids.push(mm[1]); } } return ids; };",
+                  "const shown = () => [\"Đăng ký nhận tin thành công. Cảm ơn bạn!\", \"Email này đã đăng ký nhận tin trước đó.\", \"Email không hợp lệ, vui lòng kiểm tra lại.\", \"Nếu email hợp lệ, chúng tôi đã gửi thư xác nhận. Vui lòng kiểm tra hộp thư để hoàn tất đăng ký.\", \"Bạn thao tác quá nhanh, vui lòng thử lại sau ít phút.\"].find((t) => html.includes(t)) || '(không có thông báo)';",
+                  "",
+                  "const ids = findIds(html, cv('nl_email'));",
+                  "",
+                  "pm.test(\"TC-NL-12 | Mở được trang admin (200)\", function () {",
+                  "ok(pm.response.code === 200, 'HTTP ' + pm.response.code);",
+                  "});",
+                  "",
+                  "pm.test(\"TC-NL-12 | Admin: email KHÔNG được lưu\", function () {",
+                  "ok(ids.length === 0, 'Email bị lưu vào DB (id ' + ids.join(', ') + ')');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "TC-NL-13.1 [X4] Phần trước @ lớn hơn max (max+) (78 ký tự)",
+          "protocolProfileBehavior": {
+            "followRedirects": true
+          },
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": "{{base_url}}/contact/newsletter/",
+            "body": {
+              "mode": "urlencoded",
+              "urlencoded": [
+                {
+                  "key": "email",
+                  "value": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa@greenshop.vn",
+                  "type": "text"
+                },
+                {
+                  "key": "next",
+                  "value": "/",
+                  "type": "text"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const html = pm.response.text();",
+                  "const ok = (c, m) => { if (!c) { throw new Error(m); } };",
+                  "const cv = (k) => pm.collectionVariables.get(k);",
+                  "const loc = () => pm.response.headers.get('Location') || '';",
+                  "// Lấy id các dòng trong trang admin Đăng ký nhận tin có email trùng khớp chính xác",
+                  "const findIds = (page, email) => { const ids = []; const re = /newslettersubscriber\\/(\\d+)\\/change\\/[^\"]*\">([^<]*)<\\/a>/g; let mm; while ((mm = re.exec(page))) { if (mm[2] === email) { ids.push(mm[1]); } } return ids; };",
+                  "const shown = () => [\"Đăng ký nhận tin thành công. Cảm ơn bạn!\", \"Email này đã đăng ký nhận tin trước đó.\", \"Email không hợp lệ, vui lòng kiểm tra lại.\", \"Nếu email hợp lệ, chúng tôi đã gửi thư xác nhận. Vui lòng kiểm tra hộp thư để hoàn tất đăng ký.\", \"Bạn thao tác quá nhanh, vui lòng thử lại sau ít phút.\"].find((t) => html.includes(t)) || '(không có thông báo)';",
+                  "",
+                  "const email = pm.request.body.urlencoded.get('email');",
+                  "pm.collectionVariables.set('nl_email', email);",
+                  "pm.collectionVariables.set('nl_email_q', encodeURIComponent(email));",
+                  "const at = email.lastIndexOf('@');",
+                  "const labels = email.slice(at + 1).split('.').slice(0, -1).map((l) => l.length).join(', ');",
+                  "",
+                  "pm.test(\"TC-NL-13 | Dữ liệu đúng thiết kế: tổng 78, trước @ 65, nhãn 9\", function () {",
+                  "ok(email.length === 78 && at === 65 && labels === '9', 'Thực tế: tổng ' + email.length + ', trước @ ' + at + ', nhãn ' + labels);",
+                  "});",
+                  "",
+                  "pm.test(\"TC-NL-13 | Không lỗi server (200 sau khi chuyển hướng)\", function () {",
+                  "ok(pm.response.code === 200, 'Mong đợi HTTP 200, thực tế ' + pm.response.code);",
+                  "});",
+                  "",
+                  "pm.test(\"TC-NL-13 | Không hợp lệ: hiển thị \\\"Email không hợp lệ, vui lòng kiểm tra lại.\\\"\", function () {",
+                  "ok(html.includes(\"Email không hợp lệ, vui lòng kiểm tra lại.\"), 'Thực tế hiển thị: ' + shown());",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "TC-NL-13.2 Kiểm tra admin - email không được lưu",
+          "protocolProfileBehavior": {
+            "followRedirects": false
+          },
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{base_url}}/admin/contact/newslettersubscriber/?q={{nl_email_q}}"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const html = pm.response.text();",
+                  "const ok = (c, m) => { if (!c) { throw new Error(m); } };",
+                  "const cv = (k) => pm.collectionVariables.get(k);",
+                  "const loc = () => pm.response.headers.get('Location') || '';",
+                  "// Lấy id các dòng trong trang admin Đăng ký nhận tin có email trùng khớp chính xác",
+                  "const findIds = (page, email) => { const ids = []; const re = /newslettersubscriber\\/(\\d+)\\/change\\/[^\"]*\">([^<]*)<\\/a>/g; let mm; while ((mm = re.exec(page))) { if (mm[2] === email) { ids.push(mm[1]); } } return ids; };",
+                  "const shown = () => [\"Đăng ký nhận tin thành công. Cảm ơn bạn!\", \"Email này đã đăng ký nhận tin trước đó.\", \"Email không hợp lệ, vui lòng kiểm tra lại.\", \"Nếu email hợp lệ, chúng tôi đã gửi thư xác nhận. Vui lòng kiểm tra hộp thư để hoàn tất đăng ký.\", \"Bạn thao tác quá nhanh, vui lòng thử lại sau ít phút.\"].find((t) => html.includes(t)) || '(không có thông báo)';",
+                  "",
+                  "const ids = findIds(html, cv('nl_email'));",
+                  "",
+                  "pm.test(\"TC-NL-13 | Mở được trang admin (200)\", function () {",
+                  "ok(pm.response.code === 200, 'HTTP ' + pm.response.code);",
+                  "});",
+                  "",
+                  "pm.test(\"TC-NL-13 | Admin: email KHÔNG được lưu\", function () {",
+                  "ok(ids.length === 0, 'Email bị lưu vào DB (id ' + ids.join(', ') + ')');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "TC-NL-14.1 [X5] Nhãn tên miền rỗng (min-) (8 ký tự)",
+          "protocolProfileBehavior": {
+            "followRedirects": true
+          },
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": "{{base_url}}/contact/newsletter/",
+            "body": {
+              "mode": "urlencoded",
+              "urlencoded": [
+                {
+                  "key": "email",
+                  "value": "user@.vn",
+                  "type": "text"
+                },
+                {
+                  "key": "next",
+                  "value": "/",
+                  "type": "text"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const html = pm.response.text();",
+                  "const ok = (c, m) => { if (!c) { throw new Error(m); } };",
+                  "const cv = (k) => pm.collectionVariables.get(k);",
+                  "const loc = () => pm.response.headers.get('Location') || '';",
+                  "// Lấy id các dòng trong trang admin Đăng ký nhận tin có email trùng khớp chính xác",
+                  "const findIds = (page, email) => { const ids = []; const re = /newslettersubscriber\\/(\\d+)\\/change\\/[^\"]*\">([^<]*)<\\/a>/g; let mm; while ((mm = re.exec(page))) { if (mm[2] === email) { ids.push(mm[1]); } } return ids; };",
+                  "const shown = () => [\"Đăng ký nhận tin thành công. Cảm ơn bạn!\", \"Email này đã đăng ký nhận tin trước đó.\", \"Email không hợp lệ, vui lòng kiểm tra lại.\", \"Nếu email hợp lệ, chúng tôi đã gửi thư xác nhận. Vui lòng kiểm tra hộp thư để hoàn tất đăng ký.\", \"Bạn thao tác quá nhanh, vui lòng thử lại sau ít phút.\"].find((t) => html.includes(t)) || '(không có thông báo)';",
+                  "",
+                  "const email = pm.request.body.urlencoded.get('email');",
+                  "pm.collectionVariables.set('nl_email', email);",
+                  "pm.collectionVariables.set('nl_email_q', encodeURIComponent(email));",
+                  "const at = email.lastIndexOf('@');",
+                  "const labels = email.slice(at + 1).split('.').slice(0, -1).map((l) => l.length).join(', ');",
+                  "",
+                  "pm.test(\"TC-NL-14 | Dữ liệu đúng thiết kế: tổng 8, trước @ 4, nhãn 0\", function () {",
+                  "ok(email.length === 8 && at === 4 && labels === '0', 'Thực tế: tổng ' + email.length + ', trước @ ' + at + ', nhãn ' + labels);",
+                  "});",
+                  "",
+                  "pm.test(\"TC-NL-14 | Không lỗi server (200 sau khi chuyển hướng)\", function () {",
+                  "ok(pm.response.code === 200, 'Mong đợi HTTP 200, thực tế ' + pm.response.code);",
+                  "});",
+                  "",
+                  "pm.test(\"TC-NL-14 | Không hợp lệ: hiển thị \\\"Email không hợp lệ, vui lòng kiểm tra lại.\\\"\", function () {",
+                  "ok(html.includes(\"Email không hợp lệ, vui lòng kiểm tra lại.\"), 'Thực tế hiển thị: ' + shown());",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "TC-NL-14.2 Kiểm tra admin - email không được lưu",
+          "protocolProfileBehavior": {
+            "followRedirects": false
+          },
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{base_url}}/admin/contact/newslettersubscriber/?q={{nl_email_q}}"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const html = pm.response.text();",
+                  "const ok = (c, m) => { if (!c) { throw new Error(m); } };",
+                  "const cv = (k) => pm.collectionVariables.get(k);",
+                  "const loc = () => pm.response.headers.get('Location') || '';",
+                  "// Lấy id các dòng trong trang admin Đăng ký nhận tin có email trùng khớp chính xác",
+                  "const findIds = (page, email) => { const ids = []; const re = /newslettersubscriber\\/(\\d+)\\/change\\/[^\"]*\">([^<]*)<\\/a>/g; let mm; while ((mm = re.exec(page))) { if (mm[2] === email) { ids.push(mm[1]); } } return ids; };",
+                  "const shown = () => [\"Đăng ký nhận tin thành công. Cảm ơn bạn!\", \"Email này đã đăng ký nhận tin trước đó.\", \"Email không hợp lệ, vui lòng kiểm tra lại.\", \"Nếu email hợp lệ, chúng tôi đã gửi thư xác nhận. Vui lòng kiểm tra hộp thư để hoàn tất đăng ký.\", \"Bạn thao tác quá nhanh, vui lòng thử lại sau ít phút.\"].find((t) => html.includes(t)) || '(không có thông báo)';",
+                  "",
+                  "const ids = findIds(html, cv('nl_email'));",
+                  "",
+                  "pm.test(\"TC-NL-14 | Mở được trang admin (200)\", function () {",
+                  "ok(pm.response.code === 200, 'HTTP ' + pm.response.code);",
+                  "});",
+                  "",
+                  "pm.test(\"TC-NL-14 | Admin: email KHÔNG được lưu\", function () {",
+                  "ok(ids.length === 0, 'Email bị lưu vào DB (id ' + ids.join(', ') + ')');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "TC-NL-15.1 [X6] Nhãn tên miền lớn hơn max (max+) (72 ký tự)",
+          "protocolProfileBehavior": {
+            "followRedirects": true
+          },
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": "{{base_url}}/contact/newsletter/",
+            "body": {
+              "mode": "urlencoded",
+              "urlencoded": [
+                {
+                  "key": "email",
+                  "value": "user@gggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggg.vn",
+                  "type": "text"
+                },
+                {
+                  "key": "next",
+                  "value": "/",
+                  "type": "text"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const html = pm.response.text();",
+                  "const ok = (c, m) => { if (!c) { throw new Error(m); } };",
+                  "const cv = (k) => pm.collectionVariables.get(k);",
+                  "const loc = () => pm.response.headers.get('Location') || '';",
+                  "// Lấy id các dòng trong trang admin Đăng ký nhận tin có email trùng khớp chính xác",
+                  "const findIds = (page, email) => { const ids = []; const re = /newslettersubscriber\\/(\\d+)\\/change\\/[^\"]*\">([^<]*)<\\/a>/g; let mm; while ((mm = re.exec(page))) { if (mm[2] === email) { ids.push(mm[1]); } } return ids; };",
+                  "const shown = () => [\"Đăng ký nhận tin thành công. Cảm ơn bạn!\", \"Email này đã đăng ký nhận tin trước đó.\", \"Email không hợp lệ, vui lòng kiểm tra lại.\", \"Nếu email hợp lệ, chúng tôi đã gửi thư xác nhận. Vui lòng kiểm tra hộp thư để hoàn tất đăng ký.\", \"Bạn thao tác quá nhanh, vui lòng thử lại sau ít phút.\"].find((t) => html.includes(t)) || '(không có thông báo)';",
+                  "",
+                  "const email = pm.request.body.urlencoded.get('email');",
+                  "pm.collectionVariables.set('nl_email', email);",
+                  "pm.collectionVariables.set('nl_email_q', encodeURIComponent(email));",
+                  "const at = email.lastIndexOf('@');",
+                  "const labels = email.slice(at + 1).split('.').slice(0, -1).map((l) => l.length).join(', ');",
+                  "",
+                  "pm.test(\"TC-NL-15 | Dữ liệu đúng thiết kế: tổng 72, trước @ 4, nhãn 64\", function () {",
+                  "ok(email.length === 72 && at === 4 && labels === '64', 'Thực tế: tổng ' + email.length + ', trước @ ' + at + ', nhãn ' + labels);",
+                  "});",
+                  "",
+                  "pm.test(\"TC-NL-15 | Không lỗi server (200 sau khi chuyển hướng)\", function () {",
+                  "ok(pm.response.code === 200, 'Mong đợi HTTP 200, thực tế ' + pm.response.code);",
+                  "});",
+                  "",
+                  "pm.test(\"TC-NL-15 | Không hợp lệ: hiển thị \\\"Email không hợp lệ, vui lòng kiểm tra lại.\\\"\", function () {",
+                  "ok(html.includes(\"Email không hợp lệ, vui lòng kiểm tra lại.\"), 'Thực tế hiển thị: ' + shown());",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "TC-NL-15.2 Kiểm tra admin - email không được lưu",
+          "protocolProfileBehavior": {
+            "followRedirects": false
+          },
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{base_url}}/admin/contact/newslettersubscriber/?q={{nl_email_q}}"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const html = pm.response.text();",
+                  "const ok = (c, m) => { if (!c) { throw new Error(m); } };",
+                  "const cv = (k) => pm.collectionVariables.get(k);",
+                  "const loc = () => pm.response.headers.get('Location') || '';",
+                  "// Lấy id các dòng trong trang admin Đăng ký nhận tin có email trùng khớp chính xác",
+                  "const findIds = (page, email) => { const ids = []; const re = /newslettersubscriber\\/(\\d+)\\/change\\/[^\"]*\">([^<]*)<\\/a>/g; let mm; while ((mm = re.exec(page))) { if (mm[2] === email) { ids.push(mm[1]); } } return ids; };",
+                  "const shown = () => [\"Đăng ký nhận tin thành công. Cảm ơn bạn!\", \"Email này đã đăng ký nhận tin trước đó.\", \"Email không hợp lệ, vui lòng kiểm tra lại.\", \"Nếu email hợp lệ, chúng tôi đã gửi thư xác nhận. Vui lòng kiểm tra hộp thư để hoàn tất đăng ký.\", \"Bạn thao tác quá nhanh, vui lòng thử lại sau ít phút.\"].find((t) => html.includes(t)) || '(không có thông báo)';",
+                  "",
+                  "const ids = findIds(html, cv('nl_email'));",
+                  "",
+                  "pm.test(\"TC-NL-15 | Mở được trang admin (200)\", function () {",
+                  "ok(pm.response.code === 200, 'HTTP ' + pm.response.code);",
+                  "});",
+                  "",
+                  "pm.test(\"TC-NL-15 | Admin: email KHÔNG được lưu\", function () {",
+                  "ok(ids.length === 0, 'Email bị lưu vào DB (id ' + ids.join(', ') + ')');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "99. Dọn dữ liệu",
+      "description": "Xóa email test vừa tạo và đăng xuất admin.",
+      "item": [
+        {
+          "name": "99.1 [setup] Xóa email test vừa tạo",
+          "protocolProfileBehavior": {
+            "followRedirects": false
+          },
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{base_url}}/admin/contact/newslettersubscriber/"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const html = pm.response.text();",
+                  "const ok = (c, m) => { if (!c) { throw new Error(m); } };",
+                  "const cv = (k) => pm.collectionVariables.get(k);",
+                  "const loc = () => pm.response.headers.get('Location') || '';",
+                  "// Lấy id các dòng trong trang admin Đăng ký nhận tin có email trùng khớp chính xác",
+                  "const findIds = (page, email) => { const ids = []; const re = /newslettersubscriber\\/(\\d+)\\/change\\/[^\"]*\">([^<]*)<\\/a>/g; let mm; while ((mm = re.exec(page))) { if (mm[2] === email) { ids.push(mm[1]); } } return ids; };",
+                  "const shown = () => [\"Đăng ký nhận tin thành công. Cảm ơn bạn!\", \"Email này đã đăng ký nhận tin trước đó.\", \"Email không hợp lệ, vui lòng kiểm tra lại.\", \"Nếu email hợp lệ, chúng tôi đã gửi thư xác nhận. Vui lòng kiểm tra hộp thư để hoàn tất đăng ký.\", \"Bạn thao tác quá nhanh, vui lòng thử lại sau ít phút.\"].find((t) => html.includes(t)) || '(không có thông báo)';",
+                  "",
+                  "pm.test(\"SETUP | Mở được trang admin Đăng ký nhận tin (200)\", function () {",
+                  "ok(pm.response.code === 200 && html.includes('newslettersubscriber'), 'HTTP ' + pm.response.code + ' – kiểm tra bước đăng nhập admin');",
+                  "});",
+                  "",
+                  "// Tìm từng email test trong admin, email nào còn sót thì xóa (POST /<id>/delete/ với post=yes).",
+                  "// Chạy tuần tự từng request: SQLite báo \"database is locked\" nếu xóa song song.",
+                  "const EMAILS = [\"a@b.vn\", \"ab@b.vn\", \"a@gs.vn\", \"khachhang@greenshop.vn\", \"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa@greenshop.vn\", \"user@gggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggg.vn\", \"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa@bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb.bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb.bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb.vn\", \"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa@bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb.bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb.bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb.vn\", \"a@b.v\", \"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa@bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb.bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb.bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb.vn\", \"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa@bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb.bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb.bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb.bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb.vn\", \"@greenshop.vn\", \"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa@greenshop.vn\", \"user@.vn\", \"user@gggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggg.vn\"];",
+                  "const base = pm.variables.replaceIn('{{base_url}}');",
+                  "const token = cv('csrf_cookie');",
+                  "const deleted = [], errors = [];",
+                  "const send = (req) => new Promise((resolve) => pm.sendRequest(req, (err, res) => resolve(err ? null : res)));",
+                  "(async () => {",
+                  "    for (const email of EMAILS) {",
+                  "        const res = await send(base + '/admin/contact/newslettersubscriber/?q=' + encodeURIComponent(email));",
+                  "        if (!res || res.code !== 200) { errors.push('Không tìm được email ' + email.length + ' ký tự'); continue; }",
+                  "        for (const id of findIds(res.text(), email)) {",
+                  "            const r2 = await send({",
+                  "                url: base + '/admin/contact/newslettersubscriber/' + id + '/delete/',",
+                  "                method: 'POST',",
+                  "                header: { 'X-CSRFToken': token, 'Referer': base + '/' },",
+                  "                body: { mode: 'urlencoded', urlencoded: [{ key: 'post', value: 'yes' }] },",
+                  "            });",
+                  "            // Xóa xong admin chuyển hướng về danh sách; sendRequest tự đi theo redirect nên nhận 200",
+                  "            if (r2 && (r2.code === 302 || r2.code === 200) && !findIds(r2.text(), email).length) { deleted.push(id); } else { errors.push('Xóa id ' + id + ' lỗi (HTTP ' + (r2 ? r2.code : '?') + ')'); }",
+                  "        }",
+                  "    }",
+                  "    pm.test('SETUP | Đã xóa ' + deleted.length + ' email test còn sót', function () {",
+                  "    ok(errors.length === 0, errors.join('; '));",
+                  "    });",
+                  "})();"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "99.2 [setup] Đăng xuất admin",
+          "protocolProfileBehavior": {
+            "followRedirects": false
+          },
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": "{{base_url}}/admin/logout/",
+            "body": {
+              "mode": "urlencoded",
+              "urlencoded": [
+                {
+                  "key": "csrfmiddlewaretoken",
+                  "value": "{{csrf_token_val}}",
+                  "type": "text"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const html = pm.response.text();",
+                  "const ok = (c, m) => { if (!c) { throw new Error(m); } };",
+                  "const cv = (k) => pm.collectionVariables.get(k);",
+                  "const loc = () => pm.response.headers.get('Location') || '';",
+                  "// Lấy id các dòng trong trang admin Đăng ký nhận tin có email trùng khớp chính xác",
+                  "const findIds = (page, email) => { const ids = []; const re = /newslettersubscriber\\/(\\d+)\\/change\\/[^\"]*\">([^<]*)<\\/a>/g; let mm; while ((mm = re.exec(page))) { if (mm[2] === email) { ids.push(mm[1]); } } return ids; };",
+                  "const shown = () => [\"Đăng ký nhận tin thành công. Cảm ơn bạn!\", \"Email này đã đăng ký nhận tin trước đó.\", \"Email không hợp lệ, vui lòng kiểm tra lại.\", \"Nếu email hợp lệ, chúng tôi đã gửi thư xác nhận. Vui lòng kiểm tra hộp thư để hoàn tất đăng ký.\", \"Bạn thao tác quá nhanh, vui lòng thử lại sau ít phút.\"].find((t) => html.includes(t)) || '(không có thông báo)';",
+                  "",
+                  "pm.test(\"SETUP | Đăng xuất admin\", function () {",
+                  "ok(pm.response.code === 302 || pm.response.code === 200, 'HTTP ' + pm.response.code);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

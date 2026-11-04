@@ -1,0 +1,20 @@
+$kind: collection
+description: "Kiểm thử API/luồng Orders (Thành viên 4). Cách dùng: (1) chạy `python manage.py runserver`; (2) tạo 1 tài khoản khách hàng thường và ít nhất 1 sản phẩm; (3) sửa biến username, password, product_id; (4) chạy Runner theo thứ tự thư mục 00 → 04. Mã TC-ORD-xx trùng với docs/TestCase_FR4_Orders_EP_BVA.md."
+variables:
+  base_url: http://127.0.0.1:8000
+  username: khach_test
+  password: DoiMatKhauCuaBan@123
+  product_id: "1"
+  csrf_token: ""
+  long_name_256: ""
+  long_phone_21: ""
+  cod_order_id: ""
+  qr_order_id: ""
+  mock_order_id: ""
+  mock_order_id_2: ""
+scripts:
+  - type: http:beforeRequest
+    code: |-
+      const t = pm.cookies.get('csrftoken');
+      if (t) { pm.collectionVariables.set('csrf_token', t); }
+    language: text/javascript

@@ -1,11 +1,45 @@
-from django.shortcuts import render, redirect
-from products.models import Category
-from .forms import ContactForm, FeedbackForm
+import hashlib
+
+from django.conf import settings
+from django.core import signing
+from django.core.cache import cache
 from django.core.exceptions import ValidationError
+from django.core.mail import send_mail
 from django.core.validators import validate_email
+from django.shortcuts import render, redirect
+from django.urls import reverse
 from django.utils.http import url_has_allowed_host_and_scheme
 from django.views.decorators.http import require_POST
+
+from products.models import Category
+from .forms import ContactForm, FeedbackForm
 from .models import NewsletterSubscriber
+
+NEWSLETTER_SALT = 'newsletter-confirm'
+NEWSLETTER_TOKEN_MAX_AGE = 60 * 60 * 48      
+NEWSLETTER_IP_LIMIT = 5                      
+NEWSLETTER_IP_WINDOW = 60 * 10               
+NEWSLETTER_EMAIL_COOLDOWN = 60 * 10
+# validate_email của Django cho phép email dài tới 320 ký tự, nên tự chặn theo
+# max_length của model (254) và giới hạn phần trước @ của RFC 5321 (64).
+NEWSLETTER_EMAIL_MAX_LENGTH = NewsletterSubscriber._meta.get_field('email').max_length
+EMAIL_LOCAL_PART_MAX_LENGTH = 64
+CONTACT_IP_LIMIT = 5
+CONTACT_IP_WINDOW = 60 * 10
+CONTACT_LIMIT_MESSAGE = 'Bạn gửi quá nhanh, vui lòng thử lại sau'
+
+
+def _ip_limit_exceeded(request, scope, limit, window):
+    ip = request.META.get('REMOTE_ADDR', 'unknown')
+    ip_key = f'{scope}_ip_{ip}'
+    cache.add(ip_key, 0, window)
+    try:
+        count = cache.incr(ip_key)
+    except ValueError:
+        cache.set(ip_key, 1, window)
+        count = 1
+    return count > limit
+
 
 def contact_page(request):
     categories = Category.objects.all()
@@ -20,8 +54,11 @@ def contact_page(request):
             feedback_form = FeedbackForm()
 
             if contact_form.is_valid():
-                contact_form.save()
-                return redirect('/contact/?contact_success=1')
+                if _ip_limit_exceeded(request, 'contact', CONTACT_IP_LIMIT, CONTACT_IP_WINDOW):
+                    contact_form.add_error(None, CONTACT_LIMIT_MESSAGE)
+                else:
+                    contact_form.save()
+                    return redirect('/contact/?contact_success=1')
 
         elif form_type == 'feedback':
             feedback_form = FeedbackForm(request.POST)
@@ -35,28 +72,64 @@ def contact_page(request):
         'categories': categories,
         'contact_form': contact_form,
         'feedback_form': feedback_form,
-        'contact_success': request.GET.get('contact_success') == '1',
-        'feedback_success': request.GET.get('feedback_success') == '1',
+        'contact_success': request.method == 'GET' and request.GET.get('contact_success') == '1',
+        'feedback_success': request.method == 'GET' and request.GET.get('feedback_success') == '1',
     })
 
-@require_POST
-def newsletter_subscribe(request):
-    email = (request.POST.get('email') or '').strip().lower()
- 
+
+def _safe_next(request):
     next_url = request.POST.get('next') or '/'
     if not url_has_allowed_host_and_scheme(
         next_url, allowed_hosts={request.get_host()}, require_https=request.is_secure()
     ):
         next_url = '/'
-    next_url = next_url.split('?')[0].split('#')[0]
- 
+    return next_url.split('?')[0].split('#')[0]
+
+
+def _back(next_url, result):
+    return redirect(f'{next_url}?newsletter={result}#newsletter')
+
+
+@require_POST
+def newsletter_subscribe(request):
+    next_url = _safe_next(request)
+    email = (request.POST.get('email') or '').strip().lower()
+
     try:
         validate_email(email)
+        if (len(email) > NEWSLETTER_EMAIL_MAX_LENGTH
+                or len(email.rsplit('@', 1)[0]) > EMAIL_LOCAL_PART_MAX_LENGTH):
+            raise ValidationError('Email vượt quá độ dài cho phép.')
     except ValidationError:
-        result = 'invalid'
-    else:
-        _, created = NewsletterSubscriber.objects.get_or_create(email=email)
-        result = 'success' if created else 'exists'
- 
-    return redirect(f'{next_url}?newsletter={result}#newsletter')
- 
+        return _back(next_url, 'invalid')
+
+    if _ip_limit_exceeded(request, 'newsletter', NEWSLETTER_IP_LIMIT, NEWSLETTER_IP_WINDOW):
+        return _back(next_url, 'limited')
+
+    already = NewsletterSubscriber.objects.filter(email=email, is_confirmed=True).exists()
+    email_key = 'newsletter_mail_' + hashlib.sha256(email.encode()).hexdigest()
+    if not already and cache.add(email_key, 1, NEWSLETTER_EMAIL_COOLDOWN):
+        token = signing.dumps(email, salt=NEWSLETTER_SALT)
+        link = request.build_absolute_uri(reverse('newsletter_confirm', args=[token]))
+        send_mail(
+            'Xác nhận đăng ký nhận tin Green Shop',
+            'Cảm ơn bạn đã quan tâm đến Green Shop.\n\n'
+            f'Vui lòng bấm vào liên kết sau để xác nhận đăng ký (hiệu lực 48 giờ):\n{link}\n\n'
+            'Nếu bạn không thực hiện đăng ký này, hãy bỏ qua email.',
+            getattr(settings, 'DEFAULT_FROM_EMAIL', None),
+            [email],
+            fail_silently=True,
+        )
+    return _back(next_url, 'pending')
+
+
+def newsletter_confirm(request, token):
+    try:
+        email = signing.loads(token, salt=NEWSLETTER_SALT, max_age=NEWSLETTER_TOKEN_MAX_AGE)
+    except signing.BadSignature:
+        return _back('/', 'confirm_invalid')
+    sub, _ = NewsletterSubscriber.objects.get_or_create(email=email)
+    if not sub.is_confirmed:
+        sub.is_confirmed = True
+        sub.save(update_fields=['is_confirmed'])
+    return _back('/', 'confirmed')

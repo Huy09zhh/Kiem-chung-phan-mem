@@ -1,0 +1,4 @@
+$kind: collection
+name: "00. Chuẩn bị - CSRF, đăng nhập admin, dọn dữ liệu"
+description: "Chạy đầu tiên. Lấy cookie csrftoken, đăng nhập Django admin và xóa email test còn sót."
+order: 1000

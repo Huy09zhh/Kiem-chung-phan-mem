@@ -66,6 +66,10 @@
                         {% csrf_token %}
                         <input type="hidden" name="form_type" value="contact">
 
+                        {% if contact_form.non_field_errors %}
+                            <div class="form-error">{{ contact_form.non_field_errors.0 }}</div>
+                        {% endif %}
+
                         <div class="form-grid-2">
                             <div>
                                 {{ contact_form.name }}

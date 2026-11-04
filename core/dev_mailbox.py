@@ -1,6 +1,7 @@
 """Hộp thư dev: hiển thị các email đã "gửi" khi chưa cấu hình SMTP (filebased backend).
 
-Chỉ bật khi settings.DEV_MAILBOX_ENABLED (DEBUG=True và chưa có EMAIL_HOST_USER).
+Chỉ bật trong DEBUG với DEV_MAILBOX_ENABLED; chỉ superuser đang hoạt động
+được xem hoặc xóa vì email có thể chứa token đặt lại mật khẩu của mọi tài khoản.
 """
 import email
 import re
@@ -9,10 +10,11 @@ from email.utils import parsedate_to_datetime
 from pathlib import Path
 
 from django.conf import settings
-from django.http import Http404
+from django.http import HttpResponseNotFound
 from django.shortcuts import redirect, render
 from django.utils.html import escape
 from django.utils.safestring import mark_safe
+from django.views.decorators.cache import never_cache
 from django.views.decorators.http import require_POST
 
 SEPARATOR = b'-' * 79
@@ -53,22 +55,28 @@ def _read_messages():
     return messages
 
 
-def _ensure_enabled():
-    if not getattr(settings, 'DEV_MAILBOX_ENABLED', False):
-        raise Http404
+def _can_access(request):
+    if not settings.DEBUG or not getattr(settings, 'DEV_MAILBOX_ENABLED', False):
+        return False
+    user = request.user
+    return user.is_authenticated and user.is_active and user.is_superuser
 
 
+@never_cache
 def mailbox_view(request):
-    _ensure_enabled()
+    if not _can_access(request):
+        return HttpResponseNotFound()
     return render(request, 'core/dev_mailbox.html', {
         'messages_list': _read_messages(),
         'mailbox_dir': _mailbox_dir(),
     })
 
 
+@never_cache
 @require_POST
 def mailbox_clear_view(request):
-    _ensure_enabled()
+    if not _can_access(request):
+        return HttpResponseNotFound()
     for log_file in _mailbox_dir().glob('*.log'):
         log_file.unlink(missing_ok=True)
     return redirect('dev_mailbox')

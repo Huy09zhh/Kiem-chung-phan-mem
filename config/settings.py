@@ -198,3 +198,22 @@ BANK_QR_NAME = 'MB Bank'
 BANK_QR_BANK_ID = 'mbbank'
 BANK_QR_ACCOUNT_NAME = 'NGUYEN VAN HIEU'
 BANK_QR_ACCOUNT_NUMBER = '0382771491'
+
+AUTH_PASSWORD_VALIDATORS = [
+    {
+        'NAME': 'accounts.validators.MaximumLengthValidator',
+        'OPTIONS': {'max_length': 128},
+    },
+    {
+        'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator',
+    },
+    {
+        'NAME': 'django.contrib.auth.password_validation.MinimumLengthValidator',
+    },
+    {
+        'NAME': 'django.contrib.auth.password_validation.CommonPasswordValidator',
+    },
+    {
+        'NAME': 'django.contrib.auth.password_validation.NumericPasswordValidator',
+    },
+]

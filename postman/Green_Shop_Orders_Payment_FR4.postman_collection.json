@@ -1,0 +1,1431 @@
+{
+  "info": {
+    "_postman_id": "de517ab0-15d8-4fba-a42d-a8a44a191bc1",
+    "name": "Green Shop - Orders & Payment (FR4)",
+    "description": "Kiểm thử API/luồng Orders (Thành viên 4). Cách dùng: (1) chạy `python manage.py runserver`; (2) tạo 1 tài khoản khách hàng thường và ít nhất 1 sản phẩm; (3) sửa biến username, password, product_id; (4) chạy Runner theo thứ tự thư mục 00 → 04. Mã TC-ORD-xx trùng với docs/TestCase_FR4_Orders_EP_BVA.md.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "_exporter_id": "49894313",
+    "_collection_link": "https://go.postman.co/collection/49894313-de517ab0-15d8-4fba-a42d-a8a44a191bc1?source=collection_link"
+  },
+  "item": [
+    {
+      "name": "00. Chuẩn bị (chạy đầu tiên)",
+      "item": [
+        {
+          "name": "00.1 GET trang đăng nhập (lấy cookie csrftoken)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Trang đăng nhập 200', function () { pm.expect(pm.response.code).to.eql(200); });",
+                  "const t = pm.cookies.get('csrftoken'); if (t) { pm.collectionVariables.set('csrf_token', t); }"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/accounts/login",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "accounts",
+                "login"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "00.2 POST đăng nhập khách hàng",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const t = pm.cookies.get('csrftoken');\nif (t) { pm.collectionVariables.set('csrf_token', t); }"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Đăng nhập thành công (302)', function () { pm.expect(pm.response.code).to.eql(302); });"
+                ]
+              }
+            }
+          ],
+          "protocolProfileBehavior": {
+            "followRedirects": false
+          },
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "urlencoded",
+              "urlencoded": [
+                {
+                  "key": "csrfmiddlewaretoken",
+                  "value": "{{csrf_token}}"
+                },
+                {
+                  "key": "username",
+                  "value": "{{username}}"
+                },
+                {
+                  "key": "password",
+                  "value": "{{password}}"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{base_url}}/accounts/login/",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "accounts",
+                "login",
+                ""
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "00.3 Thêm sản phẩm vào giỏ",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Thêm SP vào giỏ → 302', function () { pm.expect(pm.response.code).to.eql(302); });"
+                ]
+              }
+            }
+          ],
+          "protocolProfileBehavior": {
+            "followRedirects": false
+          },
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/cart/add/{{product_id}}/",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "cart",
+                "add",
+                "{{product_id}}",
+                ""
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "01. FR4.1 / FR4.2 Form checkout (EP/BVA)",
+      "item": [
+        {
+          "name": "TC-ORD-06 GET checkout có đủ 3 phương thức",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "// Bảo đảm giỏ hàng có ít nhất 1 sản phẩm trước khi đặt hàng",
+                  "pm.sendRequest({ url: pm.collectionVariables.get('base_url') + '/cart/add/' + pm.collectionVariables.get('product_id') + '/', method: 'GET' }, function () {});"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Checkout 200', function () { pm.expect(pm.response.code).to.eql(200); });",
+                  "pm.test('Có radio cod, qr, mock', function () { const h = pm.response.text(); ['cod','qr','mock'].forEach(m => pm.expect(h).to.include('value=\"' + m + '\"')); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/orders/checkout",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "orders",
+                "checkout"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "TC-ORD-12 Họ tên rỗng → bị chặn",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "// Bảo đảm giỏ hàng có ít nhất 1 sản phẩm trước khi đặt hàng\npm.sendRequest({ url: pm.collectionVariables.get('base_url') + '/cart/add/' + pm.collectionVariables.get('product_id') + '/', method: 'GET' }, function () {});\nconst t = pm.cookies.get('csrftoken');\nif (t) { pm.collectionVariables.set('csrf_token', t); }"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('TC-ORD-12 | Họ tên rỗng không được tạo đơn', function () {\n  pm.expect(pm.response.code, 'Phải trả 200 (hiển thị lại form + cảnh báo), thực tế ' + pm.response.code).to.eql(200);\n});"
+                ]
+              }
+            }
+          ],
+          "protocolProfileBehavior": {
+            "followRedirects": false
+          },
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "urlencoded",
+              "urlencoded": [
+                {
+                  "key": "csrfmiddlewaretoken",
+                  "value": "{{csrf_token}}"
+                },
+                {
+                  "key": "full_name",
+                  "value": ""
+                },
+                {
+                  "key": "phone",
+                  "value": "0901234567"
+                },
+                {
+                  "key": "address",
+                  "value": "12 Nguyễn Huệ, Quận 1, TP.HCM"
+                },
+                {
+                  "key": "note",
+                  "value": "Giao giờ hành chính"
+                },
+                {
+                  "key": "payment_method",
+                  "value": "cod"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{base_url}}/orders/checkout/",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "orders",
+                "checkout",
+                ""
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "TC-ORD-14 SĐT rỗng → bị chặn",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "// Bảo đảm giỏ hàng có ít nhất 1 sản phẩm trước khi đặt hàng\npm.sendRequest({ url: pm.collectionVariables.get('base_url') + '/cart/add/' + pm.collectionVariables.get('product_id') + '/', method: 'GET' }, function () {});\nconst t = pm.cookies.get('csrftoken');\nif (t) { pm.collectionVariables.set('csrf_token', t); }"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('TC-ORD-14 | SĐT rỗng không được tạo đơn', function () {\n  pm.expect(pm.response.code, 'Phải trả 200 (hiển thị lại form + cảnh báo), thực tế ' + pm.response.code).to.eql(200);\n});"
+                ]
+              }
+            }
+          ],
+          "protocolProfileBehavior": {
+            "followRedirects": false
+          },
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "urlencoded",
+              "urlencoded": [
+                {
+                  "key": "csrfmiddlewaretoken",
+                  "value": "{{csrf_token}}"
+                },
+                {
+                  "key": "full_name",
+                  "value": "Trần Đình Đức"
+                },
+                {
+                  "key": "phone",
+                  "value": ""
+                },
+                {
+                  "key": "address",
+                  "value": "12 Nguyễn Huệ, Quận 1, TP.HCM"
+                },
+                {
+                  "key": "note",
+                  "value": "Giao giờ hành chính"
+                },
+                {
+                  "key": "payment_method",
+                  "value": "cod"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{base_url}}/orders/checkout/",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "orders",
+                "checkout",
+                ""
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "TC-ORD-15 Địa chỉ rỗng → bị chặn",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "// Bảo đảm giỏ hàng có ít nhất 1 sản phẩm trước khi đặt hàng\npm.sendRequest({ url: pm.collectionVariables.get('base_url') + '/cart/add/' + pm.collectionVariables.get('product_id') + '/', method: 'GET' }, function () {});\nconst t = pm.cookies.get('csrftoken');\nif (t) { pm.collectionVariables.set('csrf_token', t); }"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('TC-ORD-15 | Địa chỉ rỗng không được tạo đơn', function () {\n  pm.expect(pm.response.code, 'Phải trả 200 (hiển thị lại form + cảnh báo), thực tế ' + pm.response.code).to.eql(200);\n});"
+                ]
+              }
+            }
+          ],
+          "protocolProfileBehavior": {
+            "followRedirects": false
+          },
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "urlencoded",
+              "urlencoded": [
+                {
+                  "key": "csrfmiddlewaretoken",
+                  "value": "{{csrf_token}}"
+                },
+                {
+                  "key": "full_name",
+                  "value": "Trần Đình Đức"
+                },
+                {
+                  "key": "phone",
+                  "value": "0901234567"
+                },
+                {
+                  "key": "address",
+                  "value": ""
+                },
+                {
+                  "key": "note",
+                  "value": "Giao giờ hành chính"
+                },
+                {
+                  "key": "payment_method",
+                  "value": "cod"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{base_url}}/orders/checkout/",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "orders",
+                "checkout",
+                ""
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "TC-ORD-17 Họ tên 256 ký tự (max+) → bị chặn",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "// Bảo đảm giỏ hàng có ít nhất 1 sản phẩm trước khi đặt hàng\npm.sendRequest({ url: pm.collectionVariables.get('base_url') + '/cart/add/' + pm.collectionVariables.get('product_id') + '/', method: 'GET' }, function () {});\nconst t = pm.cookies.get('csrftoken');\nif (t) { pm.collectionVariables.set('csrf_token', t); }\npm.collectionVariables.set('long_name_256', 'a'.repeat(256));"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('TC-ORD-17 | Họ tên 256 ký tự bị chặn', function () {\n  pm.expect(pm.response.code, 'Phải trả 200 (hiển thị lại form + cảnh báo), thực tế ' + pm.response.code).to.eql(200);\n});"
+                ]
+              }
+            }
+          ],
+          "protocolProfileBehavior": {
+            "followRedirects": false
+          },
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "urlencoded",
+              "urlencoded": [
+                {
+                  "key": "csrfmiddlewaretoken",
+                  "value": "{{csrf_token}}"
+                },
+                {
+                  "key": "full_name",
+                  "value": "{{long_name_256}}"
+                },
+                {
+                  "key": "phone",
+                  "value": "0901234567"
+                },
+                {
+                  "key": "address",
+                  "value": "12 Nguyễn Huệ, Quận 1, TP.HCM"
+                },
+                {
+                  "key": "note",
+                  "value": "Giao giờ hành chính"
+                },
+                {
+                  "key": "payment_method",
+                  "value": "cod"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{base_url}}/orders/checkout/",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "orders",
+                "checkout",
+                ""
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "TC-ORD-18 SĐT 21 ký tự (max+) → bị chặn",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "// Bảo đảm giỏ hàng có ít nhất 1 sản phẩm trước khi đặt hàng\npm.sendRequest({ url: pm.collectionVariables.get('base_url') + '/cart/add/' + pm.collectionVariables.get('product_id') + '/', method: 'GET' }, function () {});\nconst t = pm.cookies.get('csrftoken');\nif (t) { pm.collectionVariables.set('csrf_token', t); }\npm.collectionVariables.set('long_phone_21', '9'.repeat(21));"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('TC-ORD-18 | SĐT 21 ký tự bị chặn', function () {\n  pm.expect(pm.response.code, 'Phải trả 200 (hiển thị lại form + cảnh báo), thực tế ' + pm.response.code).to.eql(200);\n});"
+                ]
+              }
+            }
+          ],
+          "protocolProfileBehavior": {
+            "followRedirects": false
+          },
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "urlencoded",
+              "urlencoded": [
+                {
+                  "key": "csrfmiddlewaretoken",
+                  "value": "{{csrf_token}}"
+                },
+                {
+                  "key": "full_name",
+                  "value": "Trần Đình Đức"
+                },
+                {
+                  "key": "phone",
+                  "value": "{{long_phone_21}}"
+                },
+                {
+                  "key": "address",
+                  "value": "12 Nguyễn Huệ, Quận 1, TP.HCM"
+                },
+                {
+                  "key": "note",
+                  "value": "Giao giờ hành chính"
+                },
+                {
+                  "key": "payment_method",
+                  "value": "cod"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{base_url}}/orders/checkout/",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "orders",
+                "checkout",
+                ""
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "TC-ORD-22 payment_method không hợp lệ → bị chặn",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "// Bảo đảm giỏ hàng có ít nhất 1 sản phẩm trước khi đặt hàng\npm.sendRequest({ url: pm.collectionVariables.get('base_url') + '/cart/add/' + pm.collectionVariables.get('product_id') + '/', method: 'GET' }, function () {});\nconst t = pm.cookies.get('csrftoken');\nif (t) { pm.collectionVariables.set('csrf_token', t); }"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('TC-ORD-22 | payment_method=bitcoin bị chặn', function () {\n  pm.expect(pm.response.code, 'Phải trả 200 (hiển thị lại form + cảnh báo), thực tế ' + pm.response.code).to.eql(200);\n});"
+                ]
+              }
+            }
+          ],
+          "protocolProfileBehavior": {
+            "followRedirects": false
+          },
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "urlencoded",
+              "urlencoded": [
+                {
+                  "key": "csrfmiddlewaretoken",
+                  "value": "{{csrf_token}}"
+                },
+                {
+                  "key": "full_name",
+                  "value": "Trần Đình Đức"
+                },
+                {
+                  "key": "phone",
+                  "value": "0901234567"
+                },
+                {
+                  "key": "address",
+                  "value": "12 Nguyễn Huệ, Quận 1, TP.HCM"
+                },
+                {
+                  "key": "note",
+                  "value": "Giao giờ hành chính"
+                },
+                {
+                  "key": "payment_method",
+                  "value": "bitcoin"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{base_url}}/orders/checkout/",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "orders",
+                "checkout",
+                ""
+              ]
+            }
+          },
+          "response": []
+        }
+      ],
+      "description": "Các request dùng dữ liệu không hợp lệ; kỳ vọng hệ thống KHÔNG tạo đơn và trả 200 (hiển thị lại form)."
+    },
+    {
+      "name": "02. FR4.3 COD + FR4.6 xác nhận",
+      "item": [
+        {
+          "name": "TC-ORD-23 COD hợp lệ → 302 sang trang success",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "// Bảo đảm giỏ hàng có ít nhất 1 sản phẩm trước khi đặt hàng\npm.sendRequest({ url: pm.collectionVariables.get('base_url') + '/cart/add/' + pm.collectionVariables.get('product_id') + '/', method: 'GET' }, function () {});\nconst t = pm.cookies.get('csrftoken');\nif (t) { pm.collectionVariables.set('csrf_token', t); }"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('TC-ORD-23 | COD tạo đơn và chuyển /orders/success/<id>/', function () {\n  pm.expect(pm.response.code).to.eql(302);\n  const loc = pm.response.headers.get('Location') || '';\n  const m = loc.match(/\\/orders\\/success\\/(\\d+)\\//);\n  pm.expect(m, 'Location thực tế: ' + loc).to.not.be.null;\n  pm.collectionVariables.set('cod_order_id', m[1]);\n});"
+                ]
+              }
+            }
+          ],
+          "protocolProfileBehavior": {
+            "followRedirects": false
+          },
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "urlencoded",
+              "urlencoded": [
+                {
+                  "key": "csrfmiddlewaretoken",
+                  "value": "{{csrf_token}}"
+                },
+                {
+                  "key": "full_name",
+                  "value": "Trần Đình Đức"
+                },
+                {
+                  "key": "phone",
+                  "value": "0901234567"
+                },
+                {
+                  "key": "address",
+                  "value": "12 Nguyễn Huệ, Quận 1, TP.HCM"
+                },
+                {
+                  "key": "note",
+                  "value": "Giao giờ hành chính"
+                },
+                {
+                  "key": "payment_method",
+                  "value": "cod"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{base_url}}/orders/checkout/",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "orders",
+                "checkout",
+                ""
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "TC-ORD-44 Trang xác nhận hiển thị đủ thông tin đơn",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Trang success 200', function () { pm.expect(pm.response.code).to.eql(200); });",
+                  "pm.test('TC-ORD-44 | Có mã đơn, người nhận, SĐT, địa chỉ, phương thức, trạng thái', function () {",
+                  "  const h = pm.response.text();",
+                  "  pm.expect(h).to.include(pm.collectionVariables.get('cod_order_id'));",
+                  "  ['Trần Đình Đức','0901234567','12 Nguyễn Huệ','Thanh toán khi nhận hàng','Chờ xử lý'].forEach(s => pm.expect(h, 'Thiếu: ' + s).to.include(s));",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/orders/success/{{cod_order_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "orders",
+                "success",
+                "{{cod_order_id}}"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "TC-ORD-28 POST lần 2 khi giỏ đã rỗng → về /cart/",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const t = pm.cookies.get('csrftoken');\nif (t) { pm.collectionVariables.set('csrf_token', t); }"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('TC-ORD-28 | Không tạo đơn thứ 2, chuyển /cart/', function () {\n  pm.expect(pm.response.code).to.eql(302);\n  pm.expect(pm.response.headers.get('Location')).to.eql('/cart/');\n});"
+                ]
+              }
+            }
+          ],
+          "protocolProfileBehavior": {
+            "followRedirects": false
+          },
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "urlencoded",
+              "urlencoded": [
+                {
+                  "key": "csrfmiddlewaretoken",
+                  "value": "{{csrf_token}}"
+                },
+                {
+                  "key": "full_name",
+                  "value": "Trần Đình Đức"
+                },
+                {
+                  "key": "phone",
+                  "value": "0901234567"
+                },
+                {
+                  "key": "address",
+                  "value": "12 Nguyễn Huệ, Quận 1, TP.HCM"
+                },
+                {
+                  "key": "note",
+                  "value": "Giao giờ hành chính"
+                },
+                {
+                  "key": "payment_method",
+                  "value": "cod"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{base_url}}/orders/checkout/",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "orders",
+                "checkout",
+                ""
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "03. FR4.4 VietQR",
+      "item": [
+        {
+          "name": "TC-ORD-29 QR → 302 sang trang QR",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "// Bảo đảm giỏ hàng có ít nhất 1 sản phẩm trước khi đặt hàng\npm.sendRequest({ url: pm.collectionVariables.get('base_url') + '/cart/add/' + pm.collectionVariables.get('product_id') + '/', method: 'GET' }, function () {});\nconst t = pm.cookies.get('csrftoken');\nif (t) { pm.collectionVariables.set('csrf_token', t); }"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('TC-ORD-29 | QR tạo đơn và chuyển /orders/qr/<id>/', function () {\n  pm.expect(pm.response.code).to.eql(302);\n  const loc = pm.response.headers.get('Location') || '';\n  const m = loc.match(/\\/orders\\/qr\\/(\\d+)\\//);\n  pm.expect(m, 'Location thực tế: ' + loc).to.not.be.null;\n  pm.collectionVariables.set('qr_order_id', m[1]);\n});"
+                ]
+              }
+            }
+          ],
+          "protocolProfileBehavior": {
+            "followRedirects": false
+          },
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "urlencoded",
+              "urlencoded": [
+                {
+                  "key": "csrfmiddlewaretoken",
+                  "value": "{{csrf_token}}"
+                },
+                {
+                  "key": "full_name",
+                  "value": "Trần Đình Đức"
+                },
+                {
+                  "key": "phone",
+                  "value": "0901234567"
+                },
+                {
+                  "key": "address",
+                  "value": "12 Nguyễn Huệ, Quận 1, TP.HCM"
+                },
+                {
+                  "key": "note",
+                  "value": "Giao giờ hành chính"
+                },
+                {
+                  "key": "payment_method",
+                  "value": "qr"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{base_url}}/orders/checkout/",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "orders",
+                "checkout",
+                ""
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "TC-ORD-30 Trang QR có ảnh VietQR đúng nội dung",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Trang QR 200', function () { pm.expect(pm.response.code).to.eql(200); });",
+                  "pm.test('TC-ORD-30 | Ảnh VietQR + nội dung THANH TOAN DH{id}', function () {",
+                  "  const h = pm.response.text(); const id = pm.collectionVariables.get('qr_order_id');",
+                  "  pm.expect(h).to.include('https://img.vietqr.io/image/');",
+                  "  pm.expect(h).to.include('amount=');",
+                  "  pm.expect(h).to.include('addInfo=THANH%20TOAN%20DH' + id);",
+                  "  pm.expect(h).to.include('THANH TOAN DH' + id);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/orders/qr/{{qr_order_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "orders",
+                "qr",
+                "{{qr_order_id}}"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "TC-ORD-31 POST xác nhận đã chuyển khoản → 302 success",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const t = pm.cookies.get('csrftoken');\nif (t) { pm.collectionVariables.set('csrf_token', t); }"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('TC-ORD-31 | Confirm chuyển trang success', function () {\n  pm.expect(pm.response.code).to.eql(302);\n  const loc = pm.response.headers.get('Location') || '';\n  const m = loc.match(/\\/orders\\/success\\/(\\d+)\\//);\n  pm.expect(m, 'Location thực tế: ' + loc).to.not.be.null;\n});"
+                ]
+              }
+            }
+          ],
+          "protocolProfileBehavior": {
+            "followRedirects": false
+          },
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "urlencoded",
+              "urlencoded": [
+                {
+                  "key": "csrfmiddlewaretoken",
+                  "value": "{{csrf_token}}"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{base_url}}/orders/qr/{{qr_order_id}}/confirm/",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "orders",
+                "qr",
+                "{{qr_order_id}}",
+                "confirm",
+                ""
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "TC-ORD-46 Mã đơn không tồn tại → 404",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('TC-ORD-46 | /orders/qr/999999/ → 404', function () { pm.expect(pm.response.code).to.eql(404); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/orders/qr/999999",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "orders",
+                "qr",
+                "999999"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "TC-ORD-48 Mã đơn không phải số → 404",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('TC-ORD-48 | /orders/success/abc/ → 404', function () { pm.expect(pm.response.code).to.eql(404); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/orders/success/abc",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "orders",
+                "success",
+                "abc"
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "04. FR4.5 Mock online",
+      "item": [
+        {
+          "name": "TC-ORD-36 Mock → 302 sang trang Sandbox",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "// Bảo đảm giỏ hàng có ít nhất 1 sản phẩm trước khi đặt hàng\npm.sendRequest({ url: pm.collectionVariables.get('base_url') + '/cart/add/' + pm.collectionVariables.get('product_id') + '/', method: 'GET' }, function () {});\nconst t = pm.cookies.get('csrftoken');\nif (t) { pm.collectionVariables.set('csrf_token', t); }"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('TC-ORD-36 | Mock tạo đơn và chuyển /orders/mock/<id>/', function () {\n  pm.expect(pm.response.code).to.eql(302);\n  const loc = pm.response.headers.get('Location') || '';\n  const m = loc.match(/\\/orders\\/mock\\/(\\d+)\\//);\n  pm.expect(m, 'Location thực tế: ' + loc).to.not.be.null;\n  pm.collectionVariables.set('mock_order_id', m[1]);\n});"
+                ]
+              }
+            }
+          ],
+          "protocolProfileBehavior": {
+            "followRedirects": false
+          },
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "urlencoded",
+              "urlencoded": [
+                {
+                  "key": "csrfmiddlewaretoken",
+                  "value": "{{csrf_token}}"
+                },
+                {
+                  "key": "full_name",
+                  "value": "Trần Đình Đức"
+                },
+                {
+                  "key": "phone",
+                  "value": "0901234567"
+                },
+                {
+                  "key": "address",
+                  "value": "12 Nguyễn Huệ, Quận 1, TP.HCM"
+                },
+                {
+                  "key": "note",
+                  "value": "Giao giờ hành chính"
+                },
+                {
+                  "key": "payment_method",
+                  "value": "mock"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{base_url}}/orders/checkout/",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "orders",
+                "checkout",
+                ""
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "TC-ORD-37 Trang Sandbox hiển thị (200)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('TC-ORD-37 | Trang Sandbox trả 200 (không phải 500)', function () { pm.expect(pm.response.code).to.eql(200); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/orders/mock/{{mock_order_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "orders",
+                "mock",
+                "{{mock_order_id}}"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "TC-ORD-43 GET /success/ không được đổi trạng thái (405)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('TC-ORD-43 | GET vào /success/ phải bị từ chối (405)', function () { pm.expect(pm.response.code).to.eql(405); });"
+                ]
+              }
+            }
+          ],
+          "protocolProfileBehavior": {
+            "followRedirects": false
+          },
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/orders/mock/{{mock_order_id}}/success/",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "orders",
+                "mock",
+                "{{mock_order_id}}",
+                "success",
+                ""
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "TC-ORD-38 POST thanh toán thành công → 302 success",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const t = pm.cookies.get('csrftoken');\nif (t) { pm.collectionVariables.set('csrf_token', t); }"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('TC-ORD-38 | Mock thành công chuyển trang success', function () {\n  pm.expect(pm.response.code).to.eql(302);\n  const loc = pm.response.headers.get('Location') || '';\n  const m = loc.match(/\\/orders\\/success\\/(\\d+)\\//);\n  pm.expect(m, 'Location thực tế: ' + loc).to.not.be.null;\n});"
+                ]
+              }
+            }
+          ],
+          "protocolProfileBehavior": {
+            "followRedirects": false
+          },
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "urlencoded",
+              "urlencoded": [
+                {
+                  "key": "csrfmiddlewaretoken",
+                  "value": "{{csrf_token}}"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{base_url}}/orders/mock/{{mock_order_id}}/success/",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "orders",
+                "mock",
+                "{{mock_order_id}}",
+                "success",
+                ""
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "TC-ORD-39a Tạo đơn Mock thứ 2 để thử thất bại",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "// Bảo đảm giỏ hàng có ít nhất 1 sản phẩm trước khi đặt hàng\npm.sendRequest({ url: pm.collectionVariables.get('base_url') + '/cart/add/' + pm.collectionVariables.get('product_id') + '/', method: 'GET' }, function () {});\nconst t = pm.cookies.get('csrftoken');\nif (t) { pm.collectionVariables.set('csrf_token', t); }"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Tạo đơn Mock #2', function () {\n  pm.expect(pm.response.code).to.eql(302);\n  const loc = pm.response.headers.get('Location') || '';\n  const m = loc.match(/\\/orders\\/mock\\/(\\d+)\\//);\n  pm.expect(m, 'Location thực tế: ' + loc).to.not.be.null;\n  pm.collectionVariables.set('mock_order_id_2', m[1]);\n});"
+                ]
+              }
+            }
+          ],
+          "protocolProfileBehavior": {
+            "followRedirects": false
+          },
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "urlencoded",
+              "urlencoded": [
+                {
+                  "key": "csrfmiddlewaretoken",
+                  "value": "{{csrf_token}}"
+                },
+                {
+                  "key": "full_name",
+                  "value": "Trần Đình Đức"
+                },
+                {
+                  "key": "phone",
+                  "value": "0901234567"
+                },
+                {
+                  "key": "address",
+                  "value": "12 Nguyễn Huệ, Quận 1, TP.HCM"
+                },
+                {
+                  "key": "note",
+                  "value": "Giao giờ hành chính"
+                },
+                {
+                  "key": "payment_method",
+                  "value": "mock"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{base_url}}/orders/checkout/",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "orders",
+                "checkout",
+                ""
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "TC-ORD-39b POST thanh toán thất bại → 302 success",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const t = pm.cookies.get('csrftoken');\nif (t) { pm.collectionVariables.set('csrf_token', t); }"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('TC-ORD-39 | Mock thất bại chuyển trang kết quả', function () {\n  pm.expect(pm.response.code).to.eql(302);\n  const loc = pm.response.headers.get('Location') || '';\n  const m = loc.match(/\\/orders\\/success\\/(\\d+)\\//);\n  pm.expect(m, 'Location thực tế: ' + loc).to.not.be.null;\n});"
+                ]
+              }
+            }
+          ],
+          "protocolProfileBehavior": {
+            "followRedirects": false
+          },
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "urlencoded",
+              "urlencoded": [
+                {
+                  "key": "csrfmiddlewaretoken",
+                  "value": "{{csrf_token}}"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{base_url}}/orders/mock/{{mock_order_id_2}}/fail/",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "orders",
+                "mock",
+                "{{mock_order_id_2}}",
+                "fail",
+                ""
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "TC-ORD-40 Trang kết quả báo thất bại",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Trang kết quả 200', function () { pm.expect(pm.response.code).to.eql(200); });",
+                  "pm.test('TC-ORD-40 | Không hiện \"Đặt hàng thành công\", có thông báo thất bại', function () {",
+                  "  const h = pm.response.text();",
+                  "  pm.expect(h).to.not.include('Đặt hàng thành công');",
+                  "  pm.expect(h.toLowerCase()).to.include('thất bại');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/orders/success/{{mock_order_id_2}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "orders",
+                "success",
+                "{{mock_order_id_2}}"
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    }
+  ],
+  "event": [
+    {
+      "listen": "prerequest",
+      "script": {
+        "type": "text/javascript",
+        "exec": [
+          "const t = pm.cookies.get('csrftoken');",
+          "if (t) { pm.collectionVariables.set('csrf_token', t); }"
+        ]
+      }
+    }
+  ],
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "http://127.0.0.1:8000"
+    },
+    {
+      "key": "username",
+      "value": "khach_test"
+    },
+    {
+      "key": "password",
+      "value": "DoiMatKhauCuaBan@123"
+    },
+    {
+      "key": "product_id",
+      "value": "1"
+    },
+    {
+      "key": "csrf_token",
+      "value": ""
+    },
+    {
+      "key": "long_name_256",
+      "value": ""
+    },
+    {
+      "key": "long_phone_21",
+      "value": ""
+    },
+    {
+      "key": "cod_order_id",
+      "value": ""
+    },
+    {
+      "key": "qr_order_id",
+      "value": ""
+    },
+    {
+      "key": "mock_order_id",
+      "value": ""
+    },
+    {
+      "key": "mock_order_id_2",
+      "value": ""
+    }
+  ]
+}

@@ -1,4 +1,6 @@
 from django import forms
+from django.core.validators import MaxLengthValidator
+from .validators import MAX_PASSWORD_LENGTH
 from django.contrib.auth.models import User
 from django.contrib.auth.forms import UserCreationForm, AuthenticationForm, PasswordChangeForm, PasswordResetForm
 
@@ -15,6 +17,15 @@ class RegisterForm(UserCreationForm):
         self.fields['email'].widget.attrs.update({'placeholder': 'Nhập email'})
         self.fields['password1'].widget.attrs.update({'placeholder': 'Nhập mật khẩu'})
         self.fields['password2'].widget.attrs.update({'placeholder': 'Nhập lại mật khẩu'})
+        # Chặn sớm mật khẩu quá dài (trước cả các validator tốn thời gian)
+        for name in ('password1', 'password2'):
+            self.fields[name].validators.append(
+                MaxLengthValidator(
+                    MAX_PASSWORD_LENGTH,
+                    message='Mật khẩu không được dài quá %d ký tự.' % MAX_PASSWORD_LENGTH,
+                )
+            )
+            self.fields[name].widget.attrs['maxlength'] = MAX_PASSWORD_LENGTH
 
     def clean_email(self):
         email = self.cleaned_data['email']
@@ -28,7 +39,8 @@ class LoginForm(AuthenticationForm):
         widget=forms.TextInput(attrs={'placeholder': 'Nhập tài khoản'})
     )
     password = forms.CharField(
-        widget=forms.PasswordInput(attrs={'placeholder': 'Nhập mật khẩu'})
+        max_length=MAX_PASSWORD_LENGTH,
+        widget=forms.PasswordInput(attrs={'placeholder': 'Nhập mật khẩu', 'maxlength': MAX_PASSWORD_LENGTH})
     )
 
 

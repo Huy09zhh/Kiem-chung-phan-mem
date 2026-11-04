@@ -1,0 +1,30 @@
+$kind: http-request
+name: 'TC-AOA-077 Dashboard: % cơ cấu đơn hợp lệ'
+url: '{{base_url}}/admin-panel/dashboard/'
+method: GET
+scripts:
+- type: afterResponse
+  code: |-
+    const html = pm.response.text();
+    const ok = (c, m) => { if (!c) { throw new Error(m); } };
+    const num = (s) => parseInt(String(s).replace(/[^\d]/g, ''), 10);
+    const grab = (re) => { const m = html.match(re); return m ? m[1] : null; };
+    const rowIds = () => Array.from(html.matchAll(/<td>#(\d+)<\/td>/g), (m) => parseInt(m[1], 10));
+    const loc = () => pm.response.headers.get('Location') || '';
+    const cv = (k) => pm.collectionVariables.get(k);
+    const setcv = (k, v) => pm.collectionVariables.set(k, v);
+    const selectedStatus = () => grab(/<option value="(\w+)"\s+selected>/);
+    const LABEL = { pending: 'Chờ xử lý', awaiting_transfer: 'Chờ chuyển khoản', paid: 'Đã thanh toán', failed: 'Thanh toán thất bại', confirmed: 'Đã xác nhận', shipping: 'Đang giao', completed: 'Hoàn thành', cancelled: 'Đã hủy' };
+
+    pm.test("TC-AOA-077 | Các % trên thanh Cơ cấu đơn hàng hợp lệ và có ghi chú phần còn lại", function () {
+    const m = Array.from(html.matchAll(/(\d+) đơn \((\d+)%\)/g), (x) => ({ n: parseInt(x[1], 10), p: parseInt(x[2], 10) }));
+    ok(m.length > 0, 'Không đọc được các dòng "N đơn (P%)" trên Dashboard');
+    const sum = m.reduce((s, x) => s + x.p, 0);
+    ok(m.every((x) => x.p >= 0 && x.p <= 100), 'Có phần trăm ngoài khoảng 0-100');
+    ok(sum <= 100, 'Tổng % các trạng thái đang hiển thị = ' + sum + ', vượt 100');
+    ok(html.indexOf('Phần còn lại') >= 0, 'Thiếu ghi chú giải thích phần còn lại (các trạng thái không hiển thị trên thanh)');
+    });
+  language: text/javascript
+settings:
+  followRedirects: false
+order: 1000

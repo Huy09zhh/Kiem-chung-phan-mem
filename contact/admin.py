@@ -19,5 +19,6 @@ class FeedbackAdmin(admin.ModelAdmin):
 
 @admin.register(NewsletterSubscriber)
 class NewsletterSubscriberAdmin(admin.ModelAdmin):
-    list_display = ('email', 'created_at')
+    list_display = ('email', 'is_confirmed', 'created_at')
+    list_filter = ('is_confirmed',)
     search_fields = ('email',)

@@ -1,0 +1,27 @@
+$kind: http-request
+url: "{{base_url}}/contact/"
+method: GET
+scripts:
+  - type: afterResponse
+    code: |-
+      const html = pm.response.text();
+      const ok = (c, m) => { if (!c) { throw new Error(m); } };
+      const cv = (k) => pm.collectionVariables.get(k);
+      const loc = () => pm.response.headers.get('Location') || '';
+      // Lấy id các dòng trong trang admin Đăng ký nhận tin có email trùng khớp chính xác
+      const findIds = (page, email) => { const ids = []; const re = /newslettersubscriber\/(\d+)\/change\/[^"]*">([^<]*)<\/a>/g; let mm; while ((mm = re.exec(page))) { if (mm[2] === email) { ids.push(mm[1]); } } return ids; };
+      const shown = () => ["Đăng ký nhận tin thành công. Cảm ơn bạn!", "Email này đã đăng ký nhận tin trước đó.", "Email không hợp lệ, vui lòng kiểm tra lại.", "Nếu email hợp lệ, chúng tôi đã gửi thư xác nhận. Vui lòng kiểm tra hộp thư để hoàn tất đăng ký.", "Bạn thao tác quá nhanh, vui lòng thử lại sau ít phút."].find((t) => html.includes(t)) || '(không có thông báo)';
+
+      pm.test("PRE | Trang /contact/ mở được (200)", function () {
+      ok(pm.response.code === 200, 'Mong đợi HTTP 200, thực tế ' + pm.response.code);
+      const mm = html.match(/name=["']csrfmiddlewaretoken["'][^>]*value=["']([^"']+)["']/);
+      if (mm) { pm.collectionVariables.set('csrf_html', mm[1]); }
+      });
+
+      pm.test("PRE | Có cookie csrftoken", function () {
+      ok(pm.cookies.has('csrftoken'), 'Chưa có cookie csrftoken; kiểm tra server đang chạy ở base_url');
+      });
+    language: text/javascript
+settings:
+  followRedirects: false
+order: 1000

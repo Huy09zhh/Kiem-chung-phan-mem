@@ -1,0 +1,4 @@
+$kind: collection
+name: 02. Thống kê Dashboard (TC-AOA-023 → 026)
+description: Các ca Dashboard. Request 023 hủy một đơn Đã thanh toán rồi tự khôi phục.
+order: 3000

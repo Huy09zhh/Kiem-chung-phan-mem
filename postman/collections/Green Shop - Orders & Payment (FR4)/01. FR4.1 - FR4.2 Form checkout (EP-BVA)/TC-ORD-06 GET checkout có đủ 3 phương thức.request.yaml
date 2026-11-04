@@ -1,0 +1,15 @@
+$kind: http-request
+url: "{{base_url}}/orders/checkout"
+method: GET
+scripts:
+  - type: beforeRequest
+    code: |-
+      // Bảo đảm giỏ hàng có ít nhất 1 sản phẩm trước khi đặt hàng
+      pm.sendRequest({ url: pm.collectionVariables.get('base_url') + '/cart/add/' + pm.collectionVariables.get('product_id') + '/', method: 'GET' }, function () {});
+    language: text/javascript
+  - type: afterResponse
+    code: |-
+      pm.test('Checkout 200', function () { pm.expect(pm.response.code).to.eql(200); });
+      pm.test('Có radio cod, qr, mock', function () { const h = pm.response.text(); ['cod','qr','mock'].forEach(m => pm.expect(h).to.include('value="' + m + '"')); });
+    language: text/javascript
+order: 1000

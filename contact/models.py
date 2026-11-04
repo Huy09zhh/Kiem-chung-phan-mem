@@ -62,12 +62,23 @@ class Feedback(models.Model):
 
 class NewsletterSubscriber(models.Model):
     email = models.EmailField(unique=True)
+    is_confirmed = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)
-
+ 
     class Meta:
         ordering = ['-created_at']
         verbose_name = 'Đăng ký nhận tin'
         verbose_name_plural = 'Đăng ký nhận tin'
-
+ 
     def __str__(self):
         return self.email
+ 
+    def clean(self):
+        if self.email:
+            self.email = self.email.strip().lower()
+ 
+    def save(self, *args, **kwargs):
+        if self.email:
+            self.email = self.email.strip().lower()
+        super().save(*args, **kwargs)
+ 

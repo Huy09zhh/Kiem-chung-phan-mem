@@ -1,0 +1,10 @@
+$kind: http-request
+url: "{{base_url}}/cart/add/{{product_id}}/"
+method: GET
+scripts:
+  - type: afterResponse
+    code: pm.test('Thêm SP vào giỏ → 302', function () { pm.expect(pm.response.code).to.eql(302); });
+    language: text/javascript
+settings:
+  followRedirects: false
+order: 3000

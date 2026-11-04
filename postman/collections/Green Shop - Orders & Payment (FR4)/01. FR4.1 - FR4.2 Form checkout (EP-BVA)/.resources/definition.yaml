@@ -1,0 +1,4 @@
+$kind: collection
+name: 01. FR4.1 / FR4.2 Form checkout (EP/BVA)
+description: Các request dùng dữ liệu không hợp lệ; kỳ vọng hệ thống KHÔNG tạo đơn và trả 200 (hiển thị lại form).
+order: 2000

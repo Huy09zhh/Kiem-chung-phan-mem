@@ -1,0 +1,4 @@
+$kind: collection
+name: 03. Liên hệ và Phản hồi (TC-AOA-027 → 030)
+description: Gửi form ở /contact/ rồi kiểm tra bên Django admin. Dữ liệu thử có tên "Postman PM<số>" và được xóa ở hai request cuối nhóm.
+order: 4000

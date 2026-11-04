@@ -7,3 +7,4 @@ tzdata==2026.1
 django-allauth[socialaccount]==65.19.7
 requests
 requests-oauthlib
+openpyxl
