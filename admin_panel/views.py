@@ -273,7 +273,7 @@ def admin_order_update_status(request, pk):
         value for value, label in Order.STATUS_CHOICES
     }
 
-    if new_status in valid_statuses and not order.is_final:
+    if new_status in valid_statuses and order.can_change_to(new_status):
         order.status = new_status
         order.save(update_fields=['status'])
 
