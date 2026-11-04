@@ -63,6 +63,10 @@ def checkout(request):
             order_status = 'awaiting_transfer'
         elif payment_method == 'mock':
             order_status = 'pending'
+        # Hủy các đơn QR cũ chưa thanh toán của khách này (tránh đơn rác)
+        Order.objects.filter(
+            user=request.user, status='awaiting_transfer'
+        ).update(status='cancelled')
 
         order = Order.objects.create(
             user=request.user,
@@ -88,7 +92,6 @@ def checkout(request):
             return redirect('orders:order_success', order_id=order.id)
 
         if payment_method == 'qr':
-            cart.items.all().delete()
             return redirect('orders:order_qr', order_id=order.id)
 
         return redirect('orders:mock_payment', order_id=order.id)
@@ -110,11 +113,13 @@ def order_success(request, order_id):
 @login_required(login_url='login')
 def order_qr(request, order_id):
     order = get_object_or_404(Order, id=order_id, user=request.user)
-    qr_info = get_qr_info(order)
+
+    if order.status != 'awaiting_transfer':
+        return redirect('orders:order_success', order_id=order.id)
 
     return render(request, 'orders/qr_payment.html', {
         'order': order,
-        'qr_info': qr_info,
+        'qr_info': get_qr_info(order),
     })
 
 
@@ -122,9 +127,14 @@ def order_qr(request, order_id):
 def confirm_qr_paid(request, order_id):
     order = get_object_or_404(Order, id=order_id, user=request.user)
 
-    if request.method == 'POST':
+    if request.method == 'POST' and order.status == 'awaiting_transfer':
         order.status = 'paid'
         order.save(update_fields=['status'])
+
+        try:
+            request.user.cart.items.all().delete()
+        except Cart.DoesNotExist:
+            pass
 
     return redirect('orders:order_success', order_id=order.id)
 
@@ -159,3 +169,22 @@ def mock_payment_fail(request, order_id):
     order.save(update_fields=['status'])
 
     return redirect('orders:order_success', order_id=order.id)
+
+@login_required(login_url='login')
+def my_orders(request):
+    orders = Order.objects.filter(
+        user=request.user,
+        status='awaiting_transfer',
+    ).order_by('-id')
+    return render(request, 'orders/my_orders.html', {'orders': orders})
+
+
+@login_required(login_url='login')
+def cancel_qr_order(request, order_id):
+    order = get_object_or_404(Order, id=order_id, user=request.user)
+
+    if request.method == 'POST' and order.status == 'awaiting_transfer':
+        order.status = 'cancelled'
+        order.save(update_fields=['status'])
+
+    return redirect('cart_detail')

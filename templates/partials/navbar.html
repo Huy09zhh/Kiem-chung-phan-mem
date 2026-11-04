@@ -112,6 +112,7 @@
 
                     <div id="accountMenu" class="account-menu">
                         <a href="{% url 'profile' %}">Thông tin cá nhân</a>
+                        <a href="{% url 'orders:my_orders' %}">Đơn hàng của tôi</a>
                         <form method="post" action="{% url 'logout' %}" style="margin: 0;">
                             {% csrf_token %}
                             <button type="submit" class="account-logout-btn">Đăng xuất</button>
