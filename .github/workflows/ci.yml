@@ -50,6 +50,9 @@ jobs:
       - name: Prepare database
         run: python manage.py migrate --noinput
 
+      - name: Seed test data
+        run: python manage.py seed_bva_orders
+
       - name: Run Django and CodeceptJS
         env:
           CI: "true"
