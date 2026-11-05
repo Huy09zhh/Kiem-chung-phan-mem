@@ -7,8 +7,8 @@ Hàm được kiểm thử: admin_panel.views.admin_order_update_status
 
 Chạy:  python manage.py test admin_panel.tests_order_status -v 2
 
-BẢNG CHUYỂN TRẠNG THÁI HỢP LỆ nằm trong biến ALLOWED bên dưới.
-Nếu nhóm quyết định luồng khác, chỉ cần sửa ALLOWED; mọi test tự cập nhật.
+BẢNG CHUYỂN TRẠNG THÁI nằm trong biến ALLOWED bên dưới (khớp Order.ALLOWED_TRANSITIONS).
+Nếu nhóm đổi luồng, chỉ cần sửa ALLOWED; mọi test tự cập nhật.
 """
 from django.contrib.auth import get_user_model
 from django.test import TestCase
@@ -16,16 +16,22 @@ from django.urls import reverse
 
 from orders.models import Order
 
+# Bảng chuyển trạng thái của code (Order.ALLOWED_TRANSITIONS trong orders/models.py).
 # Trạng thái hiện tại -> tập trạng thái được phép chuyển tới.
 ALLOWED = {
-    'pending': {'confirmed', 'cancelled'},
+    'pending': {'paid', 'confirmed', 'cancelled'},
     'awaiting_transfer': {'paid', 'failed', 'cancelled'},
     'paid': {'confirmed', 'cancelled'},
     'failed': {'awaiting_transfer', 'cancelled'},
     'confirmed': {'shipping', 'cancelled'},
     'shipping': {'completed', 'cancelled'},
-    'completed': set(),   # trạng thái cuối: bị khoá
-    'cancelled': set(),   # trạng thái cuối: bị khoá
+    'completed': set(),           # trạng thái cuối: bị khoá
+    'cancelled': set(),           # trạng thái cuối: bị khoá
+}
+# Chuyển trạng thái cho hai trạng thái thanh toán chưa hoàn tất (SCRUM-44: từng bị thiếu trong code).
+EXPECTED_PAYMENT_FLOW = {
+    'awaiting_transfer': {'paid', 'failed', 'cancelled'},
+    'failed': {'awaiting_transfer', 'cancelled'},
 }
 ALL_STATES = [value for value, _label in Order.STATUS_CHOICES]
 
@@ -71,8 +77,8 @@ class OrderStatusTransitionTests(TestCase):
                 order.refresh_from_db()
                 self.assertEqual(order.status, step)
 
-    def test_online_payment_flow(self):
-        order = self.make_order('awaiting_transfer')
+    def test_payment_flow_pending_to_completed(self):
+        order = self.make_order('pending')
         for step in ('paid', 'confirmed', 'shipping', 'completed'):
             with self.subTest(step=step):
                 self.post_status(order, step)
@@ -152,3 +158,15 @@ class OrderStatusTransitionTests(TestCase):
         order.refresh_from_db()
         self.assertEqual(order.status, 'pending')
         self.assertEqual(response.status_code, 302)
+
+    # ---- 8. Đơn "Chờ chuyển khoản" và "Thanh toán thất bại" phải xử lý được ----
+    # Hồi quy cho lỗi bảng ALLOWED_TRANSITIONS từng thiếu hai trạng thái này,
+    # khiến admin không xác nhận thanh toán hay hủy được đơn chuyển khoản.
+    def test_awaiting_transfer_and_failed_orders_can_be_processed(self):
+        for start, targets in EXPECTED_PAYMENT_FLOW.items():
+            for target in targets:
+                with self.subTest(start=start, target=target):
+                    order = self.make_order(start)
+                    self.post_status(order, target)
+                    order.refresh_from_db()
+                    self.assertEqual(order.status, target)
