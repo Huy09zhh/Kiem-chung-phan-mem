@@ -7,3 +7,6 @@ media/
 sent_emails/
 node_modules/
 output/
+.coverage
+coverage.json
+htmlcov/

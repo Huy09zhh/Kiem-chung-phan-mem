@@ -6,14 +6,15 @@ Cách dùng (xem hướng dẫn đầy đủ trong file Excel / tin nhắn):
   coverage run --branch --source=admin_panel manage.py runserver --noreload
   (chạy CodeceptJS ở terminal khác, xong thì Ctrl+C dừng server)
   coverage json -o coverage.json
-  python tools/coverage_func.py coverage.json
+  python tools/coverage_func.py coverage.json [tên_hàm]
+  (mặc định đo admin_order_list; thêm tên hàm để đo hàm khác trong admin_panel/views.py)
 """
 import ast
 import json
 import sys
 from pathlib import Path
 
-FUNC = "admin_order_list"
+FUNC = sys.argv[2] if len(sys.argv) > 2 else "admin_order_list"   # ví dụ: admin_order_update_status
 data = json.loads(Path(sys.argv[1] if len(sys.argv) > 1 else "coverage.json").read_text(encoding="utf-8"))
 key = next(k for k in data["files"] if k.replace("\\", "/").endswith("admin_panel/views.py"))
 f = data["files"][key]

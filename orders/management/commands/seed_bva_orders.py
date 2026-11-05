@@ -4,6 +4,7 @@ Chạy:  python manage.py seed_bva_orders
 Tạo (nếu chưa có):
   - tài khoản quản trị  bva_admin / Bva@12345
   - một đơn "BVA Seed" có SĐT 0912345678 (10 ký tự)
+  - một đơn "Nguyen Van BVA" thanh toán QR, trạng thái Đã thanh toán (cho test bảng quyết định)
 """
 from django.contrib.auth import get_user_model
 from django.core.management.base import BaseCommand
@@ -30,6 +31,11 @@ class Command(BaseCommand):
         order, order_created = Order.objects.get_or_create(
             full_name=SEED_NAME, phone=SEED_PHONE,
             defaults={'user': admin, 'address': '1 Duong BVA', 'total_price': 100000},
+        )
+        Order.objects.get_or_create(
+            full_name='Nguyen Van BVA', phone='0987654321',
+            defaults={'user': admin, 'address': '2 Duong BVA', 'total_price': 50000,
+                      'payment_method': 'qr', 'status': 'paid'},
         )
         self.stdout.write(self.style.SUCCESS(
             f'Admin: {ADMIN_USERNAME} / {ADMIN_PASSWORD}; đơn mẫu #{order.pk} '
