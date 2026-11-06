@@ -36,6 +36,13 @@ class ProductSerializer(serializers.ModelSerializer):
             )
         return value
 
+    def validate_old_price(self, value):
+        if value is not None and value > MAX_PRICE:
+            raise serializers.ValidationError(
+                'Giá cũ không được vượt quá 100.000.000 VNĐ.'
+            )
+        return value
+
     def validate(self, attrs):
         # PATCH có thể chỉ gửi một trong hai giá, nên lấy giá còn lại từ bản ghi hiện có
         price = attrs.get('price', getattr(self.instance, 'price', None))
