@@ -39,6 +39,8 @@ class ProductForm(forms.ModelForm):
         price = self.cleaned_data.get('price')
         if price is not None and price < 0:
             raise ValidationError('Giá phải lớn hơn hoặc bằng 0.')
+        if price is not None and price > 100000000:
+            raise ValidationError('Giá bán không được vượt quá 100.000.000 VNĐ.')
         return price
 
     def clean_old_price(self):
