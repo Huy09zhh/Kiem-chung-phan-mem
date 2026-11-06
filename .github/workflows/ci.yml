@@ -70,4 +70,10 @@ jobs:
           done
 
           curl --fail --silent http://127.0.0.1:8000/ > /dev/null
+          echo "Login page HTTP status: $(curl -s -o /tmp/login.html -w '%{http_code}' http://127.0.0.1:8000/accounts/login/)"
+          grep -c 'name="username"' /tmp/login.html || true
           npx codeceptjs run --steps
+
+      - name: Show Django log on failure
+        if: failure()
+        run: tail -n 120 django.log || true
