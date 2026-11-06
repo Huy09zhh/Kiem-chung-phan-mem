@@ -1,7 +1,7 @@
 from rest_framework import serializers
 from .models import Product
 
-MAX_PRICE = 100000000
+MAX_PRICE = 100000000  # giá bán tối đa 100.000.000 VNĐ
 
 
 class ProductSerializer(serializers.ModelSerializer):
@@ -35,3 +35,13 @@ class ProductSerializer(serializers.ModelSerializer):
                 'Giá bán không được vượt quá 100.000.000 VNĐ.'
             )
         return value
+
+    def validate(self, attrs):
+        # PATCH có thể chỉ gửi một trong hai giá, nên lấy giá còn lại từ bản ghi hiện có
+        price = attrs.get('price', getattr(self.instance, 'price', None))
+        old_price = attrs.get('old_price', getattr(self.instance, 'old_price', None))
+        if price is not None and old_price is not None and old_price <= price:
+            raise serializers.ValidationError(
+                {'old_price': 'Giá cũ phải lớn hơn giá bán.'}
+            )
+        return attrs
