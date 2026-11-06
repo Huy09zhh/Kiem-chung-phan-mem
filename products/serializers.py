@@ -18,3 +18,11 @@ class ProductSerializer(serializers.ModelSerializer):
             'has_discount',
             'discount_percent',
         ]
+
+    def validate_name(self, value):
+        value = value.strip()
+        if len(value) < 2:
+            raise serializers.ValidationError(
+                'Tên sản phẩm phải có độ dài tối thiểu 2 ký tự trở lên.'
+            )
+        return value

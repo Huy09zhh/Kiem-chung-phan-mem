@@ -29,6 +29,12 @@ class ProductForm(forms.ModelForm):
         self.fields['price'].widget.attrs['min'] = 0
         self.fields['old_price'].widget.attrs['min'] = 0
 
+    def clean_name(self):
+        name = (self.cleaned_data.get('name') or '').strip()
+        if len(name) < 2:
+            raise ValidationError('Tên sản phẩm phải có độ dài tối thiểu 2 ký tự trở lên.')
+        return name
+
     def clean_price(self):
         price = self.cleaned_data.get('price')
         if price is not None and price < 0:
