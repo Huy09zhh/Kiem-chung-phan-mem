@@ -1,0 +1,3 @@
+$kind: collection
+description: 'Robustness BVA: thay đổi một biến, các biến còn lại giữ nominal. Mỗi testcase cũng tự thực hiện reset phiên.'
+order: 1000

@@ -1,0 +1,20 @@
+$kind: http-request
+url: '{{base_url}}/accounts/profile/edit/'
+method: GET
+scripts:
+  - type: afterResponse
+    code: |-
+      function decode(value) { return String(value).replace(/&#x([0-9a-f]+);/gi,(_,n)=>String.fromCodePoint(parseInt(n,16))).replace(/&#([0-9]+);/g,(_,n)=>String.fromCodePoint(Number(n))).replace(/&quot;/g,'"').replace(/&#x27;|&apos;/g,"'").replace(/&lt;/g,'<').replace(/&gt;/g,'>').replace(/&amp;/g,'&'); }
+
+      function attr(tag, key) { const m = tag.match(new RegExp('(?:^|\\s)'+key+'=["\x27]([^"\x27]*)["\x27]','i')); return m ? decode(m[1]) : null; }
+
+      function input(html, name) { return (html.match(/<input\b[^>]*>/gi)||[]).find(tag=>attr(tag,'name')===name) || null; }
+
+      function value(html,name) { const tag=input(html,name); if(!tag) throw new Error('Missing input '+name); return attr(tag,'value') || ''; }
+
+      pm.test('HTTP 200',()=>pm.response.to.have.status(200));
+      pm.test("Dữ liệu giữ nguyên sau khi bị từ chối",()=>{const html=pm.response.text();const expected={"first_name":"bva_first_name","last_name":"bva_last_name","email":"bva_email"};for(const [field,key] of Object.entries(expected))pm.expect(value(html,field),field).to.eql(pm.collectionVariables.get(key));});
+    language: text/javascript
+settings:
+  followRedirects: false
+order: 9000
