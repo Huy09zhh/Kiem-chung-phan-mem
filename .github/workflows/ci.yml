@@ -51,7 +51,9 @@ jobs:
         run: python manage.py migrate --noinput
 
       - name: Seed test data
-        run: python manage.py seed_bva_orders
+        run: |
+          python manage.py seed_bva_orders
+          python manage.py seed_cart_test
 
       - name: Run Django and CodeceptJS
         env:
