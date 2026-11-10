@@ -311,10 +311,10 @@ Mức độ ưu tiên được phân loại theo chuẩn **MoSCoW**:
 
 | Mã FR | Tên yêu cầu chức năng | Tác nhân | Mô tả chi tiết nghiệp vụ | Mức độ |
 | :---: | :--- | :---: | :--- | :---: |
-| **FR6.1** | Dashboard KPI & Thống kê doanh thu | Admin | Hiển thị các chỉ số kinh doanh cốt lõi: Tổng số sản phẩm, Tổng số khách hàng, Tổng số đơn hàng, Đơn chờ xử lý (`pending`), Đơn đã thanh toán (`paid`), Đơn đã hủy (`cancelled`), Tổng doanh thu thực tế (tính từ các đơn đã thanh toán hoặc hoàn thành), và Bảng 6 đơn hàng mới nhất. | **M** |
-| **FR6.2** | Quản lý danh sách & Bộ lọc đơn hàng | Admin | Hiển thị danh sách toàn bộ đơn hàng trong hệ thống. Cung cấp bộ lọc theo Trạng thái đơn (`status`), bộ lọc theo Phương thức thanh toán (`payment_method`), và tìm kiếm theo Mã đơn hàng (ID), Tên người nhận hoặc Số điện thoại. | **M** |
-| **FR6.3** | Xem chi tiết đơn hàng | Admin | Cho phép xem chi tiết từng đơn hàng: Người đặt, ngày giờ tạo, địa chỉ nhận hàng, số điện thoại, ghi chú, phương thức thanh toán và danh sách chi tiết các `OrderItem`. | **M** |
-| **FR6.4** | Cập nhật chu trình trạng thái đơn hàng | Admin | Cho phép Admin cập nhật trạng thái đơn hàng theo chu trình quản lý: `pending` $\rightarrow$ `confirmed` $\rightarrow$ `shipping` $\rightarrow$ `completed` hoặc chuyển sang `cancelled` nếu khách hủy. | **M** |
+| **FR6.1** | Dashboard KPI & Thống kê doanh thu | Admin | Hiển thị: Tổng số sản phẩm, Tổng số khách hàng (tài khoản không phải staff), Số sản phẩm nổi bật, Số sản phẩm Flash Sale, Tổng số đơn hàng, Đơn chờ xử lý (`pending`), Đơn đã thanh toán (`paid`), Đơn đã hủy (`cancelled`), Tổng doanh thu và bảng 6 đơn hàng mới nhất. Doanh thu chỉ cộng các đơn có trạng thái `paid`, `confirmed`, `shipping`, `completed`. | **M** |
+| **FR6.2** | Quản lý danh sách, Tìm kiếm & Bộ lọc đơn hàng | Admin | Hiển thị danh sách đơn hàng, cho phép: (1) lọc theo trạng thái `status`, (2) lọc theo phương thức thanh toán `payment_method`, (3) tìm theo từ khóa `keyword`. Ba bộ lọc kết hợp được với nhau. Quy tắc chi tiết ở mục BR06.3 → BR06.6. | **M** |
+| **FR6.3** | Xem chi tiết đơn hàng | Admin | Xem thông tin người đặt, ngày giờ tạo, địa chỉ, số điện thoại, ghi chú, phương thức thanh toán, trạng thái và danh sách `OrderItem` (tên sản phẩm, đơn giá, số lượng, thành tiền). Mã đơn không tồn tại thì trả về 404. | **M** |
+| **FR6.4** | Cập nhật trạng thái đơn hàng theo bảng chuyển trạng thái | Admin | Admin cập nhật trạng thái đơn qua POST. Hệ thống chỉ chấp nhận chuyển trạng thái hợp lệ theo bảng ở mục BR06.2. Chuyển không hợp lệ, trạng thái không tồn tại hoặc đơn đã ở trạng thái cuối (`completed`, `cancelled`) thì **bỏ qua, không đổi trạng thái**. | **M** |
 | **FR6.5** | Tiếp nhận & Quản lý phản hồi Liên hệ | Admin / Guest | Khách hàng có thể gửi tin nhắn liên hệ/góp ý từ trang `/contact/` (Họ tên, Email, Nội dung). Hệ thống tiếp nhận, kiểm tra dữ liệu và lưu trữ phản hồi để quản trị viên theo dõi. | **S** |
 
 ---
@@ -341,8 +341,10 @@ Bảng phân chia API phục vụ bài tập thiết lập **Postman Workspaces,
 | **Trần Đình Đức** (Order) | `POST` | `/orders/qr/<order_id>/confirm/` | Order ID | 302 Redirect | Xác nhận đã chuyển khoản |
 | **Nguyễn Mai Phúc Ân** (Admin) | `POST` | `/admin-panel/categories/create/` | `name` | 302 / 200 | Thêm danh mục mới |
 | **Nguyễn Mai Phúc Ân** (Admin) | `POST` | `/admin-panel/products/create/` | `name`, `price`, `category`, `image` | 302 / 200 | Thêm sản phẩm mới kèm ảnh |
-| **Nguyễn Lê Minh Quân** (Admin) | `GET` | `/admin-panel/dashboard/` | Session Admin Cookie | 200 OK | Xem Dashboard KPI doanh thu |
-| **Nguyễn Lê Minh Quân** (Admin) | `POST` | `/admin-panel/orders/<id>/status/` | `status` (pending, shipping...) | 302 / 200 | Cập nhật trạng thái đơn |
+| **Nguyễn Lê Minh Quân** (Admin) | `GET` | `/admin-panel/dashboard/` | Session Admin | 200 | Xem Dashboard KPI doanh thu |
+| **Nguyễn Lê Minh Quân** (Admin) | `GET` | `/admin-panel/orders/` | `?status=&payment_method=&keyword=` | 200 | Danh sách, tìm kiếm, lọc đơn (tham số sai cho danh sách rỗng) |
+| **Nguyễn Lê Minh Quân** (Admin) | `GET` | `/admin-panel/orders/<id>/` | Không | 200 / 404 | Chi tiết đơn (404 nếu mã không tồn tại) |
+| **Nguyễn Lê Minh Quân** (Admin) | `POST` | `/admin-panel/orders/<id>/status/` | `status`, `next` (tùy chọn: `detail`) | 302 / 404 / 405 | Cập nhật trạng thái đơn. Chuyển không hợp lệ vẫn trả 302 nhưng không đổi trạng thái. GET trả 405 |
 
 ---
 
@@ -544,46 +546,85 @@ Bảng phân chia API phục vụ bài tập thiết lập **Postman Workspaces,
 | Thuộc tính | Chi tiết đặc tả |
 | :--- | :--- |
 | **Mã Use Case** | **UC06** |
-| **Tên Use Case** | Quản lý và Cập nhật trạng thái đơn hàng (Order Lifecycle Management) |
-| **Thành viên** | **Thành viên 6** (Phụ trách Phân hệ 6) |
+| **Tên Use Case** | Quản lý, tìm kiếm và cập nhật trạng thái đơn hàng (Order Lifecycle Management) |
+| **Thành viên** | **Thành viên 6** (Nguyễn Lê Minh Quân) |
 | **Tác nhân (Actor)** | Quản trị viên (Admin / Staff) |
-| **Mô tả ngắn** | Cho phép người quản trị theo dõi Dashboard thống kê, xem danh sách đơn hàng, lọc đơn theo trạng thái/phương thức, tìm kiếm theo SĐT/Tên/Mã đơn và cập nhật trạng thái đơn hàng. |
-| **Tiền điều kiện** | 1. Người dùng đã đăng nhập với tài khoản Admin (`is_staff = True`).<br>2. Hệ thống có các bản ghi đơn hàng đã phát sinh từ người dùng. |
-| **Hậu điều kiện** | Trạng thái đơn hàng trong bảng `orders_order` được cập nhật chính xác theo chu trình nghiệp vụ. Số liệu thống kê trên Dashboard tự động tính toán lại. |
+| **Mô tả ngắn** | Admin theo dõi Dashboard, xem danh sách đơn, lọc theo trạng thái / phương thức thanh toán, tìm theo từ khóa và cập nhật trạng thái đơn theo bảng chuyển trạng thái hợp lệ. |
+| **Tiền điều kiện** | 1. Đăng nhập bằng tài khoản `is_staff = True`.<br>2. Hệ thống đã có đơn hàng phát sinh. |
+| **Hậu điều kiện** | Trạng thái đơn trong bảng `orders_order` được lưu đúng theo bảng chuyển trạng thái. Doanh thu Dashboard tự tính lại theo BR06.1. |
 
-#### Luồng sự kiện chính (Main Flow):
-1. **Theo dõi Dashboard & Danh sách đơn hàng:**
-   - Quản trị viên truy cập Bảng điều khiển `/admin-panel/dashboard/` để xem nhanh tổng quan: Số đơn chờ xử lý, Số đơn đã thanh toán, Doanh thu thực tế.
-   - Quản trị viên chuyển sang mục "Quản lý đơn hàng" tại `/admin-panel/orders/`.
-   - Hệ thống hiển thị bảng danh sách đơn hàng gồm: Mã đơn (#ID), Tên khách hàng, Số điện thoại, Phương thức thanh toán, Tổng tiền, Ngày đặt, Trạng thái hiện tại và nút Xem chi tiết.
-2. **Tìm kiếm & Lọc đơn hàng:**
-   - Quản trị viên có thể:
-     + Nhập từ khóa vào ô tìm kiếm: Mã đơn, Tên người nhận hoặc Số điện thoại.
-     + Chọn bộ lọc Trạng thái (`status`): `pending`, `awaiting_transfer`, `paid`, `shipping`, `completed`, `cancelled`.
-     + Chọn bộ lọc Phương thức thanh toán (`payment_method`): `cod`, `qr`, `mock`.
-   - Hệ thống tải lại danh sách hiển thị đúng các đơn hàng thỏa mãn tiêu chí lọc.
-3. **Xem chi tiết & Cập nhật trạng thái đơn hàng:**
-   - Quản trị viên nhấn nút "Xem chi tiết" của một đơn hàng cụ thể $\rightarrow$ Mở trang `/admin-panel/orders/<id>/`.
-   - Hệ thống hiển thị đầy đủ: Thông tin giao nhận, Ghi chú của khách, Phương thức thanh toán, và Bảng chi tiết các món hàng trong đơn (`OrderItem`: Tên SP, Đơn giá, Số lượng, Thành tiền).
-   - Tại mục "Cập nhật trạng thái", Quản trị viên chọn trạng thái mới từ Dropdown:
-     + Chuyển từ `pending` sang `confirmed` (Đã xác nhận đơn hàng).
-     + Chuyển từ `confirmed` sang `shipping` (Đang giao hàng).
-     + Chuyển từ `shipping` sang `completed` (Đã giao hàng thành công & hoàn tất).
-   - Quản trị viên nhấn nút "Cập nhật trạng thái".
-   - Hệ thống gửi POST request đến `/admin-panel/orders/<id>/status/`, lưu trạng thái mới vào CSDL và hiển thị thông báo thành công.
-4. Use Case kết thúc thành công.
+#### Luồng sự kiện chính (Main Flow)
+1. **Dashboard:** Admin vào `/admin-panel/dashboard/` xem số đơn chờ xử lý, đơn đã thanh toán, đơn đã hủy, doanh thu.
+2. **Danh sách đơn:** Admin vào `/admin-panel/orders/`. Hệ thống hiển thị bảng gồm Mã đơn, Tên khách, SĐT, Phương thức thanh toán, Tổng tiền, Ngày đặt, Trạng thái và nút Xem chi tiết.
+3. **Tìm kiếm & lọc:** Admin nhập từ khóa và/hoặc chọn bộ lọc:
+   - Trạng thái (`status`): `pending`, `awaiting_transfer`, `paid`, `failed`, `confirmed`, `shipping`, `completed`, `cancelled`.
+   - Phương thức thanh toán (`payment_method`): `cod`, `qr`, `mock`.
+   - Hệ thống tải lại danh sách theo các quy tắc BR06.3 → BR06.6.
+4. **Chi tiết đơn:** Admin mở `/admin-panel/orders/<id>/`, xem thông tin giao nhận, ghi chú, phương thức thanh toán, danh sách `OrderItem`.
+5. **Cập nhật trạng thái:** Admin chọn trạng thái mới trong danh sách và nhấn "Cập nhật". Trình duyệt gửi POST đến `/admin-panel/orders/<id>/status/` kèm `status`.
+6. Hệ thống kiểm tra trạng thái mới có nằm trong bảng chuyển trạng thái của trạng thái hiện tại (BR06.2). Hợp lệ thì lưu vào CSDL, sau đó chuyển hướng (302) về trang chi tiết hoặc trang danh sách.
+7. Use Case kết thúc thành công.
 
-#### Các luồng thay thế & Ngoại lệ (Alternative & Exception Flows):
-- **A1: Hủy đơn hàng (Cancel Order):**
-  - Khách hàng liên hệ yêu cầu hủy đơn hoặc không thể liên lạc giao hàng:
-  - Quản trị viên chọn trạng thái `cancelled` (Đã hủy) và nhấn cập nhật.
-  - Đơn hàng chuyển sang trạng thái hủy và số tiền của đơn này không được tính vào tổng doanh thu trên Dashboard.
-- **A2: Không tìm thấy đơn hàng:**
-  - Khi tìm kiếm với mã đơn hoặc số điện thoại không tồn tại, hệ thống hiển thị thông báo: *"Không tìm thấy đơn hàng nào phù hợp với điều kiện tìm kiếm."*
+#### Luồng thay thế & ngoại lệ
+- **A1 – Hủy đơn:** Admin chọn `cancelled` từ các trạng thái cho phép hủy (`pending`, `awaiting_transfer`, `paid`, `failed`, `confirmed`, `shipping`). Đơn bị hủy không được tính vào doanh thu.
+- **A2 – Không có đơn khớp điều kiện:** Danh sách hiển thị dòng *"Chưa có đơn hàng nào."* (không báo lỗi).
+- **A3 – Bộ lọc không hợp lệ:** `status` hoặc `payment_method` không thuộc danh sách cho phép thì danh sách rỗng (hiển thị như A2), không báo lỗi 500.
+- **E1 – Chuyển trạng thái không hợp lệ:** Ví dụ `pending → shipping`, hoặc đổi trạng thái của đơn `completed` / `cancelled`. Hệ thống **không đổi trạng thái** và vẫn chuyển hướng (302) về trang danh sách hoặc chi tiết.
+- **E2 – Trạng thái không tồn tại:** Giá trị `status` không thuộc 8 trạng thái thì xử lý như E1.
+- **E3 – Mã đơn không tồn tại:** Trả về 404.
+- **E4 – Gọi bằng GET:** Chỉ chấp nhận POST, GET trả về 405.
+- **E5 – Chưa đăng nhập hoặc không phải Admin:** Bị từ chối truy cập theo cơ chế `@admin_required`.
 
-#### Quy tắc nghiệp vụ (Business Rules):
-- **BR06.1:** Doanh thu thực tế trên Dashboard chỉ được cộng dồn từ các đơn hàng có trạng thái thành công (`paid`, `confirmed`, `shipping`, `completed`). Tuyệt đối không cộng các đơn `pending`, `awaiting_transfer`, `failed` hoặc `cancelled`.
-- **BR06.2:** Mỗi lần thay đổi trạng thái đơn hàng phải được ghi nhận ngay lập tức vào cơ sở dữ liệu để khách hàng bên ngoài có thể theo dõi tiến độ chính xác.
+#### Quy tắc nghiệp vụ (Business Rules)
+
+**BR06.1 – Doanh thu.** Doanh thu Dashboard chỉ cộng tổng tiền của các đơn có trạng thái `paid`, `confirmed`, `shipping`, `completed`. Không cộng `pending`, `awaiting_transfer`, `failed`, `cancelled`.
+
+**BR06.2 – Bảng chuyển trạng thái hợp lệ.**
+
+| Trạng thái hiện tại | Được chuyển sang |
+| :--- | :--- |
+| `pending` (Chờ xử lý) | `paid`, `confirmed`, `cancelled` |
+| `awaiting_transfer` (Chờ chuyển khoản) | `paid`, `failed`, `cancelled` |
+| `paid` (Đã thanh toán) | `confirmed`, `cancelled` |
+| `failed` (Thanh toán thất bại) | `awaiting_transfer`, `cancelled` |
+| `confirmed` (Đã xác nhận) | `shipping`, `cancelled` |
+| `shipping` (Đang giao) | `completed`, `cancelled` |
+| `completed` (Hoàn thành) | *(trạng thái cuối, không chuyển được)* |
+| `cancelled` (Đã hủy) | *(trạng thái cuối, không chuyển được)* |
+
+Mọi cặp chuyển khác đều không hợp lệ, trong đó có việc giữ nguyên trạng thái (ví dụ `paid → paid`).
+
+```mermaid
+stateDiagram-v2
+    [*] --> pending: COD / Mock
+    [*] --> awaiting_transfer: VietQR
+    pending --> paid
+    pending --> confirmed
+    awaiting_transfer --> paid
+    awaiting_transfer --> failed
+    failed --> awaiting_transfer
+    paid --> confirmed
+    confirmed --> shipping
+    shipping --> completed
+    pending --> cancelled
+    awaiting_transfer --> cancelled
+    failed --> cancelled
+    paid --> cancelled
+    confirmed --> cancelled
+    shipping --> cancelled
+    completed --> [*]
+    cancelled --> [*]
+```
+
+**BR06.3 – Từ khóa dạng `#số`.** Nếu từ khóa (sau khi bỏ khoảng trắng đầu cuối) bắt đầu bằng `#` và phần sau chỉ gồm chữ số, hệ thống chỉ tìm đơn có mã đúng bằng số đó.
+
+**BR06.4 – Từ khóa thông thường.** Tìm theo họ tên chứa từ khóa (không phân biệt hoa thường). Từ khóa dài từ 6 ký tự trở lên còn được tìm theo số điện thoại chứa từ khóa. Từ khóa gồm toàn chữ số còn được tìm theo mã đơn đúng bằng số đó. Các điều kiện kết hợp bằng "hoặc".
+
+**BR06.5 – Bộ lọc không hợp lệ.** `status` hoặc `payment_method` không thuộc danh sách cho phép thì kết quả là danh sách rỗng.
+
+**BR06.6 – Kết hợp bộ lọc.** Trạng thái, phương thức thanh toán và từ khóa áp dụng đồng thời bằng "và".
+
+**BR06.7 – Lưu trạng thái.** Mỗi lần đổi trạng thái hợp lệ được ghi ngay vào CSDL (chỉ cập nhật cột `status`).
 
 ---
 
@@ -790,10 +831,10 @@ erDiagram
 | **FR5.3** | Danh sách sản phẩm Admin | Admin Goods | **Thành viên 5** | **UC05** | `TC_ADM_03` | Hiển thị bảng sản phẩm quản trị đầy đủ ảnh, giá, danh mục, phân trang. |
 | **FR5.4** | Thêm mới sản phẩm & Tải ảnh | Admin Goods | **Thành viên 5** | **UC05** | `TC_ADM_04` | Upload ảnh hợp lệ, lưu đúng thư mục media, validate giá tiền > 0. |
 | **FR5.5** | Chỉnh sửa & Xóa sản phẩm | Admin Goods | **Thành viên 5** | **UC05** | `TC_ADM_05` | Cập nhật giá/khuyến mãi thành công; xóa sản phẩm có hộp thoại cảnh báo. |
-| **FR6.1** | Dashboard KPI & Doanh thu | Admin Orders| **Thành viên 6** | - | `TC_RPT_01` | Tính đúng tổng số đơn, số khách hàng và tổng doanh thu từ các đơn thành công. |
-| **FR6.2** | Quản lý danh sách & Lọc đơn | Admin Orders| **Thành viên 6** | **UC06** | `TC_RPT_02` | Lọc đơn theo trạng thái, theo hình thức thanh toán và tìm theo Tên/SĐT/Mã đơn. |
-| **FR6.3** | Xem chi tiết đơn hàng Admin | Admin Orders| **Thành viên 6** | **UC06** | `TC_RPT_03` | Hiển thị đầy đủ thông tin khách hàng, địa chỉ và từng OrderItem trong đơn. |
-| **FR6.4** | Cập nhật chu trình đơn hàng | Admin Orders| **Thành viên 6** | **UC06** | `TC_RPT_04` | Chuyển đổi trạng thái (`pending` -> `shipping` -> `completed`/`cancelled`) đúng. |
+| **FR6.1** | Dashboard KPI & Doanh thu | Admin Orders | **Thành viên 6** | - | Postman: Green_Shop_Admin_Orders | Tổng đơn, khách hàng và doanh thu đúng theo BR06.1. |
+| **FR6.2** | Danh sách, tìm kiếm & lọc đơn | Admin Orders | **Thành viên 6** | **UC06** | Postman TC-AOA-080 → 087; CodeceptJS `tests/search_order_bva_test.js` (TC01 → TC14, BVA SĐT và mã đơn); `tests/search_order_decision_test.js` (TC-BS1 → BS7, bảng quyết định); sheet "BQĐ Tìm kiếm đơn" | Đúng BR06.3 → BR06.6; độ phủ hàm `admin_order_list` đạt 27/27 dòng, 16/16 nhánh. |
+| **FR6.3** | Xem chi tiết đơn hàng | Admin Orders | **Thành viên 6** | **UC06** | Postman: Green_Shop_Admin_Orders | Hiển thị đủ thông tin và từng `OrderItem`; mã không tồn tại trả 404. |
+| **FR6.4** | Cập nhật trạng thái đơn hàng | Admin Orders | **Thành viên 6** | **UC06** | `admin_panel/tests_order_status.py` (15 unit test, kiểm 64 cặp chuyển); `tests/status_update_bva_test.js` (TC01 → TC07, BVA mã đơn); Postman TC-AOA-088 → 101; sheet "BQĐ Cập nhật trạng thái" | Chỉ chấp nhận chuyển theo BR06.2 (ví dụ `pending → shipping` bị từ chối); đơn `completed`/`cancelled` không đổi được. |
 | **FR6.5** | Tiếp nhận phản hồi Liên hệ | Support | **Thành viên 6** | - | `TC_RPT_05` | Form liên hệ tiếp nhận thông tin họ tên, email, tin nhắn góp ý thành công. |
 
 ---
