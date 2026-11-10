@@ -1,0 +1,21 @@
+$kind: http-request
+url: '{{reset_url}}'
+method: GET
+scripts:
+  - type: beforeRequest
+    code: if(!pm.collectionVariables.get('reset_url')||pm.collectionVariables.get('bva_reset_link_case')!==pm.collectionVariables.get('bva_case'))throw new Error('Thiếu liên kết reset của testcase hiện tại.');
+    language: text/javascript
+  - type: afterResponse
+    code: |-
+      pm.test('Token reset được chấp nhận',()=>pm.response.to.have.status(302));
+      pm.collectionVariables.unset('reset_form_url');
+      const loc=pm.response.headers.get('Location')||'';
+      const base=pm.collectionVariables.get('base_url').replace(/\/$/,'');
+      const next=loc.startsWith('/')?base+loc:loc;
+      pm.test('Đúng form set-password của ứng dụng local',()=>{pm.expect(next.startsWith(base+'/accounts/password/reset/')).to.eql(true);pm.expect(next).to.match(/\/accounts\/password\/reset\/[^/]+\/set-password\/$/);});
+      if(pm.response.code!==302||!next.startsWith(base+'/accounts/password/reset/')||!/\/accounts\/password\/reset\/[^/]+\/set-password\/$/.test(next))throw new Error('Liên kết reset không hợp lệ.');
+      pm.collectionVariables.set('reset_form_url',next);
+    language: text/javascript
+settings:
+  followRedirects: false
+order: 18000

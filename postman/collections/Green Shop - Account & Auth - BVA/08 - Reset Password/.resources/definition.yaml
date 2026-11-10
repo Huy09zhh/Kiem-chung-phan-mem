@@ -1,0 +1,6 @@
+$kind: collection
+description: |-
+  Robustness BVA: thay đổi một biến, các biến còn lại giữ nominal. 
+
+  SCRUM-42: hộp thư dev chỉ được đọc qua phiên superuser đang hoạt động. Cần DEBUG=True, backend filebased (EMAIL_HOST_USER rỗng trong tiến trình kiểm thử), và hai biến Environment cục bộ bva_mailbox_admin_user / bva_mailbox_admin_password. Không lưu giá trị thật vào collection hoặc Git. Luồng này không áp dụng cho máy đang gửi SMTP thật; không bật lại hộp thư công khai.
+order: 9000

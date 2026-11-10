@@ -1,0 +1,18 @@
+$kind: http-request
+url: '{{base_url}}/accounts/login/'
+method: POST
+body:
+  type: urlencoded
+  content:
+    csrfmiddlewaretoken: '{{bva_csrf}}'
+    username: '{{bva_mailbox_admin_user}}'
+    password: '{{bva_mailbox_admin_password}}'
+scripts:
+  - type: afterResponse
+    code: |-
+      function locationPath() { const loc=pm.response.headers.get('Location')||''; return loc.replace(/^https?:\/\/[^/]+/i,'').split('?')[0]; }
+      pm.test('HTTP 302',()=>pm.response.to.have.status(302));pm.test('Đúng trang chuyển hướng',()=>pm.expect(locationPath()).to.eql("/accounts/admin-dashboard/"));
+    language: text/javascript
+settings:
+  followRedirects: false
+order: 14000

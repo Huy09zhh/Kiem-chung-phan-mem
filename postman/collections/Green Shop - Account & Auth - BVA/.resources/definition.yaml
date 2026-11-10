@@ -1,0 +1,30 @@
+$kind: collection
+description: |-
+  Robustness BVA Account & Auth. Cập nhật 10/11/2026.
+
+  nom = (max+ + min-) / 2; làm tròn 0.5 lên. Username=76, password=68, email=130, first_name=last_name=75. Mỗi testcase thay đổi một biến; các biến còn lại giữ nominal. Hai trường mật khẩu mới / xác nhận luôn bằng nhau. Độ dài tên min-=-1 không áp dụng.
+
+  Giữ nguyên các nhóm 00–05 từ bản đã kiểm thử. Các request setup, CSRF, kiểm tra lưu, đăng nhập lại và cleanup không phải testcase BVA độc lập. Case nominal được giữ trong từng folder để có thể chạy riêng; khi tính ma trận 6n+1 cần loại tổ hợp nominal trùng.
+
+  Nhóm 06: Email hồ sơ; 07: Đổi mật khẩu; 08: Đặt lại mật khẩu. Nhóm 08 cần môi trường dev filebased và superuser test theo mô tả folder, không đọc hộp thư ẩn danh. Mỗi case tạo tài khoản test và đăng xuất khi kết thúc; không tự xóa tài khoản. Collection mới đã được kiểm tra cấu trúc/script; chưa thực thi HTTP các nhóm 06–08.
+
+  Phạm vi: 00–08.
+variables:
+  base_url: http://127.0.0.1:8000
+  bva_csrf: ''
+  bva_user: ''
+  bva_email: ''
+  bva_password: ''
+  old_password: ''
+  bva_new_password: ''
+  bva_reset_password: ''
+  bva_profile_value: ''
+  bva_new_email: ''
+  forged_username: ''
+  reset_url: ''
+  reset_form_url: ''
+  bva_case: ''
+  bva_email_length: ''
+  bva_first_name: ''
+  bva_last_name: ''
+  bva_reset_link_case: ''
