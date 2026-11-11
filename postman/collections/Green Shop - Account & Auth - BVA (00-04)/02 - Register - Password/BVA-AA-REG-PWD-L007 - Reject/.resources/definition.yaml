@@ -1,6 +1,0 @@
-$kind: collection
-description: "Robustness BVA. nom = (max+ + min-) / 2, làm tròn 0.5 lên cho độ dài nguyên.\n\nBiến đang xét: password;\
-  \ độ dài: 7; vị trí: MIN-. Tag: X-REG-PWD-MIN-, B-REG-PWD-MIN-.\n\nCác biến còn lại giữ nominal: username=76,\
-  \ password=68, email=130, first_name=last_name=75 khi có trong form.\n\nExpected: từ chối, báo lỗi đúng trường\
-  \ và kiểm tra trạng thái sau yêu cầu. "
-order: 1000

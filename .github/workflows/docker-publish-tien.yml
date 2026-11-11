@@ -8,6 +8,7 @@ on:
       - tuan-3
       - tuan-4
       - tuan-5
+      - tuan-6
   workflow_dispatch:
 
 permissions:

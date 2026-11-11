@@ -1,0 +1,26 @@
+$kind: http-request
+url: '{{base_url}}/dev/mailbox/'
+method: GET
+scripts:
+  - type: afterResponse
+    code: |-
+      function decode(value) { return String(value).replace(/&#x([0-9a-f]+);/gi,(_,n)=>String.fromCodePoint(parseInt(n,16))).replace(/&#([0-9]+);/g,(_,n)=>String.fromCodePoint(Number(n))).replace(/&quot;/g,'"').replace(/&#x27;|&apos;/g,"'").replace(/&lt;/g,'<').replace(/&gt;/g,'>').replace(/&amp;/g,'&'); }
+
+      function attr(tag, key) { const m = tag.match(new RegExp('(?:^|\\s)'+key+'=["\x27]([^"\x27]*)["\x27]','i')); return m ? decode(m[1]) : null; }
+
+      pm.test('Hộp thư dev chỉ đọc được bằng superuser',()=>pm.response.to.have.status(200));
+      pm.collectionVariables.unset('reset_url');
+      pm.collectionVariables.unset('bva_reset_link_case');
+      if(pm.response.code!==200)throw new Error('SETUP 08: hộp thư dev chưa bật hoặc tài khoản không phải superuser đang hoạt động.');
+      const email=pm.collectionVariables.get('bva_email');
+      const cards=pm.response.text().match(/<details\b[^>]*class=["']dev-mail["'][^>]*>[\s\S]*?<\/details>/gi)||[];
+      let found='';
+      for(const card of cards){const recipient=card.match(/<b>\s*([^<]+)\s*<\/b>/i);if(!recipient||decode(recipient[1]).trim().toLowerCase()!==email.toLowerCase())continue;for(const tag of card.match(/<a\b[^>]*>/gi)||[]){const href=attr(tag,'href')||'';const base=pm.collectionVariables.get('base_url').replace(/\/$/,'');if(href.startsWith(base+'/accounts/password/reset/')&&/\/accounts\/password\/reset\/[^/]+\/[^/]+\/$/.test(href)){found=href;break;}}if(found)break;}
+      pm.test('Reset URL thuộc đúng email của testcase hiện tại',()=>pm.expect(found).to.not.be.empty);
+      if(!found)throw new Error('Không tìm thấy thư reset của tài khoản test hiện tại. Không dùng token cũ hoặc thư của người khác.');
+      pm.collectionVariables.set('reset_url',found);
+      pm.collectionVariables.set('bva_reset_link_case',pm.collectionVariables.get('bva_case'));
+    language: text/javascript
+settings:
+  followRedirects: false
+order: 15000

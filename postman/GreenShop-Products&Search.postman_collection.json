@@ -1232,6 +1232,805 @@
           }
         }
       ]
+    },
+    {
+      "name": "27. State Transition: Chưa tồn tại -> Giá thường (TC-PS-033)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"[TC-PS-033] Tạo sản phẩm giá thường thành công (HTTP 201)\", function () {",
+              "    pm.response.to.have.status(201);",
+              "    var jsonData = pm.response.json();",
+              "    pm.expect(Boolean(jsonData.has_discount)).to.eql(false);",
+              "    pm.expect(jsonData.discount_percent).to.eql(0);",
+              "    pm.collectionVariables.set(\"stt_product_id\", jsonData.id);",
+              "});"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json",
+            "type": "text"
+          },
+          {
+            "key": "Authorization",
+            "value": "Basic dGVzdF9hZG1pbjphZG1pbjEyMw==",
+            "type": "text"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/products/api/",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "products",
+            "api",
+            ""
+          ]
+        },
+        "description": "STT-01: Tạo SP mới không có old_price -> trạng thái Giá thường",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"name\": \"Sen đá nâu STT\",\n  \"price\": \"50000\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "28. State Transition: Giá thường -> Đang giảm giá (TC-PS-034)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"[TC-PS-034] Chuyển sang trạng thái Đang giảm giá 50% (HTTP 200)\", function () {",
+              "    pm.response.to.have.status(200);",
+              "    var jsonData = pm.response.json();",
+              "    pm.expect(jsonData.has_discount).to.eql(true);",
+              "    pm.expect(jsonData.discount_percent).to.eql(50);",
+              "});"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "PATCH",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json",
+            "type": "text"
+          },
+          {
+            "key": "Authorization",
+            "value": "Basic dGVzdF9hZG1pbjphZG1pbjEyMw==",
+            "type": "text"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/products/api/{{stt_product_id}}/",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "products",
+            "api",
+            "{{stt_product_id}}",
+            ""
+          ]
+        },
+        "description": "STT-02: Cập nhật old_price > price -> chuyển sang Đang giảm giá",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"old_price\": \"100000\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "29. State Transition: Đang giảm giá -> Giá thường (TC-PS-035)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"[TC-PS-035] Tắt giảm giá về Giá thường thành công (HTTP 200)\", function () {",
+              "    pm.response.to.have.status(200);",
+              "    var jsonData = pm.response.json();",
+              "    pm.expect(Boolean(jsonData.has_discount)).to.eql(false);",
+              "    pm.expect(jsonData.discount_percent).to.eql(0);",
+              "});"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "PATCH",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json",
+            "type": "text"
+          },
+          {
+            "key": "Authorization",
+            "value": "Basic dGVzdF9hZG1pbjphZG1pbjEyMw==",
+            "type": "text"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/products/api/{{stt_product_id}}/",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "products",
+            "api",
+            "{{stt_product_id}}",
+            ""
+          ]
+        },
+        "description": "STT-03: Gỡ bỏ old_price=null -> quay về Giá thường",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"old_price\": null\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "30. State Transition: Đang tồn tại -> Đã xóa & thử truy cập lại (TC-PS-036)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"[TC-PS-036] Xóa sản phẩm thành công (HTTP 204)\", function () {",
+              "    pm.response.to.have.status(204);",
+              "});",
+              "pm.test(\"[TC-PS-036] Truy cập lại sản phẩm đã xóa phải trả 404\", function () {",
+              "    var baseUrl = pm.collectionVariables.get(\"baseUrl\") || \"http://127.0.0.1:8000\";",
+              "    var pid = pm.collectionVariables.get(\"stt_product_id\");",
+              "    pm.sendRequest(baseUrl + \"/products/api/\" + pid + \"/\", function (err, res) {",
+              "        pm.expect(res.code).to.eql(404);",
+              "    });",
+              "});"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "DELETE",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json",
+            "type": "text"
+          },
+          {
+            "key": "Authorization",
+            "value": "Basic dGVzdF9hZG1pbjphZG1pbjEyMw==",
+            "type": "text"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/products/api/{{stt_product_id}}/",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "products",
+            "api",
+            "{{stt_product_id}}",
+            ""
+          ]
+        },
+        "description": "STT-04: Xóa SP sang trạng thái cuối Đã xóa; gọi lại trả về 404"
+      },
+      "response": []
+    },
+    {
+      "name": "31. State Transition: Guest không quyền chuyển trạng thái (TC-PS-037)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"[TC-PS-037] Khách chưa đăng nhập bị chặn (401 hoặc 403)\", function () {",
+              "    pm.expect(pm.response.code).to.be.oneOf([401, 403]);",
+              "});"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json",
+            "type": "text"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/products/api/",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "products",
+            "api",
+            ""
+          ]
+        },
+        "description": "STT-05: Chuyển đổi bất hợp pháp bởi Guest -> bị chặn 401/403",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"name\": \"SP không quyền\",\n  \"price\": \"10000\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "32. Decision Table 1 (R1): GET chi tiết SP tồn tại (TC-PS-038)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"[TC-PS-038] R1: GET SP tồn tại trả 200 OK\", function () {",
+              "    pm.response.to.have.status(200);",
+              "    pm.expect(pm.response.json()).to.have.property(\"name\");",
+              "});"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json",
+            "type": "text"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/products/api/2/",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "products",
+            "api",
+            "2",
+            ""
+          ]
+        },
+        "description": "Bảng quyết định 1 - R1: GET + SP tồn tại -> 200 OK"
+      },
+      "response": []
+    },
+    {
+      "name": "33. Decision Table 1 (R2): GET chi tiết SP không tồn tại (TC-PS-039)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"[TC-PS-039] R2: GET SP không tồn tại trả 404\", function () {",
+              "    pm.response.to.have.status(404);",
+              "});"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json",
+            "type": "text"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/products/api/999999/",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "products",
+            "api",
+            "999999",
+            ""
+          ]
+        },
+        "description": "Bảng quyết định 1 - R2: GET + SP không tồn tại -> 404 Not Found"
+      },
+      "response": []
+    },
+    {
+      "name": "34. Decision Table 1 (R3): PUT chi tiết SP khi chưa đăng nhập (TC-PS-040)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"[TC-PS-040] R3: Guest sửa SP bị chặn 401\", function () {",
+              "    pm.response.to.have.status(401);",
+              "});"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "PUT",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json",
+            "type": "text"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/products/api/2/",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "products",
+            "api",
+            "2",
+            ""
+          ]
+        },
+        "description": "Bảng quyết định 1 - R3: PUT + Chưa đăng nhập -> 401 Unauthorized",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"name\": \"Sửa không quyền\",\n  \"price\": \"10000\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "35. Decision Table 1 (R4): PATCH chi tiết SP bằng User thường (TC-PS-041)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"[TC-PS-041] R4: User thường sửa SP bị chặn 403\", function () {",
+              "    pm.response.to.have.status(403);",
+              "});"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "PATCH",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json",
+            "type": "text"
+          },
+          {
+            "key": "Authorization",
+            "value": "Basic dXNlcjE6VXNlckAxMjM0NQ==",
+            "type": "text"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/products/api/2/",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "products",
+            "api",
+            "2",
+            ""
+          ]
+        },
+        "description": "Bảng quyết định 1 - R4: PATCH + User thường (user1) -> 403 Forbidden",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"price\": \"10000\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "36. Decision Table 1 (R5): PUT Admin thiếu trường bắt buộc (TC-PS-042)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"[TC-PS-042] R5: Dữ liệu thiếu field trả về 400\", function () {",
+              "    pm.response.to.have.status(400);",
+              "});"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "PUT",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json",
+            "type": "text"
+          },
+          {
+            "key": "Authorization",
+            "value": "Basic dGVzdF9hZG1pbjphZG1pbjEyMw==",
+            "type": "text"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/products/api/2/",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "products",
+            "api",
+            "2",
+            ""
+          ]
+        },
+        "description": "Bảng quyết định 1 - R5: PUT + Admin + thiếu price -> 400 Bad Request",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"name\": \"Chỉ có tên\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "37. Decision Table 1 (R6): PATCH Admin cập nhật giá hợp lệ (TC-PS-043)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"[TC-PS-043] R6: Cập nhật giá hợp lệ trả 200 OK\", function () {",
+              "    pm.response.to.have.status(200);",
+              "    pm.expect(pm.response.json().price).to.eql(\"30000\");",
+              "});"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "PATCH",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json",
+            "type": "text"
+          },
+          {
+            "key": "Authorization",
+            "value": "Basic dGVzdF9hZG1pbjphZG1pbjEyMw==",
+            "type": "text"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/products/api/2/",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "products",
+            "api",
+            "2",
+            ""
+          ]
+        },
+        "description": "Bảng quyết định 1 - R6: PATCH + Admin + dữ liệu hợp lệ -> 200 OK",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"price\": \"30000\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "38. Decision Table 2 (R1): Danh sách mặc định không lọc/sắp xếp (TC-PS-044)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"[TC-PS-044] R1: Trang danh sách mặc định 200 OK\", function () {",
+              "    pm.response.to.have.status(200);",
+              "    pm.expect(pm.response.text()).to.include(\"Tất cả sản phẩm\");",
+              "});"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json",
+            "type": "text"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/products/",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "products",
+            ""
+          ]
+        },
+        "description": "Bảng quyết định 2 - R1: Không q, không category, sort mặc định"
+      },
+      "response": []
+    },
+    {
+      "name": "39. Decision Table 2 (R2): Tìm kiếm theo từ khóa q (TC-PS-045)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"[TC-PS-045] R2: Tìm theo từ khóa q trả 200 OK\", function () {",
+              "    pm.response.to.have.status(200);",
+              "    pm.expect(pm.response.text()).to.include(\"Kết quả tìm kiếm cho:\");",
+              "});"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json",
+            "type": "text"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/products/?q=cây",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "products",
+            ""
+          ],
+          "query": [
+            {
+              "key": "q",
+              "value": "cây"
+            }
+          ]
+        },
+        "description": "Bảng quyết định 2 - R2: Có từ khóa q, không category, sort mặc định"
+      },
+      "response": []
+    },
+    {
+      "name": "40. Decision Table 2 (R3): Lọc danh mục & sort giá tăng dần (TC-PS-046)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"[TC-PS-046] R3: Lọc danh mục và sort giá tăng 200 OK\", function () {",
+              "    pm.response.to.have.status(200);",
+              "    pm.expect(pm.response.text()).to.include(\"Tất cả sản phẩm\");",
+              "});"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json",
+            "type": "text"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/products/?category=1&sort=price_asc",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "products",
+            ""
+          ],
+          "query": [
+            {
+              "key": "category",
+              "value": "1"
+            },
+            {
+              "key": "sort",
+              "value": "price_asc"
+            }
+          ]
+        },
+        "description": "Bảng quyết định 2 - R3: Danh mục hợp lệ + sort=price_asc"
+      },
+      "response": []
+    },
+    {
+      "name": "41. Decision Table 2 (R4): Tìm q + category sai abc + sort A-Z (TC-PS-047)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"[TC-PS-047] R4: Category sai định dạng xử lý an toàn 200 OK\", function () {",
+              "    pm.response.to.have.status(200);",
+              "    pm.expect(pm.response.text()).to.not.include(\"ValueError\");",
+              "});"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json",
+            "type": "text"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/products/?q=a&category=abc&sort=name_asc",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "products",
+            ""
+          ],
+          "query": [
+            {
+              "key": "q",
+              "value": "a"
+            },
+            {
+              "key": "category",
+              "value": "abc"
+            },
+            {
+              "key": "sort",
+              "value": "name_asc"
+            }
+          ]
+        },
+        "description": "Bảng quyết định 2 - R4: category=abc không crash 500, giữ lọc q và sort A-Z"
+      },
+      "response": []
+    },
+    {
+      "name": "42. Decision Table 2 (R5): Danh mục hợp lệ + từ khóa không khớp (TC-PS-048)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"[TC-PS-048] R5: Không khớp từ khóa hiển thị thông báo rỗng 200 OK\", function () {",
+              "    pm.response.to.have.status(200);",
+              "    pm.expect(pm.response.text()).to.include(\"Chưa tìm thấy sản phẩm phù hợp\");",
+              "});"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json",
+            "type": "text"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/products/?category=1&q=KhongTonTai9999",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "products",
+            ""
+          ],
+          "query": [
+            {
+              "key": "category",
+              "value": "1"
+            },
+            {
+              "key": "q",
+              "value": "KhongTonTai9999"
+            }
+          ]
+        },
+        "description": "Bảng quyết định 2 - R5: Không có SP khớp -> danh sách rỗng an toàn"
+      },
+      "response": []
     }
   ],
   "variable": [

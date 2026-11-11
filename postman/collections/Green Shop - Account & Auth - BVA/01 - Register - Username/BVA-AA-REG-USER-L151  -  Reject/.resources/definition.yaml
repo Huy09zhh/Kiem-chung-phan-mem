@@ -1,0 +1,10 @@
+$kind: collection
+description: |-
+  Robustness BVA. nom = (max+ + min-) / 2, làm tròn 0.5 lên cho độ dài nguyên.
+
+  Biến đang xét: username; độ dài: 151; vị trí: MAX+. Tag: X-REG-USER-MAX+, B-REG-USER-MAX+.
+
+  Các biến còn lại giữ nominal: username=76, password=68, email=130, first_name=last_name=75 khi có trong form.
+
+  Expected: từ chối, báo lỗi đúng trường và kiểm tra trạng thái sau yêu cầu. 
+order: 7000

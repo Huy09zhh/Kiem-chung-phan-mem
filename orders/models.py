@@ -20,13 +20,15 @@ class Order(models.Model):
         ('cancelled', 'Đã hủy'),
     )
     ALLOWED_TRANSITIONS = {
-        'pending':   {'paid', 'confirmed', 'cancelled'},
-        'paid':      {'confirmed', 'cancelled'},
-        'confirmed': {'shipping', 'cancelled'},
-        'shipping':  {'completed', 'cancelled'},
-        'completed': set(),
-        'cancelled': set(),
-    }
+    'pending':           {'paid', 'confirmed', 'cancelled'},
+    'awaiting_transfer': {'paid', 'failed', 'cancelled'},
+    'paid':              {'confirmed', 'cancelled'},
+    'failed':            {'awaiting_transfer', 'cancelled'},
+    'confirmed':         {'shipping', 'cancelled'},
+    'shipping':          {'completed', 'cancelled'},
+    'completed':         set(),
+    'cancelled':         set(),
+}
 
     def can_change_to(self, new_status):
         return new_status in self.ALLOWED_TRANSITIONS.get(self.status, set())

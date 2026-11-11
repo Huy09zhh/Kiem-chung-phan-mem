@@ -2,10 +2,10 @@ name: Green Shop CI
 
 on:
   push:
-    branches: ["tuan-2", "tuan-3", "tuan-4", "tuan-5", "main"]
+    branches: ["tuan-2", "tuan-3", "tuan-4", "tuan-5", "tuan-6", "main"]
 
   pull_request:
-    branches: ["tuan-2", "tuan-3", "tuan-4", "tuan-5", "main"]
+    branches: ["tuan-2", "tuan-3", "tuan-4", "tuan-5", "tuan-6", "main"]
 
   workflow_dispatch:
 
@@ -50,6 +50,11 @@ jobs:
       - name: Prepare database
         run: python manage.py migrate --noinput
 
+      - name: Seed test data
+        run: |
+          python manage.py seed_bva_orders
+          python manage.py seed_cart_test
+
       - name: Run Django and CodeceptJS
         env:
           CI: "true"
@@ -67,4 +72,10 @@ jobs:
           done
 
           curl --fail --silent http://127.0.0.1:8000/ > /dev/null
+          echo "Login page HTTP status: $(curl -s -o /tmp/login.html -w '%{http_code}' http://127.0.0.1:8000/accounts/login/)"
+          grep -c 'name="username"' /tmp/login.html || true
           npx codeceptjs run --steps
+
+      - name: Show Django log on failure
+        if: failure()
+        run: tail -n 120 django.log || true

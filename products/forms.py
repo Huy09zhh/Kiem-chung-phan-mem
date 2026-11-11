@@ -29,16 +29,26 @@ class ProductForm(forms.ModelForm):
         self.fields['price'].widget.attrs['min'] = 0
         self.fields['old_price'].widget.attrs['min'] = 0
 
+    def clean_name(self):
+        name = (self.cleaned_data.get('name') or '').strip()
+        if len(name) < 2:
+            raise ValidationError('Tên sản phẩm phải có độ dài tối thiểu 2 ký tự trở lên.')
+        return name
+
     def clean_price(self):
         price = self.cleaned_data.get('price')
         if price is not None and price < 0:
             raise ValidationError('Giá phải lớn hơn hoặc bằng 0.')
+        if price is not None and price > 100000000:
+            raise ValidationError('Giá bán không được vượt quá 100.000.000 VNĐ.')
         return price
 
     def clean_old_price(self):
         old_price = self.cleaned_data.get('old_price')
         if old_price is not None and old_price < 0:
             raise ValidationError('Giá cũ phải lớn hơn hoặc bằng 0.')
+        if old_price is not None and old_price > 100000000:
+            raise ValidationError('Giá cũ không được vượt quá 100.000.000 VNĐ.')
         return old_price
 
     def clean(self):
