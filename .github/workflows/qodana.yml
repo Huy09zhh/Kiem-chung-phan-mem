@@ -8,6 +8,7 @@ on:
       - tuan-4
       - tuan-5
       - tuan-6
+      - tuan-7
       - main
 
   pull_request:
@@ -17,6 +18,7 @@ on:
       - tuan-4
       - tuan-5
       - tuan-6
+      - tuan-7
       - main
 
   workflow_dispatch:

@@ -9,6 +9,7 @@ on:
       - tuan-4
       - tuan-5
       - tuan-6
+      - tuan-7
   workflow_dispatch:
 
 permissions:
