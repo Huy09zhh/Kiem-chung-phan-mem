@@ -1,0 +1,4 @@
+$kind: http-request
+url: "{{anon_url}}/accounts/login/"
+method: GET
+order: 1000

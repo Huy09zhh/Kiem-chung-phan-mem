@@ -1,0 +1,31 @@
+$kind: http-request
+url: "{{base_url}}/orders/checkout/"
+method: POST
+body:
+  type: urlencoded
+  content:
+    full_name: Nguyen Van BVA
+    phone: "0987654321"
+    address: 1 Test Street
+    note: ""
+    payment_method: cod
+scripts:
+  - type: afterResponse
+    code: |-
+      const ok = (c, m) => { if (!c) { throw new Error(m); } };
+      const html = pm.response.text();
+      const grab = (re) => { const m = html.match(re); return m ? m[1] : null; };
+      const loc = () => pm.response.headers.get('Location') || '';
+      const cv = (k) => pm.collectionVariables.get(k);
+      const setcv = (k, v) => pm.collectionVariables.set(k, v);
+      const selectedStatus = () => grab(/<option value="(\w+)"\s+selected>/);
+      const NEXT_OK = { pending: 'confirmed', awaiting_transfer: 'paid', paid: 'confirmed', failed: 'awaiting_transfer', confirmed: 'shipping', shipping: 'completed' };
+      const NEXT_BAD = { pending: 'shipping', awaiting_transfer: 'confirmed', paid: 'shipping', failed: 'paid', confirmed: 'paid', shipping: 'pending' };
+      const ALLOWED = { pending: ['paid','confirmed','cancelled'], awaiting_transfer: ['paid','failed','cancelled'], paid: ['confirmed','cancelled'], failed: ['awaiting_transfer','cancelled'], confirmed: ['shipping','cancelled'], shipping: ['completed','cancelled'] };
+      pm.test('TC-AOA-102 | Tổng 99.999.999 đặt hàng được, chuyển tới trang thành công', function () {
+        ok(pm.response.code === 302 && /\/orders\/success\//.test(loc()), 'HTTP ' + pm.response.code + ', Location=' + loc());
+      });
+    language: text/javascript
+settings:
+  followRedirects: false
+order: 4000

@@ -1,0 +1,55 @@
+$kind: collection
+description: |-
+  Khám phá lỗi phân hệ 6 – Admin Orders & Analytics, Tuần 7: TC-AOA-102 → 112.
+  Chuẩn bị: python manage.py runserver; điền admin_password, cust_username/cust_password (tài khoản KHÔNG phải staff).
+  reject_order_id và perm_order_id: hai đơn CHƯA ở trạng thái cuối (không phải Hoàn thành / Đã hủy), ví dụ đơn Chờ xử lý hoặc Đã thanh toán.
+  base_url (127.0.0.1) là phiên admin; anon_url (localhost) là phiên chưa đăng nhập rồi khách thường (hai phiên cookie riêng).
+  run_overflow: mặc định 'no' nên TC-AOA-103 và 104 bị bỏ qua. Hai test này tạo đơn tổng 100.000.000 làm dashboard và danh sách đơn lỗi 500 (bug đã báo). Đặt 'yes' chỉ khi cần tái hiện, rồi xóa đơn lỗi trong DB.
+  Giỏ hàng tài khoản admin nên trống trước khi chạy folder 01 (TC-AOA-102 tạo thêm 1 đơn COD thật).
+  Chạy theo thứ tự 00 → 06. Kết quả mong đợi: 102, 107–112 PASS; 105, 106 FAIL (bug ticket 2).
+variables:
+  base_url: http://127.0.0.1:8000
+  anon_url: http://localhost:8000
+  admin_username: adminquan
+  admin_password: ""
+  cust_username: ""
+  cust_password: ""
+  reject_order_id: "19"
+  perm_order_id: "18"
+  run_overflow: no
+  run_tag: ""
+  csrf_html: ""
+  csrf_token_val: ""
+  csrf_cookie: ""
+  pid_102: ""
+  reject_before: ""
+  reject_bad: ""
+  perm_before: ""
+  perm_target: ""
+scripts:
+  - type: http:beforeRequest
+    code: |-
+      // Tự thêm CSRF cho các request ghi dữ liệu (Django bắt buộc).
+      const m = pm.request.method;
+      pm.request.headers.upsert({ key: 'Referer', value: pm.variables.replaceIn('{{base_url}}') + '/' });
+      if (m !== 'GET' && m !== 'HEAD') {
+          const token = pm.collectionVariables.get('csrf_cookie') || pm.cookies.get('csrftoken') || pm.collectionVariables.get('csrf_html');
+          if (token) {
+              pm.request.headers.upsert({ key: 'X-CSRFToken', value: token });
+              pm.collectionVariables.set('csrf_token_val', token);
+          }
+      }
+    language: text/javascript
+  - type: http:afterResponse
+    code: |-
+      // Sau mỗi response: nhớ lại cookie csrftoken mới nhất (Django đổi token sau khi đăng nhập).
+      let tk = null;
+      try { tk = pm.cookies.get('csrftoken'); } catch (e) {}
+      if (!tk) {
+          try {
+              const rc = pm.response.cookies.get('csrftoken');
+              tk = rc && typeof rc === 'object' ? rc.value : rc;
+          } catch (e) {}
+      }
+      if (tk) { pm.collectionVariables.set('csrf_cookie', tk); }
+    language: text/javascript

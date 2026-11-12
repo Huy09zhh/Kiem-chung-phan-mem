@@ -1,0 +1,28 @@
+$kind: http-request
+url: "{{base_url}}/admin-panel/products/create/"
+method: POST
+body:
+  type: urlencoded
+  content:
+    name: "{{run_tag}}-TC-AOA-102"
+    price: "99999999"
+    old_price: ""
+    description: Sản phẩm kiểm thử biên tổng đơn
+scripts:
+  - type: afterResponse
+    code: |-
+      const ok = (c, m) => { if (!c) { throw new Error(m); } };
+      const html = pm.response.text();
+      const grab = (re) => { const m = html.match(re); return m ? m[1] : null; };
+      const loc = () => pm.response.headers.get('Location') || '';
+      const cv = (k) => pm.collectionVariables.get(k);
+      const setcv = (k, v) => pm.collectionVariables.set(k, v);
+      const selectedStatus = () => grab(/<option value="(\w+)"\s+selected>/);
+      const NEXT_OK = { pending: 'confirmed', awaiting_transfer: 'paid', paid: 'confirmed', failed: 'awaiting_transfer', confirmed: 'shipping', shipping: 'completed' };
+      const NEXT_BAD = { pending: 'shipping', awaiting_transfer: 'confirmed', paid: 'shipping', failed: 'paid', confirmed: 'paid', shipping: 'pending' };
+      const ALLOWED = { pending: ['paid','confirmed','cancelled'], awaiting_transfer: ['paid','failed','cancelled'], paid: ['confirmed','cancelled'], failed: ['awaiting_transfer','cancelled'], confirmed: ['shipping','cancelled'], shipping: ['completed','cancelled'] };
+      pm.test('Tạo sản phẩm thành công (302)', function () { ok(pm.response.code === 302, 'Form từ chối giá ' + 99999999 + ' (HTTP ' + pm.response.code + '). Giá tối đa form cho phép có thể khác 100.000.000.'); });
+    language: text/javascript
+settings:
+  followRedirects: false
+order: 1000

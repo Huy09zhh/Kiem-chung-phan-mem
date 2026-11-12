@@ -1,0 +1,29 @@
+$kind: http-request
+url: "{{base_url}}/admin-panel/products/"
+method: GET
+scripts:
+  - type: beforeRequest
+    code: |-
+      if (pm.collectionVariables.get('run_overflow') !== 'yes') {
+          try { pm.execution.skipRequest(); } catch (e) {}
+      }
+    language: text/javascript
+  - type: afterResponse
+    code: |-
+      const ok = (c, m) => { if (!c) { throw new Error(m); } };
+      const html = pm.response.text();
+      const grab = (re) => { const m = html.match(re); return m ? m[1] : null; };
+      const loc = () => pm.response.headers.get('Location') || '';
+      const cv = (k) => pm.collectionVariables.get(k);
+      const setcv = (k, v) => pm.collectionVariables.set(k, v);
+      const selectedStatus = () => grab(/<option value="(\w+)"\s+selected>/);
+      const NEXT_OK = { pending: 'confirmed', awaiting_transfer: 'paid', paid: 'confirmed', failed: 'awaiting_transfer', confirmed: 'shipping', shipping: 'completed' };
+      const NEXT_BAD = { pending: 'shipping', awaiting_transfer: 'confirmed', paid: 'shipping', failed: 'paid', confirmed: 'paid', shipping: 'pending' };
+      const ALLOWED = { pending: ['paid','confirmed','cancelled'], awaiting_transfer: ['paid','failed','cancelled'], paid: ['confirmed','cancelled'], failed: ['awaiting_transfer','cancelled'], confirmed: ['shipping','cancelled'], shipping: ['completed','cancelled'] };
+      pm.test('Tìm thấy sản phẩm trong danh sách', function () {
+        const re = new RegExp('data-id="(\\d+)"\\s+data-name="' + pm.variables.replaceIn('{{run_tag}}-TC-AOA-104') + '"');
+        const id = grab(re); ok(id, 'Không thấy sản phẩm ' + pm.variables.replaceIn('{{run_tag}}-TC-AOA-104'));
+        setcv('pid_104', id);
+      });
+    language: text/javascript
+order: 12000

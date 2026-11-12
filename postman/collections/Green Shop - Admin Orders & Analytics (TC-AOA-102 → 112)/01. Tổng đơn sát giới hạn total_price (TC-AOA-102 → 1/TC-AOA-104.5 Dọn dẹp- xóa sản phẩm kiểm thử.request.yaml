@@ -1,0 +1,28 @@
+$kind: http-request
+name: "TC-AOA-104.5 Dọn dẹp: xóa sản phẩm kiểm thử"
+url: "{{base_url}}/admin-panel/products/{{pid_104}}/delete/"
+method: POST
+scripts:
+  - type: beforeRequest
+    code: |-
+      if (pm.collectionVariables.get('run_overflow') !== 'yes') {
+          try { pm.execution.skipRequest(); } catch (e) {}
+      }
+    language: text/javascript
+  - type: afterResponse
+    code: |-
+      const ok = (c, m) => { if (!c) { throw new Error(m); } };
+      const html = pm.response.text();
+      const grab = (re) => { const m = html.match(re); return m ? m[1] : null; };
+      const loc = () => pm.response.headers.get('Location') || '';
+      const cv = (k) => pm.collectionVariables.get(k);
+      const setcv = (k, v) => pm.collectionVariables.set(k, v);
+      const selectedStatus = () => grab(/<option value="(\w+)"\s+selected>/);
+      const NEXT_OK = { pending: 'confirmed', awaiting_transfer: 'paid', paid: 'confirmed', failed: 'awaiting_transfer', confirmed: 'shipping', shipping: 'completed' };
+      const NEXT_BAD = { pending: 'shipping', awaiting_transfer: 'confirmed', paid: 'shipping', failed: 'paid', confirmed: 'paid', shipping: 'pending' };
+      const ALLOWED = { pending: ['paid','confirmed','cancelled'], awaiting_transfer: ['paid','failed','cancelled'], paid: ['confirmed','cancelled'], failed: ['awaiting_transfer','cancelled'], confirmed: ['shipping','cancelled'], shipping: ['completed','cancelled'] };
+      pm.test('Xóa sản phẩm kiểm thử (302)', function () { ok(pm.response.code === 302, 'HTTP ' + pm.response.code + ' — xóa thủ công sản phẩm ' + pm.variables.replaceIn('{{run_tag}}-TC-AOA-104')); });
+    language: text/javascript
+settings:
+  followRedirects: false
+order: 16000

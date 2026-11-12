@@ -1,0 +1,24 @@
+$kind: http-request
+url: "{{base_url}}/admin-panel/orders/{{reject_order_id}}/"
+method: GET
+scripts:
+  - type: afterResponse
+    code: |-
+      const ok = (c, m) => { if (!c) { throw new Error(m); } };
+      const html = pm.response.text();
+      const grab = (re) => { const m = html.match(re); return m ? m[1] : null; };
+      const loc = () => pm.response.headers.get('Location') || '';
+      const cv = (k) => pm.collectionVariables.get(k);
+      const setcv = (k, v) => pm.collectionVariables.set(k, v);
+      const selectedStatus = () => grab(/<option value="(\w+)"\s+selected>/);
+      const NEXT_OK = { pending: 'confirmed', awaiting_transfer: 'paid', paid: 'confirmed', failed: 'awaiting_transfer', confirmed: 'shipping', shipping: 'completed' };
+      const NEXT_BAD = { pending: 'shipping', awaiting_transfer: 'confirmed', paid: 'shipping', failed: 'paid', confirmed: 'paid', shipping: 'pending' };
+      const ALLOWED = { pending: ['paid','confirmed','cancelled'], awaiting_transfer: ['paid','failed','cancelled'], paid: ['confirmed','cancelled'], failed: ['awaiting_transfer','cancelled'], confirmed: ['shipping','cancelled'], shipping: ['completed','cancelled'] };
+      pm.test('TC-AOA-106 | Ô chọn chỉ liệt kê trạng thái hiện tại và các trạng thái chuyển được', function () {
+        const cur = selectedStatus(); ok(ALLOWED[cur], 'Đơn đang ở trạng thái cuối hoặc không đọc được');
+        const opts = Array.from(html.matchAll(/<option value="(\w+)"/g), (m) => m[1]);
+        const extra = opts.filter((o) => o !== cur && !ALLOWED[cur].includes(o));
+        ok(extra.length === 0, 'Ô chọn còn hiện trạng thái không chuyển được: ' + extra.join(', '));
+      });
+    language: text/javascript
+order: 3000

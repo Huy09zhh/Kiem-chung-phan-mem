@@ -1,0 +1,30 @@
+$kind: http-request
+name: TC-AOA-111.0 (admin) POST đổi trạng thái KHÔNG kèm CSRF token
+url: "{{base_url}}/admin-panel/orders/{{perm_order_id}}/status/"
+method: POST
+body:
+  type: urlencoded
+  content:
+    status: "{{perm_target}}"
+    next: detail
+scripts:
+  - type: beforeRequest
+    code: pm.request.headers.remove('X-CSRFToken');
+    language: text/javascript
+  - type: afterResponse
+    code: |-
+      const ok = (c, m) => { if (!c) { throw new Error(m); } };
+      const html = pm.response.text();
+      const grab = (re) => { const m = html.match(re); return m ? m[1] : null; };
+      const loc = () => pm.response.headers.get('Location') || '';
+      const cv = (k) => pm.collectionVariables.get(k);
+      const setcv = (k, v) => pm.collectionVariables.set(k, v);
+      const selectedStatus = () => grab(/<option value="(\w+)"\s+selected>/);
+      const NEXT_OK = { pending: 'confirmed', awaiting_transfer: 'paid', paid: 'confirmed', failed: 'awaiting_transfer', confirmed: 'shipping', shipping: 'completed' };
+      const NEXT_BAD = { pending: 'shipping', awaiting_transfer: 'confirmed', paid: 'shipping', failed: 'paid', confirmed: 'paid', shipping: 'pending' };
+      const ALLOWED = { pending: ['paid','confirmed','cancelled'], awaiting_transfer: ['paid','failed','cancelled'], paid: ['confirmed','cancelled'], failed: ['awaiting_transfer','cancelled'], confirmed: ['shipping','cancelled'], shipping: ['completed','cancelled'] };
+      pm.test('TC-AOA-111 | Thiếu CSRF bị từ chối (403)', function () { ok(pm.response.code === 403, 'HTTP ' + pm.response.code + ' — yêu cầu thiếu CSRF vẫn được xử lý'); });
+    language: text/javascript
+settings:
+  followRedirects: false
+order: 4000

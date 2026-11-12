@@ -1,0 +1,29 @@
+$kind: http-request
+url: "{{base_url}}/admin-panel/orders/{{reject_order_id}}/status/"
+method: POST
+body:
+  type: urlencoded
+  content:
+    status: "{{reject_bad}}"
+    next: detail
+scripts:
+  - type: afterResponse
+    code: |-
+      const ok = (c, m) => { if (!c) { throw new Error(m); } };
+      const html = pm.response.text();
+      const grab = (re) => { const m = html.match(re); return m ? m[1] : null; };
+      const loc = () => pm.response.headers.get('Location') || '';
+      const cv = (k) => pm.collectionVariables.get(k);
+      const setcv = (k, v) => pm.collectionVariables.set(k, v);
+      const selectedStatus = () => grab(/<option value="(\w+)"\s+selected>/);
+      const NEXT_OK = { pending: 'confirmed', awaiting_transfer: 'paid', paid: 'confirmed', failed: 'awaiting_transfer', confirmed: 'shipping', shipping: 'completed' };
+      const NEXT_BAD = { pending: 'shipping', awaiting_transfer: 'confirmed', paid: 'shipping', failed: 'paid', confirmed: 'paid', shipping: 'pending' };
+      const ALLOWED = { pending: ['paid','confirmed','cancelled'], awaiting_transfer: ['paid','failed','cancelled'], paid: ['confirmed','cancelled'], failed: ['awaiting_transfer','cancelled'], confirmed: ['shipping','cancelled'], shipping: ['completed','cancelled'] };
+      pm.test('TC-AOA-105 | Trạng thái đơn giữ nguyên', function () {
+        ok(selectedStatus() === cv('reject_before'), 'Trạng thái đổi thành ' + selectedStatus() + ' (không được phép)');
+      });
+      pm.test('TC-AOA-105 | Admin được thông báo vì sao yêu cầu bị từ chối', function () {
+        ok(/không hợp lệ|không thể|không được phép|không cho phép|bị từ chối/i.test(html), 'Trang không có thông báo nào: yêu cầu bị bỏ qua âm thầm');
+      });
+    language: text/javascript
+order: 2000

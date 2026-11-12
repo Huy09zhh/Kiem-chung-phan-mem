@@ -1,0 +1,40 @@
+$kind: http-request
+url: "{{base_url}}/orders/checkout/"
+method: POST
+body:
+  type: urlencoded
+  content:
+    full_name: Nguyen Van BVA
+    phone: "0987654321"
+    address: 1 Test Street
+    note: ""
+    payment_method: cod
+scripts:
+  - type: beforeRequest
+    code: |-
+      if (pm.collectionVariables.get('run_overflow') !== 'yes') {
+          try { pm.execution.skipRequest(); } catch (e) {}
+      }
+    language: text/javascript
+  - type: afterResponse
+    code: |-
+      const ok = (c, m) => { if (!c) { throw new Error(m); } };
+      const html = pm.response.text();
+      const grab = (re) => { const m = html.match(re); return m ? m[1] : null; };
+      const loc = () => pm.response.headers.get('Location') || '';
+      const cv = (k) => pm.collectionVariables.get(k);
+      const setcv = (k, v) => pm.collectionVariables.set(k, v);
+      const selectedStatus = () => grab(/<option value="(\w+)"\s+selected>/);
+      const NEXT_OK = { pending: 'confirmed', awaiting_transfer: 'paid', paid: 'confirmed', failed: 'awaiting_transfer', confirmed: 'shipping', shipping: 'completed' };
+      const NEXT_BAD = { pending: 'shipping', awaiting_transfer: 'confirmed', paid: 'shipping', failed: 'paid', confirmed: 'paid', shipping: 'pending' };
+      const ALLOWED = { pending: ['paid','confirmed','cancelled'], awaiting_transfer: ['paid','failed','cancelled'], paid: ['confirmed','cancelled'], failed: ['awaiting_transfer','cancelled'], confirmed: ['shipping','cancelled'], shipping: ['completed','cancelled'] };
+      pm.test('TC-AOA-103 | Tổng 100.000.000 không gây lỗi 500', function () {
+        ok(pm.response.code !== 500, 'LỖI: đặt hàng với tổng 100.000.000 trả HTTP 500 (total_price max_digits=10 chỉ chứa tối đa 99.999.999,99)');
+      });
+      pm.test('TC-AOA-103 | Hệ thống không tạo đơn thành công với tổng vượt giới hạn mà không báo gì', function () {
+        ok(!(pm.response.code === 302 && /\/orders\/success\//.test(loc())), 'Đơn đã được tạo, kiểm tra dữ liệu total_price');
+      });
+    language: text/javascript
+settings:
+  followRedirects: false
+order: 9000
