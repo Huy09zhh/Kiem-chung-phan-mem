@@ -31,7 +31,15 @@ class Order(models.Model):
 }
 
     def can_change_to(self, new_status):
-        return new_status in self.ALLOWED_TRANSITIONS.get(self.status, set())
+        current_status = (self.status or '').strip()
+        return new_status in self.ALLOWED_TRANSITIONS.get(current_status, set())
+
+    @property
+    def allowed_next_statuses(self):
+        """Danh sách (value, label) các trạng thái được phép chuyển tiếp từ trạng thái hiện tại."""
+        current_status = (self.status or '').strip()
+        allowed_keys = self.ALLOWED_TRANSITIONS.get(current_status, set())
+        return [(val, label) for val, label in self.STATUS_CHOICES if val in allowed_keys]
 
     FINAL_STATUSES = ('completed', 'cancelled')
 

@@ -1,5 +1,6 @@
 
 from django.shortcuts import render, redirect, get_object_or_404
+from django.contrib import messages
 from django.db.models import Sum, Q
 from django.contrib.auth.models import User
 from django.views.decorators.http import require_POST
@@ -253,12 +254,15 @@ def admin_order_detail(request, pk):
         pk=pk
     )
 
+    allowed_choices = order.allowed_next_statuses
+
     return render(
         request,
         'admin_panel/orders_detail.html',
         {
             'order': order,
-            'status_choices': Order.STATUS_CHOICES,
+            'status_choices': allowed_choices,
+            'allowed_status_choices': allowed_choices,
         }
     )
 
@@ -276,6 +280,9 @@ def admin_order_update_status(request, pk):
     if new_status in valid_statuses and order.can_change_to(new_status):
         order.status = new_status
         order.save(update_fields=['status'])
+        messages.success(request, f'Đã cập nhật trạng thái đơn hàng #{order.id} thành "{order.get_status_display()}".')
+    else:
+        messages.error(request, 'Trạng thái chuyển đổi không hợp lệ.')
 
     next_url = request.POST.get('next', '').strip()
 
