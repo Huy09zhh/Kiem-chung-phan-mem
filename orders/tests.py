@@ -14,12 +14,11 @@ from django.test import Client, TestCase
 
 from cart.models import Cart, CartItem
 from products.models import Product
-from .models import Order, OrderItem
+from .models import ORDER_TOTAL_MAX, Order, OrderItem
 
-# Giới hạn Order.total_price = DecimalField(max_digits=10, decimal_places=2)
-# -> tối đa 8 chữ số phần nguyên = 99.999.999 VND
-TOTAL_MAX = Decimal('99999999')
-TOTAL_MAX_PLUS = Decimal('100000000')
+# Giới hạn tổng tiền checkout chấp nhận: ORDER_TOTAL_MAX = 2.147.483.647 VND (max int 32-bit)
+TOTAL_MAX = ORDER_TOTAL_MAX
+TOTAL_MAX_PLUS = ORDER_TOTAL_MAX + 1
 
 
 class OrderTestBase(TestCase):
@@ -553,20 +552,39 @@ class TotalBoundaryAndReliabilityTests(OrderTestBase):
         self.assertEqual(r.status_code, 302)
         self.assertEqual(Order.objects.get().total_price, Decimal('1'))
 
-    def test_ord_50_total_at_max_99_999_999(self):
-        """TC-ORD-50: BVA max - tổng tiền 99.999.999 VND (8 chữ số) -> tạo đơn."""
+    def test_ord_50_total_at_max(self):
+        """TC-ORD-50: BVA max - tổng tiền 2.147.483.647 VND -> tạo đơn."""
         self.one_product_cart(TOTAL_MAX)
         r = self.checkout()
         self.assertEqual(r.status_code, 302)
         self.assertEqual(Order.objects.get().total_price, TOTAL_MAX)
 
     def test_ord_51_total_above_max_is_handled_gracefully(self):
-        """TC-ORD-51: BVA max+ - tổng tiền 100.000.000 VND vượt giới hạn cột total_price -> không lỗi 500 và KHÔNG lưu đơn."""
+        """TC-ORD-51: BVA max+ - tổng tiền 2.147.483.648 VND vượt ORDER_TOTAL_MAX -> không lỗi 500 và KHÔNG lưu đơn."""
         self.one_product_cart(TOTAL_MAX_PLUS)
         r = self.checkout()
         self.assertNotEqual(r.status_code, 500, 'Server không được trả lỗi 500')
         self.assertEqual(Order.objects.count(), 0, 'Đơn có tổng vượt max_digits của cột vẫn bị lưu')
         self.assertEqual(OrderItem.objects.count(), 0)
+
+    def test_ord_53_total_above_max_shows_warning_and_keeps_cart(self):
+        """TC-ORD-53: BVA max+ - tổng 2.147.483.648 VND -> hiển thị lại form kèm cảnh báo, giữ nguyên giỏ."""
+        self.one_product_cart(TOTAL_MAX_PLUS)
+        r = self.checkout()
+        self.assertEqual(r.status_code, 200)
+        self.assertContains(r, 'vượt quá giới hạn')
+        self.assertEqual(self.cart_count(), 1)
+
+    def test_ord_54_order_pages_open_with_total_over_100_million(self):
+        """TC-ORD-54: Đơn có tổng >= 100.000.000 VND (vượt cột cũ max_digits=10) -> trang đơn của khách và admin vẫn mở được (không lỗi 500)."""
+        order = self.mk_order(price='60000000', qty=2)
+        staff = User.objects.create_user('ordstaff', 'staff@test.com', 'User@12345', is_staff=True)
+        self.assertEqual(Order.objects.get(pk=order.pk).total_price, Decimal('120000000'))
+        self.assertEqual(self.client.get('/orders/my/').status_code, 200)
+        self.client.force_login(staff)
+        for url in ('/admin-panel/orders/', f'/admin-panel/orders/{order.pk}/'):
+            with self.subTest(url=url):
+                self.assertEqual(self.client.get(url).status_code, 200)
 
     def test_ord_52_atomic_order_creation(self):
         """TC-ORD-52 (NFR3 - ACID): Lỗi khi tạo OrderItem -> rollback, không còn Order mồ côi, giỏ giữ nguyên."""

@@ -3,7 +3,7 @@ from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from urllib.parse import quote
 
-from .models import Order, OrderItem
+from .models import ORDER_TOTAL_MAX, Order, OrderItem
 from cart.models import Cart
 
 
@@ -47,6 +47,16 @@ def checkout(request):
         return redirect('cart_detail')
 
     total_price = sum(item.product.price * item.quantity for item in cart_items)
+    context = {
+        'cart_items': cart_items,
+        'total_price': total_price,
+        'order_total_max': ORDER_TOTAL_MAX,
+        'total_exceeded': total_price > ORDER_TOTAL_MAX,
+    }
+
+    if request.method == 'POST' and context['total_exceeded']:
+        # Hiển thị lại form kèm cảnh báo, không tạo đơn và giữ nguyên giỏ hàng
+        return render(request, 'orders/checkout.html', context)
 
     if request.method == 'POST':
         full_name = request.POST.get('full_name', '').strip()
@@ -96,10 +106,7 @@ def checkout(request):
 
         return redirect('orders:mock_payment', order_id=order.id)
 
-    return render(request, 'orders/checkout.html', {
-        'cart_items': cart_items,
-        'total_price': total_price,
-    })
+    return render(request, 'orders/checkout.html', context)
 
 
 @login_required(login_url='login')
