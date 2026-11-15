@@ -1,0 +1,23 @@
+$kind: http-request
+url: "{{base_url}}/accounts/register/"
+method: POST
+body:
+  type: urlencoded
+  content:
+    csrfmiddlewaretoken: "{{csrf_token}}"
+    username: "{{case_username}}"
+    email: "{{case_email}}"
+    password1: "{{aa_password}}"
+    password2: "{{aa_password}}"
+    is_staff: "on"
+    is_superuser: "on"
+scripts:
+  - type: afterResponse
+    code: "pm.test('Trả 302', () => pm.response.to.have.status(302));\npm.test('Đăng ký thành công về /', () => pm.expect(pm.response.headers.get('Location') || '').to.match(/\\/$/));"
+    language: text/javascript
+  - type: beforeRequest
+    code: "const aa = eval(pm.collectionVariables.get('aa_helpers'));   // hàm dùng chung, xem biến aa_helpers\naa.guest('/accounts/register/');   // điều kiện: Guest + CSRF mới của /accounts/register/\nconst id = Date.now();\npm.collectionVariables.set('case_username', `aas_${id}`);\npm.collectionVariables.set('case_email', `aas_${id}@example.test`);"
+    language: text/javascript
+settings:
+  followRedirects: false
+order: 12000

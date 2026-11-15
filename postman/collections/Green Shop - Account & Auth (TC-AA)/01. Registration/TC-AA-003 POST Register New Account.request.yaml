@@ -11,24 +11,10 @@ body:
     password2: "{{aa_password}}"
 scripts:
   - type: afterResponse
-    code: "pm.test(\"Valid registration redirects\", () => {\r
-
-      \  pm.response.to.have.status(302);\r
-
-      });\r
-
-      pm.test(\"Redirects to home\", () => {\r
-
-      \  pm.expect(pm.response.headers.get(\"Location\") || \"\").to.match(/\\/$/);\r
-
-      });"
+    code: "pm.test(\"Valid registration redirects\", () => {\r\n  pm.response.to.have.status(302);\r\n});\r\npm.test(\"Redirects to home\", () => {\r\n  pm.expect(pm.response.headers.get(\"Location\") || \"\").to.match(/\\/$/);\r\n});"
     language: text/javascript
   - type: beforeRequest
-    code: "const id = Date.now();\r
-
-      pm.collectionVariables.set(\"aa_username\", `aa_${id}`);\r
-
-      pm.collectionVariables.set(\"aa_email\", `aa_${id}@example.test`);"
+    code: "const aa = eval(pm.collectionVariables.get('aa_helpers'));   // hàm dùng chung, xem biến aa_helpers\naa.guest('/accounts/register/');   // điều kiện: Guest + CSRF mới của /accounts/register/\nconst id = Date.now();\r\npm.collectionVariables.set(\"aa_username\", `aa_${id}`);\r\npm.collectionVariables.set(\"aa_email\", `aa_${id}@example.test`);"
     language: text/javascript
 settings:
   followRedirects: false

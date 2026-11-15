@@ -1,0 +1,20 @@
+$kind: http-request
+url: "{{base_url}}/accounts/register/"
+method: POST
+body:
+  type: urlencoded
+  content:
+    csrfmiddlewaretoken: "{{csrf_token}}"
+    username: "{{case_username}}"
+    email: "{{aa_email}}"
+    password1: "{{aa_password}}"
+    password2: "{{aa_password}}"
+scripts:
+  - type: afterResponse
+    code: "pm.test(\"Duplicate email stays on registration form\", () => {\r\n  pm.response.to.have.status(200);\r\n});\r\npm.test(\"Duplicate email error appears\", () => {\r\n  pm.expect(pm.response.text()).to.include(\"Email này đã được sử dụng\");\r\n});"
+    language: text/javascript
+  - type: beforeRequest
+    code: "const aa = eval(pm.collectionVariables.get('aa_helpers'));   // hàm dùng chung, xem biến aa_helpers\naa.guest('/accounts/register/');   // điều kiện: Guest + CSRF mới của /accounts/register/\nconst id = Date.now();\r\npm.collectionVariables.set(\"case_username\", `duplicate_email_${id}`);"
+    language: text/javascript
+settings: {}
+order: 7000

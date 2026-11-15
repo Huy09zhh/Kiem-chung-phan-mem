@@ -1,0 +1,13 @@
+$kind: http-request
+url: "{{base_url}}/admin-panel/dashboard/"
+method: GET
+scripts:
+  - type: afterResponse
+    code: "pm.test('Customer cannot access admin dashboard', () => pm.expect([302, 403]).to.include(pm.response.code));\r\nif (pm.response.code === 302) pm.test('Redirect target is provided', () => pm.expect(pm.response.headers.get('Location') || '').to.not.equal(''));"
+    language: text/javascript
+  - type: beforeRequest
+    code: "const aa = eval(pm.collectionVariables.get('aa_helpers'));   // hàm dùng chung, xem biến aa_helpers\naa.user();   // điều kiện: đăng nhập tài khoản A"
+    language: text/javascript
+settings:
+  followRedirects: false
+order: 2000

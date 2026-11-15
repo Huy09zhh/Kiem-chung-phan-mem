@@ -5,14 +5,15 @@ body:
   type: urlencoded
   content:
     csrfmiddlewaretoken: "{{csrf_token}}"
-    username: no_such_user_999999
+    username: "no_such_user_999999"
     password: "{{aa_password}}"
 scripts:
   - type: afterResponse
-    code: "pm.test(\"Unknown username does not authenticate\", () => { pm.response.to.have.status(200); });\r
-
-      pm.test(\"Login form remains visible\", () => { pm.expect(pm.response.text()).to.include(\"<title>Đăng nhập</title>\"); });"
+    code: "pm.test(\"Unknown username does not authenticate\", () => { pm.response.to.have.status(200); });\r\npm.test(\"Login form remains visible\", () => { pm.expect(pm.response.text()).to.include(\"<title>Đăng nhập</title>\"); });"
+    language: text/javascript
+  - type: beforeRequest
+    code: "const aa = eval(pm.collectionVariables.get('aa_helpers'));   // hàm dùng chung, xem biến aa_helpers\naa.guest('/accounts/login/');   // điều kiện: Guest + CSRF mới của /accounts/login/"
     language: text/javascript
 settings:
   followRedirects: false
-order: 3000
+order: 2000

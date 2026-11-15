@@ -1,0 +1,19 @@
+$kind: http-request
+url: "{{base_url}}/accounts/login/"
+method: POST
+body:
+  type: urlencoded
+  content:
+    csrfmiddlewaretoken: "{{csrf_token}}"
+    username: "{{inactive_user}}"
+    password: "{{inactive_pass}}"
+scripts:
+  - type: afterResponse
+    code: "pm.test('Trả 200 (ở lại biểu mẫu)', () => pm.response.to.have.status(200));\npm.test('Hiện khối lỗi đăng nhập', () => pm.expect(pm.response.text()).to.match(/auth-error-box/));"
+    language: text/javascript
+  - type: beforeRequest
+    code: "const aa = eval(pm.collectionVariables.get('aa_helpers'));   // hàm dùng chung, xem biến aa_helpers\naa.guest('/accounts/login/');   // điều kiện: Guest + CSRF mới của /accounts/login/"
+    language: text/javascript
+settings:
+  followRedirects: false
+order: 5000

@@ -1,0 +1,19 @@
+$kind: http-request
+url: "{{base_url}}/accounts/login/"
+method: POST
+body:
+  type: urlencoded
+  content:
+    csrfmiddlewaretoken: "{{csrf_token}}"
+    username: "{{aa_username}}"
+    password: "{{aa_password}}"
+scripts:
+  - type: afterResponse
+    code: "pm.test(\"Customer login redirects\", () => { pm.response.to.have.status(302); });\r\npm.test(\"Redirects to home\", () => { pm.expect(pm.response.headers.get(\"Location\")).to.eql(\"/\"); });"
+    language: text/javascript
+  - type: beforeRequest
+    code: "const aa = eval(pm.collectionVariables.get('aa_helpers'));   // hàm dùng chung, xem biến aa_helpers\naa.guest('/accounts/login/');   // điều kiện: Guest + CSRF mới của /accounts/login/"
+    language: text/javascript
+settings:
+  followRedirects: false
+order: 8000
