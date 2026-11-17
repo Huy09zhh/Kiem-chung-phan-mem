@@ -1,0 +1,4 @@
+$kind: collection
+name: "02. Luồng đơn B (cancel_order_id): Chờ xử lý → Đã hủy, rồi bị khoá (TC-AOA-091, 096, 097)"
+description: Cần cancel_order_id là đơn đang Chờ xử lý (khác flow_order_id).
+order: 3000

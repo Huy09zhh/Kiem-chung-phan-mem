@@ -1,0 +1,4 @@
+$kind: collection
+name: "01. Luồng đơn A (flow_order_id): Chờ xử lý → Đã xác nhận → Đang giao → Hoàn thành, kèm đầu vào bất thường và đổi lùi (TC-AOA-088 → 090, 094, 095, 098 → 101)"
+description: Cần flow_order_id là đơn đang Chờ xử lý. TC-AOA-099 → 101 chạy khi đơn ở Đã xác nhận, TC-AOA-098 chạy khi đơn ở Đang giao.
+order: 2000
