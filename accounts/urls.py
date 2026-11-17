@@ -22,7 +22,8 @@ urlpatterns = [
     path('admin-dashboard/', views.admin_dashboard_view, name='admin_dashboard'),
     path(
         'password/reset/',
-        auth_views.PasswordResetView.as_view(
+        # SCRUM-55: view có giới hạn số yêu cầu theo email và IP
+        views.ThrottledPasswordResetView.as_view(
             form_class=CustomPasswordResetForm,
             template_name='accounts/password_reset.html',
             email_template_name='accounts/password_reset_email.html',

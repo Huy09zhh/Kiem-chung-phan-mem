@@ -1,6 +1,7 @@
 from django.conf import settings
 from django.contrib.auth.models import User
 from django.test import TestCase, Client
+from django.core import mail
 from django.urls import reverse
 from allauth.socialaccount.models import SocialApp
 
@@ -419,3 +420,67 @@ class SCRUM54LoginLockoutTests(TestCase):
         # Giả lập hết thời gian khóa bằng cách xóa bộ đếm (hết hạn trong cache)
         cache.clear()
         self.assertEqual(self._login('victim', 'Abcd#2026xyz').status_code, 302)
+
+
+class SCRUM55PasswordResetThrottleTests(TestCase):
+    """Kiểm thử SCRUM-55: giới hạn số yêu cầu đặt lại mật khẩu theo email và IP."""
+
+    def setUp(self):
+        from django.core.cache import cache
+        cache.clear()
+        self.addCleanup(cache.clear)
+        User.objects.create_user('victim55', 'victim@example.test', 'Abcd#2026xyz')
+
+    def _reset(self, email, ip='10.0.0.1'):
+        return self.client.post(reverse('password_reset'), {'email': email}, REMOTE_ADDR=ip)
+
+    def _so_mail_toi(self, email):
+        return sum(1 for m in mail.outbox if email in m.to)
+
+    def test_3_yeu_cau_dau_van_gui_mail(self):
+        for _ in range(3):
+            self.assertEqual(self._reset('victim@example.test').status_code, 302)
+        self.assertEqual(self._so_mail_toi('victim@example.test'), 3)
+
+    def test_30_yeu_cau_chi_gui_toi_da_3_mail(self):
+        codes = [self._reset('victim@example.test').status_code for _ in range(30)]
+        self.assertEqual(codes.count(302), 3)
+        self.assertEqual(codes.count(429), 27)
+        self.assertEqual(self._so_mail_toi('victim@example.test'), 3)
+
+    def test_vuot_nguong_co_thong_bao(self):
+        for _ in range(3):
+            self._reset('victim@example.test')
+        resp = self._reset('victim@example.test')
+        self.assertContains(resp, 'quá nhiều yêu cầu đặt lại mật khẩu', status_code=429)
+
+    def test_doi_hoa_thuong_khong_lach_duoc(self):
+        for _ in range(3):
+            self._reset('victim@example.test')
+        self.assertEqual(self._reset('VICTIM@Example.TEST').status_code, 429)
+        self.assertEqual(self._so_mail_toi('victim@example.test'), 3)
+
+    def test_doi_ip_van_bi_chan_theo_email(self):
+        for i in range(3):
+            self._reset('victim@example.test', ip=f'10.0.1.{i}')
+        self.assertEqual(self._reset('victim@example.test', ip='10.0.1.99').status_code, 429)
+
+    def test_gioi_han_theo_ip(self):
+        for i in range(10):
+            self._reset(f'khac{i}@example.test', ip='10.0.0.7')
+        self.assertEqual(self._reset('victim@example.test', ip='10.0.0.7').status_code, 429)
+        self.assertEqual(self._so_mail_toi('victim@example.test'), 0)
+
+    def test_email_khong_ton_tai_cung_bi_dem(self):
+        # Không để lộ email nào đã đăng ký: email lạ cũng bị giới hạn như email thật
+        for _ in range(3):
+            self.assertEqual(self._reset('nobody@example.test').status_code, 302)
+        self.assertEqual(self._reset('nobody@example.test').status_code, 429)
+
+    def test_het_cua_so_thi_gui_lai_duoc(self):
+        from django.core.cache import cache
+        for _ in range(3):
+            self._reset('victim@example.test')
+        cache.clear()
+        self.assertEqual(self._reset('victim@example.test').status_code, 302)
+        self.assertEqual(self._so_mail_toi('victim@example.test'), 4)

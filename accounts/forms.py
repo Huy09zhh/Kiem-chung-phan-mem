@@ -1,7 +1,7 @@
 from django import forms
 from django.core.validators import MaxLengthValidator
 from .validators import MAX_PASSWORD_LENGTH
-from . import login_throttle
+from . import login_throttle, reset_throttle
 from django.contrib.auth.models import User
 from django.contrib.auth.forms import UserCreationForm, AuthenticationForm, PasswordChangeForm, PasswordResetForm
 
@@ -138,9 +138,26 @@ class CustomPasswordChangeForm(PasswordChangeForm):
         self.fields['new_password2'].widget.attrs.update({'placeholder': 'Nhập lại mật khẩu mới'})
 
 class CustomPasswordResetForm(PasswordResetForm):
-    def __init__(self, *args, **kwargs):
+    # SCRUM-55: cờ báo đã vượt ngưỡng, view dùng để trả HTTP 429
+    is_throttled = False
+
+    def __init__(self, *args, request=None, **kwargs):
+        self.request = request
         super().__init__(*args, **kwargs)
         self.fields['email'].widget.attrs.update({'placeholder': 'Nhập email của bạn'})
+
+    def clean_email(self):
+        email = self.cleaned_data['email']
+        # SCRUM-55: giới hạn số yêu cầu theo email và IP để chống spam hộp thư
+        if reset_throttle.is_limited(self.request, email):
+            self.is_throttled = True
+            raise forms.ValidationError(
+                'Bạn đã gửi quá nhiều yêu cầu đặt lại mật khẩu. '
+                'Vui lòng kiểm tra hộp thư hoặc thử lại sau %d phút.' % reset_throttle.window_minutes(),
+                code='throttled',
+            )
+        reset_throttle.register_request(self.request, email)
+        return email
 
     def save(self, *args, **kwargs):
         # Dùng domain người dùng đang truy cập thay cho Site mặc định ("example.com"),

@@ -10,6 +10,7 @@ from django.test import Client, TestCase, override_settings
 from django.urls import include, path
 
 from . import dev_mailbox
+from django.core.cache import cache
 
 
 class MailboxTestURLs:
@@ -33,6 +34,10 @@ class DevMailboxSecurityTests(TestCase):
         cls.superuser = User.objects.create_superuser('mail_admin', 'admin@example.test', 'Admin7!Password#42')
 
     def setUp(self):
+        # SCRUM-55: xóa bộ đếm giới hạn đặt lại mật khẩu (lưu trong cache) giữa các test,
+        # vì setUp gửi yêu cầu cho cùng một email trước mỗi test.
+        cache.clear()
+        self.addCleanup(cache.clear)
         self.folder = TemporaryDirectory(prefix='scrum42-mail-')
         self.addCleanup(self.folder.cleanup)
         override = override_settings(EMAIL_FILE_PATH=self.folder.name)
