@@ -1,0 +1,100 @@
+{
+  "info": {
+    "name": "SCRUM-30 Username Protection",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "Attempt spoof username (should be ignored)",
+      "request": {
+        "method": "POST",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/accounts/profile/",
+          "host": ["{{baseUrl}}"],
+          "path": ["accounts", "profile"]
+        },
+        "body": {
+          "mode": "urlencoded",
+          "urlencoded": [
+            {"key": "username", "value": "hacker_user", "type": "text"},
+            {"key": "first_name", "value": "NewName", "type": "text"}
+          ]
+        }
+      },
+      "event": [{
+        "listen": "test",
+        "script": {
+          "exec": [
+            "pm.test('Response is 200 (form re‑render)', function () {",
+            "  pm.response.to.have.status(200);",
+            "});",
+            "pm.test('Username unchanged', function () {",
+            "  // Không có cách kiểm tra DB trong Postman, nhưng chúng ta kiểm tra rằng phản hồi không chứa thông báo thành công",
+            "  pm.expect(pm.response.text()).to.not.include('Cập nhật thành công');",
+            "});"
+          ]
+        }
+      }]
+    },
+    {
+      "name": "Valid first_name update (no username field)",
+      "request": {
+        "method": "POST",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/accounts/profile/",
+          "host": ["{{baseUrl}}"],
+          "path": ["accounts", "profile"]
+        },
+        "body": {
+          "mode": "urlencoded",
+          "urlencoded": [
+            {"key": "first_name", "value": "UpdatedName", "type": "text"}
+          ]
+        }
+      },
+      "event": [{
+        "listen": "test",
+        "script": {
+          "exec": [
+            "pm.test('Redirect on successful update', function () {",
+            "  pm.response.to.have.status(302);",
+            "});",
+            "pm.test('Success flag present', function () {",
+            "  pm.expect(pm.response.headers.get('Location')).to.include('profile_success=1');",
+            "});"
+          ]
+        }
+      }]
+    },
+    {
+      "name": "Admin changes username (requires auth token)",
+      "request": {
+        "method": "PATCH",
+        "header": [
+          {"key": "Authorization", "value": "Bearer {{authToken}}", "type": "text"}
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/admin/api/users/{{userId}}/",
+          "host": ["{{baseUrl}}"],
+          "path": ["admin", "api", "users", "{{userId}}" ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\"username\": \"new_admin_name\"}"
+        }
+      },
+      "event": [{
+        "listen": "test",
+        "script": {
+          "exec": [
+            "pm.test('Admin can change username', function () {",
+            "  pm.response.to.have.status(200);",
+            "});"
+          ]
+        }
+      }]
+    }
+  ]
+}

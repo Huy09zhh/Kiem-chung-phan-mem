@@ -1,0 +1,116 @@
+{
+  "info": {
+    "name": "SCRUM-40 Contact Message Length",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "Valid short message",
+      "request": {
+        "method": "POST",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/contact/",
+          "host": ["{{baseUrl}}"],
+          "path": ["contact"]
+        },
+        "body": {
+          "mode": "urlencoded",
+          "urlencoded": [
+            {"key": "form_type", "value": "contact", "type": "text"},
+            {"key": "name", "value": "Test User", "type": "text"},
+            {"key": "email", "value": "test@example.com", "type": "text"},
+            {"key": "phone", "value": "0912345678", "type": "text"},
+            {"key": "subject", "value": "Feedback", "type": "text"},
+            {"key": "message", "value": "A short valid message", "type": "text"}
+          ]
+        }
+      },
+      "event": [{
+        "listen": "test",
+        "script": {
+          "exec": [
+            "pm.test('Redirect on success', function () {",
+            "  pm.response.to.have.status(302);",
+            "});",
+            "pm.test('Success flag in URL', function () {",
+            "  pm.expect(pm.response.headers.get('Location')).to.include('contact_success=1');",
+            "});"
+          ]
+        }
+      }]
+    },
+    {
+      "name": "Valid boundary 2000 chars",
+      "request": {
+        "method": "POST",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/contact/",
+          "host": ["{{baseUrl}}"],
+          "path": ["contact"]
+        },
+        "body": {
+          "mode": "urlencoded",
+          "urlencoded": [
+            {"key": "form_type", "value": "contact", "type": "text"},
+            {"key": "name", "value": "Boundary User", "type": "text"},
+            {"key": "email", "value": "boundary@example.com", "type": "text"},
+            {"key": "phone", "value": "0912345678", "type": "text"},
+            {"key": "subject", "value": "Edge", "type": "text"},
+            {"key": "message", "value": "{{msg_2000}}", "type": "text"}
+          ]
+        }
+      },
+      "event": [{
+        "listen": "test",
+        "script": {
+          "exec": [
+            "pm.test('Redirect on success', function () {",
+            "  pm.response.to.have.status(302);",
+            "});",
+            "pm.test('Success flag present', function () {",
+            "  pm.expect(pm.response.headers.get('Location')).to.include('contact_success=1');",
+            "});"
+          ]
+        }
+      }]
+    },
+    {
+      "name": "Invalid 2001 chars",
+      "request": {
+        "method": "POST",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/contact/",
+          "host": ["{{baseUrl}}"],
+          "path": ["contact"]
+        },
+        "body": {
+          "mode": "urlencoded",
+          "urlencoded": [
+            {"key": "form_type", "value": "contact", "type": "text"},
+            {"key": "name", "value": "Invalid User", "type": "text"},
+            {"key": "email", "value": "invalid@example.com", "type": "text"},
+            {"key": "phone", "value": "0912345678", "type": "text"},
+            {"key": "subject", "value": "Edge", "type": "text"},
+            {"key": "message", "value": "{{msg_2001}}", "type": "text"}
+          ]
+        }
+      },
+      "event": [{
+        "listen": "test",
+        "script": {
+          "exec": [
+            "pm.test('Validation error 200', function () {",
+            "  pm.response.to.have.status(200);",
+            "});",
+            "pm.test('Error message present', function () {",
+            "  pm.expect(pm.response.text()).to.include('Nội dung không được dài quá 2000 ký tự');",
+            "});"
+          ]
+        }
+      }]
+    }
+  ]
+}
