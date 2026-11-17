@@ -38,7 +38,10 @@ class LoginForm(AuthenticationForm):
     username = forms.CharField(
         widget=forms.TextInput(attrs={'placeholder': 'Nhập tài khoản'})
     )
+    # SCRUM-52: strip=False để so khớp nguyên văn mật khẩu như lúc đăng ký
+    # (UserCreationForm giữ khoảng trắng đầu/cuối, CharField mặc định thì cắt).
     password = forms.CharField(
+        strip=False,
         max_length=MAX_PASSWORD_LENGTH,
         widget=forms.PasswordInput(attrs={'placeholder': 'Nhập mật khẩu', 'maxlength': MAX_PASSWORD_LENGTH})
     )

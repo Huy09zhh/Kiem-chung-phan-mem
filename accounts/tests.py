@@ -243,3 +243,60 @@ class PasswordLengthBoundaryTests(TestCase):
         resp = self._register('pwlong', 'Ab1x' * 250000)
         self.assertEqual(resp.status_code, 200)
         self.assertFalse(User.objects.filter(username='pwlong').exists())
+
+
+class SCRUM52PasswordWhitespaceTests(TestCase):
+    """Kiểm thử SCRUM-52: mật khẩu có khoảng trắng đầu/cuối phải đăng nhập lại được."""
+
+    def setUp(self):
+        # Trang đăng ký/đăng nhập cần cấu hình Google OAuth giả để render được
+        app = SocialApp.objects.create(
+            provider='google', name='Google', client_id='test', secret='test'
+        )
+        if 'django.contrib.sites' in settings.INSTALLED_APPS:
+            from django.contrib.sites.models import Site
+            app.sites.add(Site.objects.get_current())
+
+    def _register(self, username, pw):
+        return self.client.post(reverse('register'), {
+            'username': username,
+            'email': f'{username}@example.com',
+            'password1': pw,
+            'password2': pw,
+        })
+
+    def _login(self, username, pw):
+        self.client.logout()
+        return self.client.post(reverse('login'), {'username': username, 'password': pw})
+
+    def _dang_nhap_thanh_cong(self, resp):
+        return resp.status_code == 302 and '_auth_user_id' in self.client.session
+
+    def test_khoang_trang_dau_dang_nhap_nguyen_van_duoc(self):
+        pw = '  Abcd#2026x'
+        self.assertEqual(self._register('ws_dau', pw).status_code, 302)
+        self.assertTrue(self._dang_nhap_thanh_cong(self._login('ws_dau', pw)))
+
+    def test_khoang_trang_cuoi_dang_nhap_nguyen_van_duoc(self):
+        pw = 'Abcd#2026x  '
+        self.assertEqual(self._register('ws_cuoi', pw).status_code, 302)
+        self.assertTrue(self._dang_nhap_thanh_cong(self._login('ws_cuoi', pw)))
+
+    def test_bo_khoang_trang_thi_bi_tu_choi(self):
+        self._register('ws_bo', '  Abcd#2026x')
+        resp = self._login('ws_bo', 'Abcd#2026x')
+        self.assertEqual(resp.status_code, 200)
+        self.assertNotIn('_auth_user_id', self.client.session)
+
+    def test_mat_khau_chi_gom_khoang_trang(self):
+        pw = ' ' * 8
+        if self._register('ws_rong', pw).status_code == 302:
+            # Đăng ký được thì phải đăng nhập lại được bằng đúng mật khẩu đó
+            self.assertTrue(self._dang_nhap_thanh_cong(self._login('ws_rong', pw)))
+        else:
+            self.assertFalse(User.objects.filter(username='ws_rong').exists())
+
+    def test_mat_khau_binh_thuong_khong_bi_anh_huong(self):
+        pw = 'Abcd#2026x'
+        self._register('ws_thuong', pw)
+        self.assertTrue(self._dang_nhap_thanh_cong(self._login('ws_thuong', pw)))
