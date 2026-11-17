@@ -15,6 +15,7 @@ cloudResources:
     ../postman/collections/Green Shop - Admin Orders & Analytics (TC-AOA-016 → 030)-1: 51188784-7e5a-44a9-8bd6-7a79de9a7fd3
     ../postman/collections/Green Shop - Admin Orders & Analytics (Tìm kiếm đơn- biên: bee26190-399f-492f-9005-9901c9fc416a
     ../postman/collections/Green Shop - Admin Orders & Analytics (Chuyển trạng thái đ: c7b49a23-7a2a-432a-a15f-496f32eec431
+    ../postman/collections/Green Shop - Admin Orders & Analytics (Tuần 7- Khám phá lỗ: 60ea18fb-c737-4647-b8f7-f24cb907c6af
   environments:
     ../postman/environments/Green Shop - Local.environment.yaml: 58627368-f6f0c653-b7e6-48c9-8070-8c6b791d0215
   globals:

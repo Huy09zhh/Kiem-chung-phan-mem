@@ -300,3 +300,48 @@ class SCRUM52PasswordWhitespaceTests(TestCase):
         pw = 'Abcd#2026x'
         self._register('ws_thuong', pw)
         self.assertTrue(self._dang_nhap_thanh_cong(self._login('ws_thuong', pw)))
+
+
+class SCRUM53AllauthSignupBlockedTests(TestCase):
+    """Kiểm thử SCRUM-53: chỉ đăng ký qua /accounts/register/, chặn trang thừa của allauth."""
+
+    def setUp(self):
+        app = SocialApp.objects.create(
+            provider='google', name='Google', client_id='test', secret='test'
+        )
+        if 'django.contrib.sites' in settings.INSTALLED_APPS:
+            from django.contrib.sites.models import Site
+            app.sites.add(Site.objects.get_current())
+
+    def test_get_signup_chuyen_ve_register(self):
+        resp = self.client.get('/accounts/signup/')
+        self.assertRedirects(resp, reverse('register'), fetch_redirect_response=False)
+
+    def test_post_signup_khong_tao_tai_khoan(self):
+        self.client.post('/accounts/signup/', {
+            'username': 'noemail', 'password1': 'Abcd#2026x', 'password2': 'Abcd#2026x',
+        })
+        self.assertFalse(User.objects.filter(username='noemail').exists())
+        self.assertNotIn('_auth_user_id', self.client.session)
+
+    def test_adapter_dong_dang_ky_allauth(self):
+        from allauth.account.adapter import get_adapter
+        self.assertFalse(get_adapter().is_open_for_signup(None))
+
+    def test_trang_allauth_thua_tra_404_khi_da_dang_nhap(self):
+        user = User.objects.create_user('u53', 'u53@example.com', 'Abcd#2026x')
+        self.client.force_login(user)
+        for url in ('/accounts/email/', '/accounts/3rdparty/', '/accounts/reauthenticate/'):
+            with self.subTest(url=url):
+                self.assertEqual(self.client.get(url).status_code, 404)
+
+    def test_dang_nhap_google_van_con(self):
+        from allauth.socialaccount.adapter import get_adapter as get_social_adapter
+        self.assertTrue(get_social_adapter().is_open_for_signup(None, None))
+        self.assertEqual(reverse('google_login'), '/accounts/google/login/')
+
+    def test_register_van_bat_buoc_email(self):
+        self.client.post(reverse('register'), {
+            'username': 'reg53', 'email': '', 'password1': 'Abcd#2026x', 'password2': 'Abcd#2026x',
+        })
+        self.assertFalse(User.objects.filter(username='reg53').exists())
