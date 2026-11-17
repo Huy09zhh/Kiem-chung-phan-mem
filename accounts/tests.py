@@ -345,3 +345,77 @@ class SCRUM53AllauthSignupBlockedTests(TestCase):
             'username': 'reg53', 'email': '', 'password1': 'Abcd#2026x', 'password2': 'Abcd#2026x',
         })
         self.assertFalse(User.objects.filter(username='reg53').exists())
+
+
+class SCRUM54LoginLockoutTests(TestCase):
+    """Kiểm thử SCRUM-54: đăng nhập sai nhiều lần phải bị khóa tạm."""
+
+    def setUp(self):
+        from django.core.cache import cache
+        cache.clear()
+        self.addCleanup(cache.clear)
+        app = SocialApp.objects.create(
+            provider='google', name='Google', client_id='test', secret='test'
+        )
+        if 'django.contrib.sites' in settings.INSTALLED_APPS:
+            from django.contrib.sites.models import Site
+            app.sites.add(Site.objects.get_current())
+        User.objects.create_user('victim', 'victim@example.com', 'Abcd#2026xyz')
+
+    def _login(self, username, pw, ip='10.0.0.1'):
+        return self.client.post(reverse('login'), {'username': username, 'password': pw},
+                                REMOTE_ADDR=ip)
+
+    def _da_dang_nhap(self):
+        return '_auth_user_id' in self.client.session
+
+    def test_sai_4_lan_van_dang_nhap_dung_duoc(self):
+        for i in range(4):
+            self.assertEqual(self._login('victim', f'Wrong#{i}').status_code, 200)
+        self.assertEqual(self._login('victim', 'Abcd#2026xyz').status_code, 302)
+        self.assertTrue(self._da_dang_nhap())
+
+    def test_sai_5_lan_bi_khoa_ke_ca_mat_khau_dung(self):
+        for i in range(4):
+            self._login('victim', f'Wrong#{i}')
+        resp = self._login('victim', 'Wrong#4')
+        self.assertEqual(resp.status_code, 429)
+        self.assertContains(resp, 'sai quá nhiều lần', status_code=429)
+        resp = self._login('victim', 'Abcd#2026xyz')
+        self.assertEqual(resp.status_code, 429)
+        self.assertFalse(self._da_dang_nhap())
+
+    def test_100_lan_sai_khong_lan_nao_vao_duoc(self):
+        codes = [self._login('victim', f'Wrong#{i}').status_code for i in range(100)]
+        self.assertEqual(codes.count(429), 96)
+        self._login('victim', 'Abcd#2026xyz')
+        self.assertFalse(self._da_dang_nhap())
+
+    def test_khoa_theo_ten_khong_phan_biet_hoa_thuong(self):
+        for i in range(5):
+            self._login('VICTIM', f'Wrong#{i}')
+        self.assertEqual(self._login('victim', 'Abcd#2026xyz').status_code, 429)
+
+    def test_khoa_theo_ip_khi_do_nhieu_tai_khoan(self):
+        for i in range(20):
+            self._login(f'ghost{i}', 'Wrong#1', ip='10.0.0.9')
+        self.assertEqual(self._login('victim', 'Abcd#2026xyz', ip='10.0.0.9').status_code, 429)
+        # IP khác vẫn đăng nhập bình thường
+        self.assertEqual(self._login('victim', 'Abcd#2026xyz', ip='10.0.0.2').status_code, 302)
+
+    def test_dang_nhap_dung_thi_reset_bo_dem(self):
+        for i in range(4):
+            self._login('victim', f'Wrong#{i}')
+        self._login('victim', 'Abcd#2026xyz')
+        self.client.logout()
+        for i in range(4):
+            self._login('victim', f'Wrong#{i}')
+        self.assertEqual(self._login('victim', 'Abcd#2026xyz').status_code, 302)
+
+    def test_het_thoi_gian_khoa_thi_dang_nhap_lai_duoc(self):
+        from django.core.cache import cache
+        for i in range(5):
+            self._login('victim', f'Wrong#{i}')
+        # Giả lập hết thời gian khóa bằng cách xóa bộ đếm (hết hạn trong cache)
+        cache.clear()
+        self.assertEqual(self._login('victim', 'Abcd#2026xyz').status_code, 302)

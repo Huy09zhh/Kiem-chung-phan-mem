@@ -182,6 +182,11 @@ AUTHENTICATION_BACKENDS = [
 
 SOCIALACCOUNT_LOGIN_ON_GET = False
 
+# SCRUM-54: khóa tạm đăng nhập sau nhiều lần sai liên tiếp
+LOGIN_MAX_FAILED_ATTEMPTS = 5
+LOGIN_IP_MAX_FAILED_ATTEMPTS = 20
+LOGIN_LOCKOUT_SECONDS = 15 * 60
+
 # SCRUM-53: chỉ đăng ký qua RegisterForm, allauth chỉ dùng cho Google
 ACCOUNT_ADAPTER = 'accounts.adapters.NoLocalSignupAccountAdapter'
 SOCIALACCOUNT_ADAPTER = 'accounts.adapters.GoogleSocialAccountAdapter'

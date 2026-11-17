@@ -1,6 +1,7 @@
 from django import forms
 from django.core.validators import MaxLengthValidator
 from .validators import MAX_PASSWORD_LENGTH
+from . import login_throttle
 from django.contrib.auth.models import User
 from django.contrib.auth.forms import UserCreationForm, AuthenticationForm, PasswordChangeForm, PasswordResetForm
 
@@ -45,6 +46,34 @@ class LoginForm(AuthenticationForm):
         max_length=MAX_PASSWORD_LENGTH,
         widget=forms.PasswordInput(attrs={'placeholder': 'Nhập mật khẩu', 'maxlength': MAX_PASSWORD_LENGTH})
     )
+
+    # SCRUM-54: chặn dò mật khẩu bằng cách khóa tạm sau nhiều lần sai liên tiếp
+    is_locked_out = False
+
+    def _lockout_error(self):
+        self.is_locked_out = True
+        return forms.ValidationError(
+            'Bạn đã đăng nhập sai quá nhiều lần. Vui lòng thử lại sau %d phút '
+            'hoặc dùng chức năng Quên mật khẩu.' % login_throttle.lockout_minutes(),
+            code='locked_out',
+        )
+
+    def clean(self):
+        username = self.cleaned_data.get('username')
+        if username and login_throttle.is_locked(self.request, username):
+            # Đang bị khóa: không kiểm tra mật khẩu, kể cả mật khẩu đúng
+            raise self._lockout_error()
+        try:
+            cleaned = super().clean()
+        except forms.ValidationError:
+            if username:
+                login_throttle.register_failure(self.request, username)
+                if login_throttle.is_locked(self.request, username):
+                    raise self._lockout_error()
+            raise
+        if username:
+            login_throttle.reset_user(self.request, username)
+        return cleaned
 
 
 class ProfileUpdateForm(forms.ModelForm):

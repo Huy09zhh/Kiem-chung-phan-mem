@@ -59,7 +59,7 @@ def login_view(request):
     return render(request, 'accounts/login.html', {
         'form': form,
         'next': next_url,
-    })
+    }, status=429 if form.is_locked_out else 200)
 
 
 @require_POST
