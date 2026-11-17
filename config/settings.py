@@ -182,6 +182,10 @@ AUTHENTICATION_BACKENDS = [
 
 SOCIALACCOUNT_LOGIN_ON_GET = False
 
+# SCRUM-53: chỉ đăng ký qua RegisterForm, allauth chỉ dùng cho Google
+ACCOUNT_ADAPTER = 'accounts.adapters.NoLocalSignupAccountAdapter'
+SOCIALACCOUNT_ADAPTER = 'accounts.adapters.GoogleSocialAccountAdapter'
+
 SOCIALACCOUNT_PROVIDERS = {
     'google': {
         'SCOPE': ['profile', 'email'],

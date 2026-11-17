@@ -1,3 +1,4 @@
+from django.http import Http404
 from django.shortcuts import render, redirect
 from django.contrib.auth import login, logout, update_session_auth_hash
 from django.contrib.auth.decorators import login_required
@@ -104,3 +105,9 @@ def change_password_view(request):
 @admin_required
 def admin_dashboard_view(request):
     return render(request, 'admin_panel/dashboard.html')
+
+
+def allauth_disabled_view(request, *args, **kwargs):
+    """SCRUM-53: Trang quản lý email/tài khoản MXH/xác thực lại của allauth
+    không dùng trong dự án (chỉ đăng nhập Google) -> trả 404."""
+    raise Http404

@@ -1,5 +1,6 @@
 from django.conf import settings
 from django.urls import path
+from django.views.generic import RedirectView
 from . import views
 from django.contrib.auth import views as auth_views
 from .forms import CustomPasswordResetForm
@@ -8,6 +9,12 @@ urlpatterns = [
     path('login/', views.login_view, name='login'),
     path('register/', views.register_view, name='register'),
     path('logout/', views.logout_view, name='logout'),
+
+    # SCRUM-53: chặn các trang allauth không dùng (đặt trước allauth.urls trong config/urls.py)
+    path('signup/', RedirectView.as_view(pattern_name='register', query_string=True)),
+    path('email/', views.allauth_disabled_view),
+    path('3rdparty/', views.allauth_disabled_view),
+    path('reauthenticate/', views.allauth_disabled_view),
 
     path('profile/', views.profile_view, name='profile'),
     path('profile/edit/', views.profile_update_view, name='profile_edit'),
