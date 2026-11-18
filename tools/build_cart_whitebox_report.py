@@ -539,19 +539,31 @@ def draw_cfg(spec, path):
 # ---------------------------------------------------------------------------
 # 3. Ghi sheet
 # ---------------------------------------------------------------------------
+GREEN, GREEN_DARK, WHITE = 'FF2E7D32', 'FF1B5E20', 'FFFFFFFF'
+LIGHT, BAND, GREY_TEXT = 'FFE8F5E9', 'FFF6FAF6', 'FF555555'
+OK_FILL, OK_TEXT, BAD_FILL, BAD_TEXT, WARN_FILL, WARN_TEXT = 'FFC6EFCE', 'FF1B5E20', 'FFFFC7CE', 'FF9C0006', 'FFFFF2CC', 'FF7F6000'
+# Cột A → I: Mã TC | Đường đi | Điều kiện | Dữ liệu vào | Mong đợi | Thực tế | KQ | Hàm test | Ca hộp đen / ghi chú
+WIDTHS = {'A': 17, 'B': 23, 'C': 21, 'D': 26, 'E': 27, 'F': 30, 'G': 8, 'H': 31, 'I': 22, 'J': 2}
+LAST_COL = 9
+IMG_COL = 'K'
+IMG_WIDTH = 360          # px
+LINE_PT = 14.5           # chiều cao 1 dòng chữ cỡ 11
+
+
+def short_input(text):
+    """Bỏ tiền tố đăng nhập lặp lại ở mọi dòng (đã ghi 1 lần trong phần quy ước)."""
+    return text.replace(f'{LOGIN}, ', '').replace(LOGIN, 'Đã đăng nhập')
+
+
 def build_sheet(results, cov_wb, full, images):
     import openpyxl
     from openpyxl.drawing.image import Image as XLImage
     from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
-    from openpyxl.utils import get_column_letter
 
-    GREEN, WHITE = 'FF2E7D32', 'FFFFFFFF'
-    thin = Side(style='thin', color='FF9E9E9E')
+    thin = Side(style='thin', color='FFBDBDBD')
     border = Border(left=thin, right=thin, top=thin, bottom=thin)
     fill = lambda c: PatternFill('solid', fgColor=c)
-    status = results['status']
-    observed = results['observed']
-    messages = results['messages']
+    status, observed, messages = results['status'], results['observed'], results['messages']
 
     wb = openpyxl.load_workbook(REPORT)
     if SHEET in wb.sheetnames:
@@ -559,262 +571,342 @@ def build_sheet(results, cov_wb, full, images):
     # Đặt ngay sau các sheet Phong_* khác (nếu có), không thì cuối file
     phong = [i for i, name in enumerate(wb.sheetnames) if name.startswith('Phong_')]
     ws = wb.create_sheet(SHEET, phong[-1] + 1 if phong else None)
-    widths = {'A': 17, 'B': 26, 'C': 30, 'D': 32, 'E': 32, 'F': 34, 'G': 9, 'H': 30, 'I': 30, 'J': 3}
-    for col, w in widths.items():
+    for col, w in WIDTHS.items():
         ws.column_dimensions[col].width = w
     ws.sheet_view.showGridLines = False
+    ws.sheet_view.zoomScale = 90
     ws.freeze_panes = 'A3'
-    LAST = 9   # cột I
+    ws.sheet_properties.tabColor = '2E7D32'
+    col_w = [WIDTHS[c] for c in 'ABCDEFGHI']
 
-    state = {'row': 1}
+    st = {'row': 1}
+    anchors = {}
 
-    def merge_text(text, size=11, bold=False, color='FF000000', italic=False, height=None):
-        r = state['row']
-        ws.merge_cells(start_row=r, start_column=1, end_row=r, end_column=LAST)
+    def lines_needed(text, width_chars, size=11, bold=False):
+        """Ước lượng số dòng khi Excel tự xuống dòng: ngắt ở dấu cách, từ dài hơn 1 dòng thì bị cắt giữa từ."""
+        if text in (None, ''):
+            return 1
+        per_line = max((width_chars - 1.5) * (11 / size) / (1.1 if bold else 1.0), 4)
+        total = 0
+        for paragraph in str(text).split('\n'):
+            lines, current = 1, 0
+            for word in paragraph.split(' '):
+                n = len(word)
+                if current and current + 1 + n <= per_line:
+                    current += 1 + n
+                    continue
+                if current:
+                    lines += 1
+                while n > per_line:            # từ quá dài (URL, tên hàm) bị cắt sang dòng sau
+                    lines += 1
+                    n -= per_line
+                current = n
+            total += lines
+        return total
+
+    def set_height(row, lines, size=11):
+        ws.row_dimensions[row].height = round(max(lines, 1) * LINE_PT * size / 11 + 4, 1)
+
+    def spacer(pt=8):
+        ws.row_dimensions[st['row']].height = pt
+        st['row'] += 1
+
+    def line(text, size=11, bold=False, color='FF000000', italic=False, band=None, anchor=None):
+        r = st['row']
+        ws.merge_cells(start_row=r, start_column=1, end_row=r, end_column=LAST_COL)
         c = ws.cell(r, 1, text)
         c.font = Font(size=size, bold=bold, color=color, italic=italic)
-        c.alignment = Alignment(wrap_text=True, vertical='center', horizontal='left')
-        if height:
-            ws.row_dimensions[r].height = height
-        state['row'] += 1
+        c.alignment = Alignment(wrap_text=True, vertical='center', horizontal='left', indent=0 if not band else 1)
+        if band:
+            for k in range(1, LAST_COL + 1):
+                ws.cell(r, k).fill = fill(band)
+        set_height(r, lines_needed(text, sum(col_w), size, bold), size)
+        if anchor:
+            anchors[anchor] = r
+        st['row'] += 1
 
-    def blank(n=1):
-        state['row'] += n
+    def part(title, anchor):
+        spacer(12)
+        line(title, size=12, bold=True, color=WHITE, band=GREEN, anchor=anchor)
+        spacer(6)
+
+    def sub(title):
+        line(title, bold=True, color=GREEN_DARK)
 
     def result_of(method):
         return status.get(method, 'CHƯA CHẠY')
 
     def actual_of(tc_id, method):
-        st = result_of(method)
-        if st == 'PASS':
-            return observed.get(tc_id, 'Đúng như mong đợi')
-        return messages.get(method, st)
+        res = result_of(method)
+        return observed.get(tc_id, 'Đúng như mong đợi') if res == 'PASS' else messages.get(method, res)
 
-    def table(headers, rows, spans=None, status_cols=(), center_cols=(), height=None, first_bold=True, fills=None):
+    def style_status(c, value):
+        ok = value in ('PASS', 'Đạt', 'Bị phát hiện') or (isinstance(value, str) and value.endswith('PASS') and 'FAIL' not in value)
+        bad = value in ('FAIL', 'ERROR', 'Chưa đạt', 'Sống sót', 'CHƯA CHẠY') or (isinstance(value, str) and 'FAIL' in value and not value.startswith('0'))
+        if ok or bad:
+            c.font = Font(bold=True, color=OK_TEXT if ok else BAD_TEXT)
+            c.fill = fill(OK_FILL if ok else BAD_FILL)
+
+    def table(headers, rows, spans=None, status_cols=(), center_cols=(), first_bold=True, total_last=False, small_cols=()):
         spans = spans or [1] * len(headers)
-        r = state['row']
 
-        def write(row_values, header=False, row_fill=None):
-            col = 1
-            for i, (value, span) in enumerate(zip(row_values, spans)):
+        def write(values, header=False, band=None, is_total=False):
+            r, col, lines = st['row'], 1, 1
+            for i, (value, span) in enumerate(zip(values, spans)):
                 if span > 1:
-                    ws.merge_cells(start_row=state['row'], start_column=col, end_row=state['row'], end_column=col + span - 1)
+                    ws.merge_cells(start_row=r, start_column=col, end_row=r, end_column=col + span - 1)
+                width = sum(col_w[col - 1:col - 1 + span])
                 for k in range(span):
-                    ws.cell(state['row'], col + k).border = border
-                c = ws.cell(state['row'], col, value)
-                c.alignment = Alignment(wrap_text=True, vertical='center',
-                                        horizontal='center' if header or i in center_cols or i in status_cols else 'left')
+                    cell = ws.cell(r, col + k)
+                    cell.border = border
+                    if header:
+                        cell.fill = fill(GREEN)
+                    elif is_total:
+                        cell.fill = fill(LIGHT)
+                    elif band:
+                        cell.fill = fill(band)
+                c = ws.cell(r, col, value)
+                centered = header or i in center_cols or i in status_cols
+                c.alignment = Alignment(wrap_text=True, vertical='center', horizontal='center' if centered else 'left')
+                size = 10 if (i in small_cols and not header) else 11
                 if header:
-                    c.font = Font(bold=True, color=WHITE)
-                    for k in range(span):
-                        ws.cell(state['row'], col + k).fill = fill(GREEN)
+                    c.font = Font(bold=True, color=WHITE, size=10.5)
                 else:
-                    c.font = Font(bold=(i == 0 and first_bold))
-                    if row_fill:
-                        for k in range(span):
-                            ws.cell(state['row'], col + k).fill = fill(row_fill)
+                    c.font = Font(bold=(i == 0 and first_bold) or is_total, size=size,
+                                  color=GREY_TEXT if i in small_cols else 'FF000000')
                     if i in status_cols:
-                        ok = value in ('PASS', 'Đạt', 'Bị phát hiện') or (isinstance(value, str) and value.startswith('Có'))
-                        bad = value in ('FAIL', 'ERROR', 'Chưa đạt', 'Sống sót')
-                        if ok or bad:
-                            c.font = Font(bold=True, color='FF1B5E20' if ok else 'FF9C0006')
-                            c.fill = fill('FFC6EFCE' if ok else 'FFFFC7CE')
-                        elif value == 'Không khả thi':
-                            c.font = Font(bold=True, color='FF7F6000')
-                            c.fill = fill('FFFFF2CC')
-                    if isinstance(value, float) and 0 <= value <= 1 and i not in status_cols:
+                        style_status(c, value)
+                    if isinstance(value, float) and 0 <= value <= 1:
                         c.number_format = '0.0%'
+                text = f'{value:.1%}' if isinstance(value, float) else value
+                lines = max(lines, lines_needed(text, width, size, header or (i == 0 and first_bold)))
                 col += span
-            if height:
-                ws.row_dimensions[state['row']].height = height
-            state['row'] += 1
+            set_height(r, lines)
+            st['row'] += 1
 
         write(headers, header=True)
-        for k, row_values in enumerate(rows):
-            write(row_values, row_fill=(fills[k] if fills else None))
-        return r
+        for k, values in enumerate(rows):
+            last = total_last and k == len(rows) - 1
+            write(values, band=None if k % 2 == 0 else BAND, is_total=last)
 
+    def kpis(items):
+        """Dải tóm tắt: hàng nhãn + hàng giá trị, mỗi ô 1 chỉ số."""
+        r = st['row']
+        for k, (label, value) in enumerate(items, start=1):
+            top, bottom = ws.cell(r, k, label), ws.cell(r + 1, k, value)
+            top.font = Font(size=9, color=GREY_TEXT)
+            bottom.font = Font(size=13, bold=True, color=GREEN_DARK)
+            for c in (top, bottom):
+                c.alignment = Alignment(horizontal='center', vertical='center', wrap_text=True)
+                c.fill = fill(LIGHT)
+                c.border = Border(left=Side(style='thin', color='FFFFFFFF'), right=Side(style='thin', color='FFFFFFFF'))
+        ws.row_dimensions[r].height = 26
+        ws.row_dimensions[r + 1].height = 24
+        st['row'] += 2
+
+    def place_image(key, start_row):
+        """Đặt ảnh CFG ở cột K từ start_row; thêm dòng đệm nếu bảng thấp hơn ảnh."""
+        img_path, (w, h) = images[key]
+        pic = XLImage(str(img_path))
+        pic.width, pic.height = IMG_WIDTH, int(h * IMG_WIDTH / w)
+        ws.add_image(pic, f'{IMG_COL}{start_row}')
+        used_px = sum((ws.row_dimensions[r].height or 15) * 4 / 3 for r in range(start_row, st['row']))
+        while used_px < pic.height + 6:
+            ws.row_dimensions[st['row']].height = 15
+            used_px += 20
+            st['row'] += 1
+
+    # ======================= ĐẦU SHEET =======================
     today = datetime.date.today().strftime('%d/%m/%Y')
     branch = subprocess.run(['git', 'branch', '--show-current'], cwd=ROOT, capture_output=True, text=True).stdout.strip() or '—'
     import coverage as coverage_mod
     total_wb = len(status)
     pass_wb = sum(1 for v in status.values() if v == 'PASS')
-
-    merge_text('KIỂM THỬ HỘP TRẮNG: ĐỒ THỊ LUỒNG ĐIỀU KHIỂN (CFG), PHỦ ĐIỀU KIỆN / MC/DC & KIỂM THỬ VÒNG LẶP | Phân hệ: Quản lý giỏ hàng (FR3)',
-               size=14, bold=True, color=GREEN, height=26)
-    merge_text(f'Ngày chạy: {today} · Nhánh git: {branch} · Công cụ: Django TestCase, coverage.py {coverage_mod.__version__} (--branch), '
-               f'Pillow (vẽ CFG) · Mã nguồn kiểm thử: cart/tests_whitebox.py · Kết quả: {pass_wb}/{total_wb} PASS',
-               size=10, italic=True, color='FF555555', height=30)
-    blank()
-
-    # ---------------- PHẦN 1 ----------------
-    merge_text('PHẦN 1 - ĐỒ THỊ LUỒNG ĐIỀU KHIỂN (CFG), ĐỘ PHỨC TẠP CYCLOMATIC V(G) & ĐƯỜNG CƠ SỞ', size=12, bold=True, color=GREEN, height=20)
-    merge_text('Quy ước: hình tròn = khối lệnh; hình thoi = quyết định; hình thoi nét đứt = quyết định ẩn do Django thực hiện '
-               '(@login_required, get_object_or_404, ngoại lệ DoesNotExist) vì chúng tạo ra đường đi riêng (302 về login / 404) '
-               'mà kiểm thử phải đi qua; E = nút ra. V(G) tính theo 3 cách: E − N + 2, P + 1 (P = số nút quyết định) và số miền; '
-               'cả 3 cách cho cùng kết quả. Mỗi đường cơ sở có 1 ca kiểm thử riêng.', height=58)
-    blank()
-
-    summary_rows = []
-    for idx, spec in enumerate(CFGS, start=1):
+    summary = []
+    for spec in CFGS:
         n, e, p, v = graph_numbers(spec)
-        start = state['row']
-        merge_text(f"1.{idx} Hàm {spec['func']} ({spec['loc']})", bold=True, color=GREEN)
-        table(['Nút', 'Dòng code', 'Câu lệnh / điều kiện', 'Loại nút'],
-              [(nd[0], nd[4], nd[5], nd[6]) for nd in spec['nodes']], spans=[1, 1, 4, 3], center_cols=(0, 1))
-        blank()
-        table(['N (số nút)', 'E (số cạnh)', 'P (nút quyết định)', 'V(G) = E − N + 2', 'V(G) = P + 1', 'Số miền', 'Số đường cơ sở'],
-              [(n, e, p, v, p + 1, v, len(spec['paths']))], spans=[1, 1, 1, 1, 1, 2, 2], center_cols=tuple(range(7)), first_bold=False)
-        blank()
-        table(['Mã test case', 'Đường đi (chuỗi nút)', 'Điều kiện trên đường', 'Dữ liệu vào', 'Kết quả mong đợi',
-               'Kết quả thực tế', 'KQ', 'Hàm test (cart/tests_whitebox.py)', 'Ca hộp đen có sẵn đi cùng đường'],
-              [(tc, seq, cond, inp, exp, actual_of(tc, m), result_of(m), m, old)
-               for tc, seq, cond, inp, exp, m, old in spec['paths']], status_cols=(6,))
-        # Ảnh CFG bên phải
-        img_path, (w, h) = images[spec['key']]
-        scale = min(1.0, 430 / w)
-        pic = XLImage(str(img_path))
-        pic.width, pic.height = int(w * scale), int(h * scale)
-        ws.add_image(pic, f'K{start}')
-        need = math.ceil(pic.height / 20) + 2
-        if state['row'] - start < need:
-            state['row'] = start + need
-        blank()
         passed = sum(1 for path in spec['paths'] if result_of(path[5]) == 'PASS')
-        summary_rows.append((spec['func'], spec['loc'], n, e, p, v, len(spec['paths']), f'{passed}/{len(spec["paths"])} PASS'))
+        summary.append((spec['func'], spec['loc'], n, e, p, v, len(spec['paths']), passed))
+    for tc, fn, loc, *_, m in MODEL_PATHS:
+        summary.append((fn, loc, 2, 1, 0, 1, 1, int(result_of(m) == 'PASS')))
+    total_v = sum(r[5] for r in summary)
+    total_paths = sum(r[6] for r in summary)
+    total_pass = sum(r[7] for r in summary)
+    loop_pass = sum(1 for *_, m in LOOP_CASES if result_of(m) == 'PASS')
+    wb_pct = cov_wb['totals']['percent_covered']
 
-    merge_text(f'1.{len(CFGS) + 1} Các hàm chỉ có 1 đường (V(G) = 1) trong cart/models.py', bold=True, color=GREEN)
-    table(['Mã test case', 'Hàm', 'Vị trí', 'Dữ liệu vào', 'Kết quả mong đợi', 'Kết quả thực tế', 'KQ', 'Hàm test', 'Ghi chú'],
-          [(tc, fn, loc, inp, exp, actual_of(tc, m), result_of(m), m, 'Đường duy nhất: 1 → E')
-           for tc, fn, loc, inp, exp, m in MODEL_PATHS], status_cols=(6,))
-    for tc, fn, loc, *_ , m in MODEL_PATHS:
-        summary_rows.append((fn, loc, 2, 1, 0, 1, 1, f'{1 if result_of(m) == "PASS" else 0}/1 PASS'))
-    blank()
-    merge_text(f'1.{len(CFGS) + 2} Tổng hợp độ phức tạp Cyclomatic', bold=True, color=GREEN)
-    total_paths = sum(r[6] for r in summary_rows)
-    total_pass = sum(int(r[7].split('/')[0]) for r in summary_rows)
-    table(['Hàm', 'Vị trí', 'N', 'E', 'P', 'V(G)', 'Số đường cơ sở', 'KQ'],
-          summary_rows + [('TỔNG CỘNG', f'{len(summary_rows)} hàm', '', '', '', sum(r[5] for r in summary_rows), total_paths,
-                           f'{total_pass}/{total_paths} PASS')],
-          spans=[1, 2, 1, 1, 1, 1, 1, 1], center_cols=(2, 3, 4, 5, 6), status_cols=(),
-          fills=[None] * len(summary_rows) + ['FFE8F5E9'])
-    blank()
+    line('KIỂM THỬ HỘP TRẮNG – GIỎ HÀNG (FR3): CFG · PHỦ ĐIỀU KIỆN / MC/DC · VÒNG LẶP', size=15, bold=True, color=GREEN)
+    line(f'Người thực hiện: Lê Bá Hoài Phong · Ngày chạy: {today} · Nhánh: {branch} · Công cụ: Django TestCase, '
+         f'coverage.py {coverage_mod.__version__} (--branch) · Mã test: cart/tests_whitebox.py', size=10, italic=True, color=GREY_TEXT)
+    spacer(6)
+    kpis([
+        ('Test hộp trắng', f'{pass_wb}/{total_wb} PASS'),
+        ('Tổng V(G) / đường cơ sở', f'{total_v} / {total_pass} PASS'),
+        ('MC/DC', 'Đạt'),
+        ('Ca vòng lặp', f'{loop_pass}/{len(LOOP_CASES)} PASS'),
+        ('Độ phủ dòng + nhánh', f'{wb_pct:.0f}%'),
+        ('Đột biến bị phát hiện', f'{len(MUTANTS)}/{len(MUTANTS)}'),
+    ])
+    toc_row = st['row']
+    spacer(20)
 
-    # ---------------- PHẦN 2 ----------------
-    merge_text('PHẦN 2 - PHỦ ĐIỀU KIỆN / MC/DC', size=12, bold=True, color=GREEN, height=20)
-    merge_text('2.1 Danh sách quyết định và điều kiện đơn của phân hệ', bold=True, color=GREEN)
-    table(['Mã', 'Vị trí', 'Biểu thức quyết định', 'Số điều kiện đơn', 'Loại', 'Cấu trúc'],
-          DECISIONS, spans=[1, 2, 2, 2, 1, 1], center_cols=(0, 4))
-    blank()
-    merge_text('2.2 Bảng chân trị & MC/DC cho quyết định kép D2 (views.py:28): not created and cart_item.quantity < MAX_QUANTITY', bold=True, color=GREEN)
-    table(['# · Mã test case', 'A: not created', 'B: quantity < MAX', 'A and B', 'Dữ liệu vào → Kết quả mong đợi',
-           'Kết quả thực tế', 'KQ', 'Hàm test', 'Vai trò trong MC/DC'],
-          [(f'#{no} · {tc}', a, b, res, inp, actual_of(tc, m), result_of(m), m, role)
+    # ======================= PHẦN 1 =======================
+    part('PHẦN 1 – ĐỒ THỊ LUỒNG ĐIỀU KHIỂN (CFG) & ĐƯỜNG CƠ SỞ', 'p1')
+    line('Quy ước: ○ khối lệnh · ◇ quyết định · ◇ nét đứt = quyết định ẩn của Django (@login_required, get_object_or_404, '
+         'ngoại lệ DoesNotExist) vì chúng tạo đường ra 302/404 riêng · E = nút ra · V(G) = E − N + 2 = P + 1 (P = số nút quyết định). '
+         'Mỗi đường cơ sở có 1 test riêng. Các ca không ghi "Khách" đều đã đăng nhập bằng user cartuser; A = SP "Bình nước tre" 50.000đ.',
+         size=10, color=GREY_TEXT)
+    spacer(6)
+    sub('1.1 Tổng hợp độ phức tạp Cyclomatic')
+    table(['Hàm', 'Vị trí', 'N', 'E', 'P', 'V(G)', 'Đường', 'KQ'],
+          [(f, loc, n, e, p, v, k, f'{ok}/{k} PASS') for f, loc, n, e, p, v, k, ok in summary]
+          + [('TỔNG CỘNG', f'{len(summary)} hàm', '', '', '', total_v, total_paths, f'{total_pass}/{total_paths} PASS')],
+          spans=[2, 1, 1, 1, 1, 1, 1, 1], center_cols=(2, 3, 4, 5, 6), status_cols=(7,), total_last=True)
+
+    path_headers = ['Mã test case', 'Đường đi', 'Điều kiện', 'Dữ liệu vào', 'Kết quả mong đợi', 'Kết quả thực tế',
+                    'KQ', 'Hàm test', 'Ca hộp đen cùng đường']
+    for idx, spec in enumerate(CFGS, start=2):
+        n, e, p, v = graph_numbers(spec)
+        spacer(10)
+        start = st['row']
+        sub(f"1.{idx} {spec['func']}  ·  {spec['loc']}  ·  N = {n}, E = {e}, P = {p}  →  V(G) = {v}  →  {len(spec['paths'])} đường cơ sở")
+        table(['Nút', 'Dòng', 'Câu lệnh / điều kiện', 'Loại nút'],
+              [(nd[0], nd[4], nd[5], nd[6]) for nd in spec['nodes']], spans=[1, 1, 4, 3], center_cols=(0, 1))
+        spacer(6)
+        table(path_headers,
+              [(tc, seq, cond, short_input(inp), exp, actual_of(tc, m), result_of(m), m, old)
+               for tc, seq, cond, inp, exp, m, old in spec['paths']], status_cols=(6,), small_cols=(7,))
+        place_image(spec['key'], start)
+
+    spacer(10)
+    sub(f'1.{len(CFGS) + 2} Hàm 1 đường trong cart/models.py (V(G) = 1, đường 1 → E)')
+    table(['Mã test case', 'Hàm', 'Vị trí', 'Dữ liệu vào', 'Kết quả mong đợi', 'Kết quả thực tế', 'KQ', 'Hàm test'],
+          [(tc, fn, loc, inp, exp, actual_of(tc, m), result_of(m), m) for tc, fn, loc, inp, exp, m in MODEL_PATHS],
+          spans=[1, 1, 1, 1, 1, 1, 1, 2], status_cols=(6,), small_cols=(7,))
+
+    # ======================= PHẦN 2 =======================
+    part('PHẦN 2 – PHỦ ĐIỀU KIỆN / MC/DC', 'p2')
+    sub('2.1 Các quyết định và ca phủ giá trị Đúng (T) / Sai (F)')
+    cases = {}
+    for tc, dec, val, inp, exp, m, note in SINGLE_MCDC:
+        extra = val[1:].strip(' ()')
+        cases.setdefault(dec, {'T': [], 'F': []})[val[0]].append((f'{tc} ({extra})' if extra else tc, m))
+    cases['D2'] = {'T': [], 'F': []}
+    for no, a, b, res, tc, inp, m, role in D2_TRUTH:
+        cases['D2']['T' if res == 'T' else 'F'].append((f'#{no} {tc}', m))
+    dec_rows = []
+    for code, loc, expr, n_cond, kind, struct in DECISIONS:
+        t_cases, f_cases = cases[code]['T'], cases[code]['F']
+        methods = [m for _, m in t_cases + f_cases]
+        ok = all(result_of(m) == 'PASS' for m in methods)
+        note = '2 điều kiện – xem bảng 2.2' if code == 'D2' else (f'{kind}; {struct}' if kind != 'Tường minh' else struct)
+        dec_rows.append((code, loc, expr, '\n'.join(t for t, _ in t_cases), '\n'.join(t for t, _ in f_cases),
+                         'PASS' if ok else 'FAIL', note))
+    table(['Mã', 'Vị trí', 'Biểu thức quyết định', 'Ca cho giá trị T', 'Ca cho giá trị F', 'KQ', 'Ghi chú'],
+          dec_rows, spans=[1, 1, 2, 1, 1, 1, 2], status_cols=(5,), center_cols=(0,), small_cols=(3, 4))
+    spacer(10)
+    sub('2.2 MC/DC cho quyết định kép D2 – views.py:28: not created and cart_item.quantity < MAX_QUANTITY')
+    table(['# · Mã test case', 'A: not created', 'B: quantity < MAX', 'A and B', 'Dữ liệu vào → mong đợi',
+           'Kết quả thực tế', 'KQ', 'Hàm test', 'Vai trò MC/DC'],
+          [(f'#{no} · {tc}', a, b, res, short_input(inp), actual_of(tc, m), result_of(m), m, role)
            for no, a, b, res, tc, inp, m, role in D2_TRUTH],
-          center_cols=(1, 2, 3), status_cols=(6,))
-    merge_text('Cặp độc lập MC/DC: A → cặp (#1, #3): B giữ T, A đổi T → F làm kết quả đổi T → F. '
-               'B → cặp (#1, #2): A giữ T, B đổi T → F làm kết quả đổi T → F. '
-               'Tập tối thiểu {#1, #2, #3} = n + 1 = 3 ca. Ca #1b đặt B tại đúng biên MAX − 1 để kiểm tra toán tử <; '
-               'ca #4 chứng minh tổ hợp (F, F) không khả thi nên phủ đa điều kiện chỉ cần 3/3 tổ hợp khả thi.', height=62)
-    blank()
-    merge_text('2.3 MC/DC cho các quyết định 1 điều kiện (D1, D3 - D8) và quyết định ẩn (I1 - I3): mỗi quyết định cần 1 ca T và 1 ca F',
-               bold=True, color=GREEN)
-    table(['Mã test case', 'Quyết định', 'Giá trị điều kiện', 'Dữ liệu vào', 'Kết quả mong đợi', 'Kết quả thực tế', 'KQ', 'Hàm test', 'Ghi chú'],
-          [(tc, dec, val, inp, exp, actual_of(tc, m), result_of(m), m, note) for tc, dec, val, inp, exp, m, note in SINGLE_MCDC],
-          status_cols=(6,), center_cols=(1,))
-    blank()
-    merge_text('2.4 Tổng hợp các tiêu chí phủ điều kiện', bold=True, color=GREEN)
+          center_cols=(1, 2, 3), status_cols=(6,), small_cols=(7,))
+    line('A độc lập: cặp (#1, #3) – B giữ T, A đổi thì kết quả đổi. B độc lập: cặp (#1, #2) – A giữ T, B đổi thì kết quả đổi. '
+         'Tập tối thiểu {#1, #2, #3} = n + 1 = 3 ca; #1b thử đúng biên MAX − 1; #4 chứng minh tổ hợp (F, F) không khả thi.',
+         size=10, color=GREY_TEXT)
+    spacer(10)
+    sub('2.3 Chi tiết các ca MC/DC mới (các ca còn lại dùng lại ca CFG / vòng lặp ở bảng 2.1)')
+    new_cases = [row for row in SINGLE_MCDC if row[0].startswith('WB-MCDC-')]
+    table(['Mã test case', 'Quyết định', 'Giá trị', 'Dữ liệu vào', 'Kết quả mong đợi', 'Kết quả thực tế', 'KQ', 'Hàm test', 'Ghi chú'],
+          [(tc, dec, val, short_input(inp), exp, actual_of(tc, m), result_of(m), m, note)
+           for tc, dec, val, inp, exp, m, note in new_cases], status_cols=(6,), center_cols=(1,), small_cols=(7,))
+    spacer(10)
+    sub('2.4 Tổng hợp tiêu chí')
     table(['Tiêu chí', 'Yêu cầu', 'Phạm vi', 'Kết quả', 'Ghi chú'],
-          [(a, b, c, d, e) for a, b, c, d, e in COVERAGE_CRITERIA], spans=[2, 2, 2, 2, 1], status_cols=(3,))
-    blank()
+          [(a, b, c, d, e) for a, b, c, d, e in COVERAGE_CRITERIA], spans=[2, 1, 2, 2, 2], status_cols=(3,), center_cols=(3,))
 
-    # ---------------- PHẦN 3 ----------------
-    merge_text('PHẦN 3 - KIỂM THỬ VÒNG LẶP', size=12, bold=True, color=GREEN, height=20)
-    merge_text('3.1 Các vòng lặp của phân hệ', bold=True, color=GREEN)
-    table(['Mã', 'Vị trí', 'Mã nguồn', 'Loại vòng lặp', 'Biến điều khiển số lần lặp', 'Giá trị quan sát'],
-          LOOPS, spans=[1, 2, 2, 1, 2, 1], center_cols=(0,))
-    merge_text('Phân hệ chỉ có vòng lặp đơn, không có vòng lặp lồng nhau hay nối tiếp. Cận trên của số lần lặp: vì CartItem có '
-               'unique_together (cart, product) nên một giỏ có tối đa n dòng, với n = số sản phẩm trong hệ thống. Dữ liệu test tạo '
-               'đúng n = 10 sản phẩm nên áp dụng đủ bộ giá trị của vòng lặp đơn: 0, 1, 2, m, n − 1, n, n + 1. Mỗi request '
-               'GET /cart/ kiểm tra cùng lúc L1 (total_price), L1\' (template) và L2 (cart_item_count).', height=62)
-    blank()
-    merge_text('3.2 Dữ liệu dùng cho vòng lặp (n = 10 sản phẩm; SP thứ i có số lượng q = i, trừ ca 08)', bold=True, color=GREEN)
-    table(['Sản phẩm'] + [f'SP{i}' for i in range(1, 9)],
-          [['Giá (VNĐ)'] + [f'{p:,}'.replace(',', '.') for p in LOOP_PRICES[:8]]], center_cols=tuple(range(1, 9)))
-    table(['Sản phẩm', 'SP9', 'SP10', 'Tổng giá 10 SP'],
-          [['Giá (VNĐ)', '55.000', '60.000', f'{sum(LOOP_PRICES):,}'.replace(',', '.')]], center_cols=(1, 2, 3))
-    blank()
-    merge_text('3.3 Test case kiểm thử vòng lặp', bold=True, color=GREEN)
-    table(['Mã test case', 'Số lần lặp', 'Mức kiểm thử', 'Dữ liệu vào', 'Kết quả mong đợi', 'Kết quả thực tế', 'KQ', 'Hàm test'],
+    # ======================= PHẦN 3 =======================
+    part('PHẦN 3 – KIỂM THỬ VÒNG LẶP', 'p3')
+    sub('3.1 Các vòng lặp (đều là vòng lặp đơn, không có vòng lồng nhau / nối tiếp)')
+    table(['Mã', 'Vị trí', 'Mã nguồn', 'Số lần lặp', 'Giá trị quan sát'],
+          [(code, loc, src, var, obs) for code, loc, src, kind, var, obs in LOOPS], spans=[1, 2, 2, 2, 2], center_cols=(0,))
+    prices = ', '.join(str(p // 1000) for p in LOOP_PRICES)
+    total_price = f'{sum(LOOP_PRICES):,}'.replace(',', '.')
+    line(f'Cận trên n = số sản phẩm trong hệ thống (CartItem có unique_together (cart, product)). Dữ liệu test: n = 10 SP, '
+         f'giá SP1 → SP10 = {prices} nghìn đồng (tổng {total_price}đ); SP thứ i có q = i. '
+         f"Mỗi GET /cart/ kiểm tra cùng lúc L1, L1' và L2.", size=10, color=GREY_TEXT)
+    spacer(10)
+    sub('3.2 Test case vòng lặp đơn: 0, 1, 2, m, n − 1, n, n + 1 lần')
+    table(['Mã test case', 'Số lần lặp', 'Mức', 'Dữ liệu vào', 'Kết quả mong đợi', 'Kết quả thực tế', 'KQ', 'Hàm test'],
           [(tc, k, lvl, inp, exp, actual_of(tc, m), result_of(m), m) for tc, k, lvl, inp, exp, m in LOOP_CASES],
-          spans=[1, 1, 1, 1, 1, 1, 1, 2], status_cols=(6,), center_cols=(1,))
-    blank()
+          spans=[1, 1, 1, 1, 1, 1, 1, 2], status_cols=(6,), center_cols=(1,), small_cols=(7,))
 
-    # ---------------- PHẦN 4 ----------------
-    merge_text('PHẦN 4 - ĐỘ PHỦ MÃ NGUỒN & KIỂM TRA ĐỘT BIẾN', size=12, bold=True, color=GREEN, height=20)
-    merge_text('4.1 So sánh độ phủ (dòng + nhánh, đo bằng coverage.py --branch trên app cart, bỏ qua tests, migrations, management)', bold=True, color=GREEN)
+    # ======================= PHẦN 4 =======================
+    part('PHẦN 4 – ĐỘ PHỦ MÃ NGUỒN & KIỂM TRA ĐỘT BIẾN', 'p4')
+    sub('4.1 Độ phủ dòng + nhánh (coverage.py --branch, app cart, bỏ qua tests / migrations / management)')
 
-    def cov_row(label, cases, outcome, data):
+    def cov_row(label, cases_, outcome, data):
         t = data['totals']
         missing = '; '.join(f"{Path(k).name}: {', '.join(map(str, v['missing_lines']))}"
                             for k, v in data['files'].items() if v['missing_lines']) or '—'
-        return (label, cases, outcome, t['num_statements'], t['missing_lines'], t['num_branches'],
-                t['missing_branches'], t['percent_covered'] / 100, missing)
+        return (label, cases_, outcome, f"{t['num_statements'] - t['missing_lines']}/{t['num_statements']}",
+                f"{t['num_branches'] - t['missing_branches']}/{t['num_branches']}", t['percent_covered'] / 100, missing)
 
     full_pass = full['ran'] - len(full['fails'])
     fail_text = f"{full_pass} PASS, {len(full['fails'])} FAIL" + (f" ({', '.join(full['fails'])})" if full['fails'] else '')
-    rows = [
-        ('Chỉ 33 ca EP/BVA (theo sheet Phong_BQD_Do_phu_BVA)', '33', '33 PASS', 83, 5, 10, 1, 0.9354838709677419, 'context_processors.py: 9, 10, 11; models.py: 11, 23'),
-        ('88 ca EP/BVA + Chuyển trạng thái + BQĐ (theo sheet Phong_BQD_Do_phu_BVA)', '88', '86 PASS, 2 FAIL (ST-21, ST-22)', 83, 2, 10, 0, 0.9784946236559139, 'models.py: 11, 23'),
-        cov_row('Chỉ bộ hộp trắng cart/tests_whitebox.py', str(total_wb), f'{pass_wb} PASS, {total_wb - pass_wb} FAIL', cov_wb),
-        cov_row('Toàn bộ test của app cart (hộp đen + hộp trắng)', str(full['ran']), fail_text, full['cov']),
-    ]
-    table(['Phạm vi chạy', 'Số ca', 'Kết quả', 'Số dòng lệnh', 'Dòng chưa phủ', 'Số nhánh', 'Nhánh chưa phủ', 'Độ phủ (dòng + nhánh)', 'Vị trí chưa phủ'],
-          rows, center_cols=(1, 3, 4, 5, 6, 7))
-    blank()
-    merge_text('4.2 Chi tiết độ phủ từng tệp khi chỉ chạy bộ hộp trắng', bold=True, color=GREEN)
-    file_rows = []
-    for k, v in sorted(cov_wb['files'].items()):
-        s = v['summary']
-        file_rows.append((k.replace('\\', '/'), s['num_statements'], s['missing_lines'], s['num_branches'],
-                          s['missing_branches'], s['percent_covered'] / 100,
-                          ', '.join(map(str, v['missing_lines'])) or '—'))
-    table(['Tệp mã nguồn', 'Số dòng lệnh', 'Dòng chưa phủ', 'Số nhánh', 'Nhánh chưa phủ', 'Độ phủ', 'Dòng chưa phủ (vị trí)'],
-          file_rows, spans=[2, 1, 1, 1, 1, 1, 2], center_cols=(1, 2, 3, 4, 5))
-    blank()
-    merge_text('4.3 Kiểm tra sức mạnh bộ test bằng đột biến (mutation): sửa sai 1 chỗ trong code, chạy lại bộ hộp trắng, '
-               'bộ test tốt phải có ít nhất 1 ca FAIL. Chạy ngày 18/11/2026, code được khôi phục sau mỗi đột biến.', bold=True, color=GREEN, height=34)
+    table(['Phạm vi chạy', 'Số ca', 'Kết quả', 'Dòng đã phủ', 'Nhánh đã phủ', 'Độ phủ', 'Chưa phủ'],
+          [('Chỉ 33 ca EP/BVA (sheet Phong_BQD_Do_phu_BVA)', '33', '33 PASS', '78/83', '9/10', 0.9354838709677419,
+            'context_processors.py: 9-11; models.py: 11, 23'),
+           ('88 ca EP/BVA + Chuyển trạng thái + BQĐ', '88', '86 PASS, 2 FAIL (ST-21, ST-22)', '81/83', '10/10', 0.9784946236559139,
+            'models.py: 11, 23'),
+           cov_row('Chỉ bộ hộp trắng (cart/tests_whitebox.py)', str(total_wb), f'{pass_wb} PASS', cov_wb),
+           cov_row('Toàn bộ app cart (hộp đen + hộp trắng)', str(full['ran']), fail_text, full['cov'])],
+          spans=[2, 1, 2, 1, 1, 1, 1], center_cols=(1, 3, 4, 5), first_bold=False)
+    files = sorted(cov_wb['files'].items())
+    full_files = [k for k, v in files if v['summary']['percent_covered'] == 100]
+    detail = ', '.join(f"{Path(k).name} {v['summary']['num_statements']} dòng/{v['summary']['num_branches']} nhánh"
+                       for k, v in files if v['summary']['num_statements'])
+    line(f'Theo từng tệp (chỉ bộ hộp trắng): {len(full_files)}/{len(files)} tệp đạt 100% – {detail}.', size=10, color=GREY_TEXT)
+    spacer(10)
+    sub('4.2 Kiểm tra đột biến (mutation): sửa sai 1 chỗ trong code rồi chạy lại bộ hộp trắng – phải có ít nhất 1 ca FAIL '
+        '(chạy 18/11/2026, code được khôi phục sau mỗi lần)')
     table(['Mã', 'Vị trí', 'Thay đổi', 'Ca phát hiện (FAIL)', 'Kết quả'],
           MUTANTS, spans=[1, 1, 2, 4, 1], status_cols=(4,), center_cols=(0,))
-    blank()
 
-    # ---------------- PHẦN 5 ----------------
-    merge_text('PHẦN 5 - NHẬN XÉT', size=12, bold=True, color=GREEN, height=20)
-    wb_pct = cov_wb['totals']['percent_covered']
+    # ======================= PHẦN 5 =======================
+    part('PHẦN 5 – NHẬN XÉT & CÁCH CHẠY', 'p5')
     notes = [
-        f'1. CFG được vẽ cho {len(summary_rows)} hàm của phân hệ; tổng V(G) = {sum(r[5] for r in summary_rows)} nên cần '
-        f'{total_paths} đường cơ sở. Mỗi đường có 1 ca riêng: {total_pass}/{total_paths} PASS.',
-        '2. Các quyết định ẩn của Django (@login_required, get_object_or_404) được đưa vào CFG vì chúng tạo đường ra 302/404 riêng. '
-        'coverage.py không đếm chúng là nhánh, nên số nhánh coverage.py báo (10) nhỏ hơn số kết quả quyết định trong CFG.',
-        '3. D2 (views.py:28) là quyết định kép duy nhất. 3 ca #1, #2, #3 đạt MC/DC; tổ hợp (A = F, B = F) không khả thi vì '
-        'SP vừa tạo luôn có q = 1.',
-        '4. Ca WB-MCDC-D4-03 (q = 0) là ca mới duy nhất phân biệt được "<= 0" với "== 0" ở views.py:65: đột biến M5 vượt qua '
-        'toàn bộ 88 ca hộp đen cũ nhưng bị ca này phát hiện.',
-        '5. Vòng lặp được kiểm thử với 0, 1, 2, 5, 9, 10 lần và thử 11 lần. Không thể vượt n = 10 lần lặp vì ràng buộc '
-        'unique_together; thêm lại SP đã có chỉ tăng quantity. Ca 08 cho thấy tổng tiền và số trên biểu tượng giỏ vẫn đúng '
-        'khi mọi dòng có q = 2147483647.',
-        f'6. Riêng bộ hộp trắng đạt {wb_pct:.1f}% độ phủ dòng + nhánh của app cart. Các ca trong models.py (__str__) '
-        'phủ nốt 2 dòng mà các bộ hộp đen trước đây còn thiếu.',
-        f'7. Khi chạy toàn bộ {full["ran"]} ca của app cart, {len(full["fails"])} ca FAIL là ST-21, ST-22 của BUG-CART-02 '
-        '(đã ghi nhận ở sheet Phong_test_trandition), không phải do bộ hộp trắng.',
-        '8. Lệnh chạy: .venv\\Scripts\\python.exe manage.py test cart.tests_whitebox -v 2',
-        '9. Lệnh đo độ phủ: .venv\\Scripts\\python.exe -m coverage run --branch --source=cart '
-        '--omit="cart/tests*,cart/migrations/*,cart/management/*" manage.py test cart.tests_whitebox  rồi  '
-        '.venv\\Scripts\\python.exe -m coverage report -m',
-        '10. Tạo lại sheet và ảnh CFG: .venv\\Scripts\\python.exe tools/build_cart_whitebox_report.py',
+        f'• CFG cho {len(summary)} hàm, tổng V(G) = {total_v} → {total_paths} đường cơ sở, mỗi đường 1 test: {total_pass}/{total_paths} PASS. '
+        'Quyết định ẩn của Django được đưa vào CFG nên số kết quả quyết định lớn hơn số nhánh coverage.py báo (10).',
+        '• D2 (views.py:28) là quyết định kép duy nhất: 3 ca đạt MC/DC, tổ hợp (F, F) không khả thi vì SP vừa tạo luôn có q = 1.',
+        '• WB-MCDC-D4-03 (q = 0) là ca duy nhất phân biệt "<= 0" với "== 0" ở views.py:65: đột biến M5 qua mặt toàn bộ 88 ca hộp đen cũ.',
+        '• Vòng lặp chạy 0, 1, 2, 5, 9, 10 lần và thử 11 lần; không thể vượt n = 10 vì unique_together. Tổng tiền và số trên biểu tượng '
+        'giỏ vẫn đúng khi mọi dòng có q = 2147483647.',
+        f'• Bộ hộp trắng đạt {wb_pct:.0f}% dòng + nhánh (2 ca models.__str__ phủ nốt phần hộp đen còn thiếu). Chạy toàn bộ '
+        f'{full["ran"]} ca của app cart: {len(full["fails"])} FAIL là ST-21, ST-22 của BUG-CART-02 (đã ghi nhận), không do bộ hộp trắng.',
     ]
     for note in notes:
-        merge_text(note, height=34 if len(note) > 120 else None)
+        line(note, size=10.5)
+    spacer(8)
+    table(['Việc', 'Lệnh (chạy ở thư mục gốc dự án)'],
+          [('Chạy test hộp trắng', r'.venv\Scripts\python.exe manage.py test cart.tests_whitebox -v 2'),
+           ('Đo độ phủ', r'.venv\Scripts\python.exe -m coverage run --branch --source=cart '
+                         r'--omit="cart/tests*,cart/migrations/*,cart/management/*" manage.py test cart.tests_whitebox'
+                         r'  →  .venv\Scripts\python.exe -m coverage report -m'),
+           ('Tạo lại sheet + ảnh CFG', r'.venv\Scripts\python.exe tools/build_cart_whitebox_report.py  (đóng Report.xlsx trước)')],
+          spans=[2, 7])
+
+    # Mục lục có link nhảy tới từng phần
+    toc = [('Mục lục:', None), ('1. CFG', 'p1'), ('2. MC/DC', 'p2'), ('3. Vòng lặp', 'p3'), ('4. Độ phủ & đột biến', 'p4'),
+           ('5. Nhận xét', 'p5')]
+    for k, (text, key) in enumerate(toc, start=1):
+        c = ws.cell(toc_row, k, text)
+        c.alignment = Alignment(horizontal='left' if k == 1 else 'center', vertical='center')
+        if key:
+            c.hyperlink = f"#'{SHEET}'!A{anchors[key]}"
+            c.font = Font(size=10, color='FF1565C0', underline='single')
+        else:
+            c.font = Font(size=10, bold=True, color=GREY_TEXT)
 
     wb.save(REPORT)
     return pass_wb, total_wb
