@@ -1,0 +1,13 @@
+$kind: http-request
+url: "{{base_url}}/accounts/profile/"
+method: GET
+scripts:
+  - type: afterResponse
+    code: "pm.test(\"Guest is redirected from profile\", () => { pm.response.to.have.status(302); });\r\npm.test(\"Redirect points to login\", () => { pm.expect(pm.response.headers.get(\"Location\") || \"\").to.include(\"/accounts/login/\"); });"
+    language: text/javascript
+  - type: beforeRequest
+    code: "const aa = eval(pm.collectionVariables.get('aa_helpers'));   // hàm dùng chung, xem biến aa_helpers\naa.guest();   // điều kiện: Guest"
+    language: text/javascript
+settings:
+  followRedirects: false
+order: 6000

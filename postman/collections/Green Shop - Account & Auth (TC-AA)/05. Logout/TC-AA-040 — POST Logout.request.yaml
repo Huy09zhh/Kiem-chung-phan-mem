@@ -1,0 +1,17 @@
+$kind: http-request
+url: "{{base_url}}/accounts/logout/"
+method: POST
+body:
+  type: urlencoded
+  content:
+    csrfmiddlewaretoken: "{{csrf_token}}"
+scripts:
+  - type: afterResponse
+    code: "pm.test(\"Logout redirects\", () => { pm.response.to.have.status(302); });"
+    language: text/javascript
+  - type: beforeRequest
+    code: "const aa = eval(pm.collectionVariables.get('aa_helpers'));   // hàm dùng chung, xem biến aa_helpers\naa.user('/accounts/password/change/');   // điều kiện: đăng nhập tài khoản A + CSRF mới của /accounts/password/change/"
+    language: text/javascript
+settings:
+  followRedirects: false
+order: 2000

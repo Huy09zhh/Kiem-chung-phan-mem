@@ -1,0 +1,110 @@
+{
+  "info": {
+    "name": "SCRUM-51 Order Status Transitions",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "Valid Transition - pending to paid",
+      "request": {
+        "method": "POST",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/admin-panel/orders/{{orderId}}/status/",
+          "host": ["{{baseUrl}}"],
+          "path": ["admin-panel", "orders", "{{orderId}}", "status"]
+        },
+        "body": {
+          "mode": "urlencoded",
+          "urlencoded": [
+            {"key": "status", "value": "paid", "type": "text"}
+          ]
+        }
+      },
+      "response": [],
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status code is 200', function () {",
+              "  pm.response.to.have.status(200);",
+              "});",
+              "pm.test('Response contains success message', function () {",
+              "  pm.expect(pm.response.text()).to.include('Đã cập nhật trạng thái đơn hàng');",
+              "});"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Invalid Transition - pending to shipping",
+      "request": {
+        "method": "POST",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/admin-panel/orders/{{orderId}}/status/",
+          "host": ["{{baseUrl}}"],
+          "path": ["admin-panel", "orders", "{{orderId}}", "status"]
+        },
+        "body": {
+          "mode": "urlencoded",
+          "urlencoded": [
+            {"key": "status", "value": "shipping", "type": "text"}
+          ]
+        }
+      },
+      "response": [],
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Invalid transition returns 400', function () {",
+              "  pm.response.to.have.status(400);",
+              "});",
+              "pm.test('Error message present', function () {",
+              "  pm.expect(pm.response.text()).to.include('Trạng thái chuyển đổi không hợp lệ');",
+              "});"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Final State Locked - completed",
+      "request": {
+        "method": "POST",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/admin-panel/orders/{{orderId}}/status/",
+          "host": ["{{baseUrl}}"],
+          "path": ["admin-panel", "orders", "{{orderId}}", "status"]
+        },
+        "body": {
+          "mode": "urlencoded",
+          "urlencoded": [
+            {"key": "status", "value": "paid", "type": "text"}
+          ]
+        }
+      },
+      "response": [],
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Locked final state returns 400', function () {",
+              "  pm.response.to.have.status(400);",
+              "});",
+              "pm.test('Error about final state', function () {",
+              "  pm.expect(pm.response.text()).to.include('Đơn hàng đã ở trạng thái cuối, không thể thay đổi');",
+              "});"
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}

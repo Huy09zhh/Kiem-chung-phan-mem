@@ -1,0 +1,13 @@
+$kind: http-request
+url: "{{base_url}}/accounts/logout/"
+method: POST
+scripts:
+  - type: afterResponse
+    code: "pm.test('Trả 403 (thiếu CSRF)', () => pm.response.to.have.status(403));"
+    language: text/javascript
+  - type: beforeRequest
+    code: "const aa = eval(pm.collectionVariables.get('aa_helpers'));   // hàm dùng chung, xem biến aa_helpers\naa.user();   // điều kiện: đăng nhập tài khoản A"
+    language: text/javascript
+settings:
+  followRedirects: false
+order: 1000

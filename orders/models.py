@@ -1,5 +1,10 @@
+from decimal import Decimal
+
 from django.db import models
 from django.contrib.auth.models import User
+
+# Tổng tiền tối đa (VND) mà checkout chấp nhận cho một đơn hàng (max int 32-bit).
+ORDER_TOTAL_MAX = Decimal('2147483647')
 
 
 class Order(models.Model):
@@ -31,7 +36,15 @@ class Order(models.Model):
 }
 
     def can_change_to(self, new_status):
-        return new_status in self.ALLOWED_TRANSITIONS.get(self.status, set())
+        current_status = (self.status or '').strip()
+        return new_status in self.ALLOWED_TRANSITIONS.get(current_status, set())
+
+    @property
+    def allowed_next_statuses(self):
+        """Danh sách (value, label) các trạng thái được phép chuyển tiếp từ trạng thái hiện tại."""
+        current_status = (self.status or '').strip()
+        allowed_keys = self.ALLOWED_TRANSITIONS.get(current_status, set())
+        return [(val, label) for val, label in self.STATUS_CHOICES if val in allowed_keys]
 
     FINAL_STATUSES = ('completed', 'cancelled')
 
@@ -58,7 +71,7 @@ class Order(models.Model):
         default='pending'
     )
 
-    total_price = models.DecimalField(max_digits=10, decimal_places=2)
+    total_price = models.DecimalField(max_digits=15, decimal_places=2)
     created_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
@@ -69,7 +82,7 @@ class OrderItem(models.Model):
     order = models.ForeignKey(Order, on_delete=models.CASCADE, related_name='items')
 
     product_name = models.CharField(max_length=255)
-    price = models.DecimalField(max_digits=10, decimal_places=2)
+    price = models.DecimalField(max_digits=15, decimal_places=2)
     quantity = models.PositiveIntegerField()
 
     @property

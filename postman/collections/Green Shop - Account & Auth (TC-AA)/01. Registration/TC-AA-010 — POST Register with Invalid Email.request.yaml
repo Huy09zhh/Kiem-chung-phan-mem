@@ -1,0 +1,20 @@
+$kind: http-request
+url: "{{base_url}}/accounts/register/"
+method: POST
+body:
+  type: urlencoded
+  content:
+    csrfmiddlewaretoken: "{{csrf_token}}"
+    username: "{{case_username}}"
+    email: "not-an-email"
+    password1: "{{aa_password}}"
+    password2: "{{aa_password}}"
+scripts:
+  - type: afterResponse
+    code: "pm.test(\"Invalid email stays on registration form\", () => { pm.response.to.have.status(200); });\r\npm.test(\"Email validation error appears\", () => { pm.expect(pm.response.text()).to.include(\"Enter a valid email address.\"); });"
+    language: text/javascript
+  - type: beforeRequest
+    code: "const aa = eval(pm.collectionVariables.get('aa_helpers'));   // hàm dùng chung, xem biến aa_helpers\naa.guest('/accounts/register/');   // điều kiện: Guest + CSRF mới của /accounts/register/\nconst id = Date.now();\r\npm.collectionVariables.set(\"case_username\", `invalid_email_${id}`);"
+    language: text/javascript
+settings: {}
+order: 10000

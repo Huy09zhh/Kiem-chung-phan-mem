@@ -1,6 +1,7 @@
 from django import forms
 from django.core.validators import MaxLengthValidator
 from .validators import MAX_PASSWORD_LENGTH
+from . import login_throttle, reset_throttle
 from django.contrib.auth.models import User
 from django.contrib.auth.forms import UserCreationForm, AuthenticationForm, PasswordChangeForm, PasswordResetForm
 
@@ -38,10 +39,41 @@ class LoginForm(AuthenticationForm):
     username = forms.CharField(
         widget=forms.TextInput(attrs={'placeholder': 'Nhập tài khoản'})
     )
+    # SCRUM-52: strip=False để so khớp nguyên văn mật khẩu như lúc đăng ký
+    # (UserCreationForm giữ khoảng trắng đầu/cuối, CharField mặc định thì cắt).
     password = forms.CharField(
+        strip=False,
         max_length=MAX_PASSWORD_LENGTH,
         widget=forms.PasswordInput(attrs={'placeholder': 'Nhập mật khẩu', 'maxlength': MAX_PASSWORD_LENGTH})
     )
+
+    # SCRUM-54: chặn dò mật khẩu bằng cách khóa tạm sau nhiều lần sai liên tiếp
+    is_locked_out = False
+
+    def _lockout_error(self):
+        self.is_locked_out = True
+        return forms.ValidationError(
+            'Bạn đã đăng nhập sai quá nhiều lần. Vui lòng thử lại sau %d phút '
+            'hoặc dùng chức năng Quên mật khẩu.' % login_throttle.lockout_minutes(),
+            code='locked_out',
+        )
+
+    def clean(self):
+        username = self.cleaned_data.get('username')
+        if username and login_throttle.is_locked(self.request, username):
+            # Đang bị khóa: không kiểm tra mật khẩu, kể cả mật khẩu đúng
+            raise self._lockout_error()
+        try:
+            cleaned = super().clean()
+        except forms.ValidationError:
+            if username:
+                login_throttle.register_failure(self.request, username)
+                if login_throttle.is_locked(self.request, username):
+                    raise self._lockout_error()
+            raise
+        if username:
+            login_throttle.reset_user(self.request, username)
+        return cleaned
 
 
 class ProfileUpdateForm(forms.ModelForm):
@@ -106,9 +138,26 @@ class CustomPasswordChangeForm(PasswordChangeForm):
         self.fields['new_password2'].widget.attrs.update({'placeholder': 'Nhập lại mật khẩu mới'})
 
 class CustomPasswordResetForm(PasswordResetForm):
-    def __init__(self, *args, **kwargs):
+    # SCRUM-55: cờ báo đã vượt ngưỡng, view dùng để trả HTTP 429
+    is_throttled = False
+
+    def __init__(self, *args, request=None, **kwargs):
+        self.request = request
         super().__init__(*args, **kwargs)
         self.fields['email'].widget.attrs.update({'placeholder': 'Nhập email của bạn'})
+
+    def clean_email(self):
+        email = self.cleaned_data['email']
+        # SCRUM-55: giới hạn số yêu cầu theo email và IP để chống spam hộp thư
+        if reset_throttle.is_limited(self.request, email):
+            self.is_throttled = True
+            raise forms.ValidationError(
+                'Bạn đã gửi quá nhiều yêu cầu đặt lại mật khẩu. '
+                'Vui lòng kiểm tra hộp thư hoặc thử lại sau %d phút.' % reset_throttle.window_minutes(),
+                code='throttled',
+            )
+        reset_throttle.register_request(self.request, email)
+        return email
 
     def save(self, *args, **kwargs):
         # Dùng domain người dùng đang truy cập thay cho Site mặc định ("example.com"),

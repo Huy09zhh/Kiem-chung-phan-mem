@@ -1,17 +1,21 @@
 $kind: collection
 name: Green Shop - Admin Orders & Analytics (Chuyển trạng thái đơn TC-AOA-088 → 101)
 description: |-
-  Kiểm thử chuyển đổi trạng thái đơn hàng (TC-AOA-088 → 101).
+  Kiểm thử chuyển đổi trạng thái đơn hàng (TC-AOA-088 → 101), đã cập nhật theo luồng ALLOWED_TRANSITIONS (SCRUM-44, SCRUM-51).
   1. python manage.py runserver
-  2. Điền admin_password. flow_order_id và cancel_order_id là HAI đơn CHƯA ở trạng thái cuối (không phải Hoàn thành / Đã hủy). Mỗi lần chạy hai đơn này bị đưa về trạng thái cuối nên lần sau cần hai đơn mới.
-  3. Run collection theo thứ tự folder 00 → 03.
-  TC-AOA-098 (đổi lùi trạng thái) có thể FAIL: nghi lỗi hệ thống không kiểm soát luồng.
+  2. Điền admin_password và ba đơn mới:
+     - flow_order_id: đơn đang Chờ xử lý (luồng A)
+     - cancel_order_id: một đơn khác đang Chờ xử lý (luồng B)
+     - qr_order_id: đơn đặt bằng chuyển khoản QR, đang Chờ chuyển khoản (luồng C)
+  3. Run collection theo thứ tự folder 00 → 03. Bước A.0, B.0, C.0 báo FAIL nếu đơn không đúng trạng thái đầu.
+  Sau mỗi lần chạy ba đơn đã chuyển trạng thái (A Hoàn thành, B Đã hủy, C Đã xác nhận), lần sau cần ba đơn mới.
 variables:
   base_url: http://127.0.0.1:8000
   admin_username: adminquan
   admin_password: ""
   flow_order_id: "8"
   cancel_order_id: "10"
+  qr_order_id: ""
   run_tag: ""
   csrf_html: ""
   csrf_token_val: ""

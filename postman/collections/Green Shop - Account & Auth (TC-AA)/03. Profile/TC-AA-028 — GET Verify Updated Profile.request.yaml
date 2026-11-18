@@ -1,0 +1,12 @@
+$kind: http-request
+url: "{{base_url}}/accounts/profile/"
+method: GET
+scripts:
+  - type: afterResponse
+    code: "pm.test('Profile returns 200', () => pm.response.to.have.status(200));\r\nconst html = pm.response.text();\r\npm.test('Updated first and last name are shown', () => { pm.expect(html).to.include('Test'); pm.expect(html).to.include('Account'); });\r\npm.test('Customer username is shown', () => pm.expect(html).to.include(pm.collectionVariables.get('aa_username')));"
+    language: text/javascript
+  - type: beforeRequest
+    code: "const aa = eval(pm.collectionVariables.get('aa_helpers'));   // hàm dùng chung, xem biến aa_helpers\naa.user();   // điều kiện: đăng nhập tài khoản A"
+    language: text/javascript
+settings: {}
+order: 3000

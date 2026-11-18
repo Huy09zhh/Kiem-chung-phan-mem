@@ -1,5 +1,7 @@
+from django.http import Http404
 from django.shortcuts import render, redirect
 from django.contrib.auth import login, logout, update_session_auth_hash
+from django.contrib.auth import views as auth_views
 from django.contrib.auth.decorators import login_required
 from django.utils.http import url_has_allowed_host_and_scheme
 from django.views.decorators.http import require_POST
@@ -58,7 +60,7 @@ def login_view(request):
     return render(request, 'accounts/login.html', {
         'form': form,
         'next': next_url,
-    })
+    }, status=429 if form.is_locked_out else 200)
 
 
 @require_POST
@@ -104,3 +106,24 @@ def change_password_view(request):
 @admin_required
 def admin_dashboard_view(request):
     return render(request, 'admin_panel/dashboard.html')
+
+
+def allauth_disabled_view(request, *args, **kwargs):
+    """SCRUM-53: Trang quản lý email/tài khoản MXH/xác thực lại của allauth
+    không dùng trong dự án (chỉ đăng nhập Google) -> trả 404."""
+    raise Http404
+
+
+class ThrottledPasswordResetView(auth_views.PasswordResetView):
+    """SCRUM-55: truyền request vào form để giới hạn theo IP; trả 429 khi vượt ngưỡng."""
+
+    def get_form_kwargs(self):
+        kwargs = super().get_form_kwargs()
+        kwargs['request'] = self.request
+        return kwargs
+
+    def form_invalid(self, form):
+        response = super().form_invalid(form)
+        if getattr(form, 'is_throttled', False):
+            response.status_code = 429
+        return response

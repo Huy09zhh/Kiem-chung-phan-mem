@@ -258,3 +258,109 @@ class ProductDecisionTableTests(TestCase):
         })
         self.assertEqual(res.status_code, 200)
         self.assertEqual(list(res.context['products']), [])
+
+
+class WhiteBoxProductTests(TestCase):
+    """
+    White-Box Unit Tests: Kiểm thử luồng điều khiển (Control Flow) cho hàm product_api_list
+    (Dòng 89-115, products/views.py) và logic xác thực trong ProductSerializer.
+    """
+    @classmethod
+    def setUpTestData(cls):
+        cls.category = Category.objects.create(name='Cây phong thủy')
+        cls.admin_user = User.objects.create_superuser(
+            username='admin_wb',
+            password='AdminPassword123!',
+            email='admin_wb@greenshop.local',
+        )
+        cls.normal_user = User.objects.create_user(
+            username='user_wb',
+            password='UserPassword123!',
+            email='user_wb@greenshop.local',
+            is_staff=False,
+        )
+        cls.p1 = Product.objects.create(
+            name='Cây Kim Tiền WB',
+            price=Decimal('150000.00'),
+            category=cls.category,
+        )
+
+    def setUp(self):
+        self.api_client = APIClient()
+
+    def test_ps_049_wb_s1_get_products_list(self):
+        """TC-PS-049 (WB-S1): GET /products/api/ -> trả 200 kèm danh sách sản phẩm (D1=T)."""
+        res = self.api_client.get(reverse('product_api_list'))
+        self.assertEqual(res.status_code, 200)
+        self.assertTrue(len(res.data) >= 1)
+
+    def test_ps_050_wb_s2_guest_create_rejected(self):
+        """TC-PS-050 (WB-S2): POST /products/api/ khi chưa đăng nhập -> trả 401 (D1=F, D2=T)."""
+        res = self.api_client.post(reverse('product_api_list'), {
+            'name': 'Cây Khách Chưa Đăng Nhập',
+            'price': 50000,
+            'category': self.category.pk,
+        })
+        self.assertEqual(res.status_code, 401)
+
+    def test_ps_051_wb_s3_non_staff_create_rejected(self):
+        """TC-PS-051 (WB-S3): POST /products/api/ bằng user thường -> trả 403 (D1=F, D2=F, D3=T)."""
+        self.api_client.force_authenticate(user=self.normal_user)
+        res = self.api_client.post(reverse('product_api_list'), {
+            'name': 'Cây User Thường',
+            'price': 50000,
+            'category': self.category.pk,
+        })
+        self.assertEqual(res.status_code, 403)
+
+    def test_ps_052_wb_s4_admin_create_success(self):
+        """TC-PS-052 (WB-S4): POST /products/api/ bằng Admin với dữ liệu hợp lệ -> trả 201 (D1=F, D2=F, D3=F, D4=T)."""
+        self.api_client.force_authenticate(user=self.admin_user)
+        res = self.api_client.post(reverse('product_api_list'), {
+            'name': 'Cây Kim Ngân Lộc WB',
+            'price': 50000,
+            'old_price': 70000,
+            'category': self.category.pk,
+        })
+        self.assertEqual(res.status_code, 201)
+        self.assertEqual(res.data['name'], 'Cây Kim Ngân Lộc WB')
+
+    def test_ps_053_wb_s5_admin_create_invalid(self):
+        """TC-PS-053 (WB-S5): POST /products/api/ bằng Admin với payload rỗng -> trả 400 (D1=F, D2=F, D3=F, D4=F)."""
+        self.api_client.force_authenticate(user=self.admin_user)
+        res = self.api_client.post(reverse('product_api_list'), {})
+        self.assertEqual(res.status_code, 400)
+
+    def test_ps_054_wb_c1_condition_old_price_le_price_rejected(self):
+        """TC-PS-054 (WB-C1): old_price <= price -> báo lỗi 400."""
+        self.api_client.force_authenticate(user=self.admin_user)
+        res = self.api_client.post(reverse('product_api_list'), {
+            'name': 'Cây Giá Cũ Bằng Giá Bán',
+            'price': 50000,
+            'old_price': 50000,
+            'category': self.category.pk,
+        })
+        self.assertEqual(res.status_code, 400)
+        self.assertIn('old_price', res.data)
+
+    def test_ps_055_wb_c2_condition_old_price_gt_price_accepted(self):
+        """TC-PS-055 (WB-C2): old_price > price -> tạo thành công 201."""
+        self.api_client.force_authenticate(user=self.admin_user)
+        res = self.api_client.post(reverse('product_api_list'), {
+            'name': 'Cây Giảm Giá Hợp Lệ WB',
+            'price': 50000,
+            'old_price': 80000,
+            'category': self.category.pk,
+        })
+        self.assertEqual(res.status_code, 201)
+
+    def test_ps_056_wb_c3_condition_no_old_price_accepted(self):
+        """TC-PS-056 (WB-C3): Không có giá cũ -> tạo thành công 201."""
+        self.api_client.force_authenticate(user=self.admin_user)
+        res = self.api_client.post(reverse('product_api_list'), {
+            'name': 'Cây Không Giảm Giá WB',
+            'price': 50000,
+            'category': self.category.pk,
+        })
+        self.assertEqual(res.status_code, 201)
+

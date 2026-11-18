@@ -1,0 +1,16 @@
+{
+  "id": "environment-nguoi5",
+  "name": "Green Shop Nguoi5 Environment",
+  "values": [
+    {
+      "key": "baseUrl",
+      "value": "http://127.0.0.1:8000",
+      "enabled": true
+    },
+    {
+      "key": "authToken",
+      "value": "<YOUR_AUTH_TOKEN>",
+      "enabled": true
+    }
+  ]
+}

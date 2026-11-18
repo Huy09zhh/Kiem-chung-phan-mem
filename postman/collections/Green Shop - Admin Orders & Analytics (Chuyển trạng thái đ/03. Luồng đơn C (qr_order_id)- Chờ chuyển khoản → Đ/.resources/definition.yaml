@@ -1,0 +1,4 @@
+$kind: collection
+name: "03. Luồng đơn C (qr_order_id): Chờ chuyển khoản → Đã thanh toán → Đã xác nhận (TC-AOA-092, 093)"
+description: Cần qr_order_id là đơn đặt bằng chuyển khoản QR, đang Chờ chuyển khoản (không đưa đơn khác về trạng thái này được).
+order: 4000

@@ -42,17 +42,25 @@
 
                     <div class="form-group">
                         <label><strong>Cập nhật trạng thái</strong></label>
-                        <select name="status" class="form-control" {% if order.is_final %}disabled{% endif %}>
-                            {% for value, label in status_choices %}
-                                <option value="{{ value }}" {% if order.status == value %}selected{% endif %}>{{ label }}</option>
+                        {% with next_choices=allowed_status_choices|default:order.allowed_next_statuses %}
+                        <select name="status" class="form-control" {% if order.is_final or not next_choices %}disabled{% endif %}>
+                            {% for value, label in next_choices %}
+                                <option value="{{ value }}">{{ label }}</option>
+                            {% empty %}
+                                <option value="">Không có trạng thái chuyển tiếp</option>
                             {% endfor %}
                         </select>
                         {% if order.is_final %}
                             <small class="text-muted">Đơn đã ở trạng thái cuối, không thể thay đổi.</small>
+                        {% elif not next_choices %}
+                            <small class="text-muted">Không có trạng thái chuyển đổi hợp lệ khả dụng.</small>
                         {% endif %}
+                        {% endwith %}
                     </div>
 
-                    <button type="submit" class="btn btn-success" {% if order.is_final %}disabled{% endif %}>Lưu trạng thái</button>
+                    {% with next_choices=allowed_status_choices|default:order.allowed_next_statuses %}
+                    <button type="submit" class="btn btn-success" {% if order.is_final or not next_choices %}disabled{% endif %}>Lưu trạng thái</button>
+                    {% endwith %}
                 </form>
             </div>
         </div>

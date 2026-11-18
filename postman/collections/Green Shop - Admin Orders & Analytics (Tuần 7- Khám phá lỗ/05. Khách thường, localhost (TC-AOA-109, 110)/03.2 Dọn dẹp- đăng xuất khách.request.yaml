@@ -1,0 +1,11 @@
+$kind: http-request
+name: "03.2 Dọn dẹp: đăng xuất khách"
+url: "{{anon_url}}/accounts/logout/"
+method: POST
+body:
+  type: urlencoded
+  content:
+    x: "1"
+settings:
+  followRedirects: false
+order: 5000

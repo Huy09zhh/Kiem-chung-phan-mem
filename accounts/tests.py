@@ -1,6 +1,7 @@
 from django.conf import settings
 from django.contrib.auth.models import User
 from django.test import TestCase, Client
+from django.core import mail
 from django.urls import reverse
 from allauth.socialaccount.models import SocialApp
 
@@ -243,3 +244,243 @@ class PasswordLengthBoundaryTests(TestCase):
         resp = self._register('pwlong', 'Ab1x' * 250000)
         self.assertEqual(resp.status_code, 200)
         self.assertFalse(User.objects.filter(username='pwlong').exists())
+
+
+class SCRUM52PasswordWhitespaceTests(TestCase):
+    """Kiểm thử SCRUM-52: mật khẩu có khoảng trắng đầu/cuối phải đăng nhập lại được."""
+
+    def setUp(self):
+        # Trang đăng ký/đăng nhập cần cấu hình Google OAuth giả để render được
+        app = SocialApp.objects.create(
+            provider='google', name='Google', client_id='test', secret='test'
+        )
+        if 'django.contrib.sites' in settings.INSTALLED_APPS:
+            from django.contrib.sites.models import Site
+            app.sites.add(Site.objects.get_current())
+
+    def _register(self, username, pw):
+        return self.client.post(reverse('register'), {
+            'username': username,
+            'email': f'{username}@example.com',
+            'password1': pw,
+            'password2': pw,
+        })
+
+    def _login(self, username, pw):
+        self.client.logout()
+        return self.client.post(reverse('login'), {'username': username, 'password': pw})
+
+    def _dang_nhap_thanh_cong(self, resp):
+        return resp.status_code == 302 and '_auth_user_id' in self.client.session
+
+    def test_khoang_trang_dau_dang_nhap_nguyen_van_duoc(self):
+        pw = '  Abcd#2026x'
+        self.assertEqual(self._register('ws_dau', pw).status_code, 302)
+        self.assertTrue(self._dang_nhap_thanh_cong(self._login('ws_dau', pw)))
+
+    def test_khoang_trang_cuoi_dang_nhap_nguyen_van_duoc(self):
+        pw = 'Abcd#2026x  '
+        self.assertEqual(self._register('ws_cuoi', pw).status_code, 302)
+        self.assertTrue(self._dang_nhap_thanh_cong(self._login('ws_cuoi', pw)))
+
+    def test_bo_khoang_trang_thi_bi_tu_choi(self):
+        self._register('ws_bo', '  Abcd#2026x')
+        resp = self._login('ws_bo', 'Abcd#2026x')
+        self.assertEqual(resp.status_code, 200)
+        self.assertNotIn('_auth_user_id', self.client.session)
+
+    def test_mat_khau_chi_gom_khoang_trang(self):
+        pw = ' ' * 8
+        if self._register('ws_rong', pw).status_code == 302:
+            # Đăng ký được thì phải đăng nhập lại được bằng đúng mật khẩu đó
+            self.assertTrue(self._dang_nhap_thanh_cong(self._login('ws_rong', pw)))
+        else:
+            self.assertFalse(User.objects.filter(username='ws_rong').exists())
+
+    def test_mat_khau_binh_thuong_khong_bi_anh_huong(self):
+        pw = 'Abcd#2026x'
+        self._register('ws_thuong', pw)
+        self.assertTrue(self._dang_nhap_thanh_cong(self._login('ws_thuong', pw)))
+
+
+class SCRUM53AllauthSignupBlockedTests(TestCase):
+    """Kiểm thử SCRUM-53: chỉ đăng ký qua /accounts/register/, chặn trang thừa của allauth."""
+
+    def setUp(self):
+        app = SocialApp.objects.create(
+            provider='google', name='Google', client_id='test', secret='test'
+        )
+        if 'django.contrib.sites' in settings.INSTALLED_APPS:
+            from django.contrib.sites.models import Site
+            app.sites.add(Site.objects.get_current())
+
+    def test_get_signup_chuyen_ve_register(self):
+        resp = self.client.get('/accounts/signup/')
+        self.assertRedirects(resp, reverse('register'), fetch_redirect_response=False)
+
+    def test_post_signup_khong_tao_tai_khoan(self):
+        self.client.post('/accounts/signup/', {
+            'username': 'noemail', 'password1': 'Abcd#2026x', 'password2': 'Abcd#2026x',
+        })
+        self.assertFalse(User.objects.filter(username='noemail').exists())
+        self.assertNotIn('_auth_user_id', self.client.session)
+
+    def test_adapter_dong_dang_ky_allauth(self):
+        from allauth.account.adapter import get_adapter
+        self.assertFalse(get_adapter().is_open_for_signup(None))
+
+    def test_trang_allauth_thua_tra_404_khi_da_dang_nhap(self):
+        user = User.objects.create_user('u53', 'u53@example.com', 'Abcd#2026x')
+        self.client.force_login(user)
+        for url in ('/accounts/email/', '/accounts/3rdparty/', '/accounts/reauthenticate/'):
+            with self.subTest(url=url):
+                self.assertEqual(self.client.get(url).status_code, 404)
+
+    def test_dang_nhap_google_van_con(self):
+        from allauth.socialaccount.adapter import get_adapter as get_social_adapter
+        self.assertTrue(get_social_adapter().is_open_for_signup(None, None))
+        self.assertEqual(reverse('google_login'), '/accounts/google/login/')
+
+    def test_register_van_bat_buoc_email(self):
+        self.client.post(reverse('register'), {
+            'username': 'reg53', 'email': '', 'password1': 'Abcd#2026x', 'password2': 'Abcd#2026x',
+        })
+        self.assertFalse(User.objects.filter(username='reg53').exists())
+
+
+class SCRUM54LoginLockoutTests(TestCase):
+    """Kiểm thử SCRUM-54: đăng nhập sai nhiều lần phải bị khóa tạm."""
+
+    def setUp(self):
+        from django.core.cache import cache
+        cache.clear()
+        self.addCleanup(cache.clear)
+        app = SocialApp.objects.create(
+            provider='google', name='Google', client_id='test', secret='test'
+        )
+        if 'django.contrib.sites' in settings.INSTALLED_APPS:
+            from django.contrib.sites.models import Site
+            app.sites.add(Site.objects.get_current())
+        User.objects.create_user('victim', 'victim@example.com', 'Abcd#2026xyz')
+
+    def _login(self, username, pw, ip='10.0.0.1'):
+        return self.client.post(reverse('login'), {'username': username, 'password': pw},
+                                REMOTE_ADDR=ip)
+
+    def _da_dang_nhap(self):
+        return '_auth_user_id' in self.client.session
+
+    def test_sai_4_lan_van_dang_nhap_dung_duoc(self):
+        for i in range(4):
+            self.assertEqual(self._login('victim', f'Wrong#{i}').status_code, 200)
+        self.assertEqual(self._login('victim', 'Abcd#2026xyz').status_code, 302)
+        self.assertTrue(self._da_dang_nhap())
+
+    def test_sai_5_lan_bi_khoa_ke_ca_mat_khau_dung(self):
+        for i in range(4):
+            self._login('victim', f'Wrong#{i}')
+        resp = self._login('victim', 'Wrong#4')
+        self.assertEqual(resp.status_code, 429)
+        self.assertContains(resp, 'sai quá nhiều lần', status_code=429)
+        resp = self._login('victim', 'Abcd#2026xyz')
+        self.assertEqual(resp.status_code, 429)
+        self.assertFalse(self._da_dang_nhap())
+
+    def test_100_lan_sai_khong_lan_nao_vao_duoc(self):
+        codes = [self._login('victim', f'Wrong#{i}').status_code for i in range(100)]
+        self.assertEqual(codes.count(429), 96)
+        self._login('victim', 'Abcd#2026xyz')
+        self.assertFalse(self._da_dang_nhap())
+
+    def test_khoa_theo_ten_khong_phan_biet_hoa_thuong(self):
+        for i in range(5):
+            self._login('VICTIM', f'Wrong#{i}')
+        self.assertEqual(self._login('victim', 'Abcd#2026xyz').status_code, 429)
+
+    def test_khoa_theo_ip_khi_do_nhieu_tai_khoan(self):
+        for i in range(20):
+            self._login(f'ghost{i}', 'Wrong#1', ip='10.0.0.9')
+        self.assertEqual(self._login('victim', 'Abcd#2026xyz', ip='10.0.0.9').status_code, 429)
+        # IP khác vẫn đăng nhập bình thường
+        self.assertEqual(self._login('victim', 'Abcd#2026xyz', ip='10.0.0.2').status_code, 302)
+
+    def test_dang_nhap_dung_thi_reset_bo_dem(self):
+        for i in range(4):
+            self._login('victim', f'Wrong#{i}')
+        self._login('victim', 'Abcd#2026xyz')
+        self.client.logout()
+        for i in range(4):
+            self._login('victim', f'Wrong#{i}')
+        self.assertEqual(self._login('victim', 'Abcd#2026xyz').status_code, 302)
+
+    def test_het_thoi_gian_khoa_thi_dang_nhap_lai_duoc(self):
+        from django.core.cache import cache
+        for i in range(5):
+            self._login('victim', f'Wrong#{i}')
+        # Giả lập hết thời gian khóa bằng cách xóa bộ đếm (hết hạn trong cache)
+        cache.clear()
+        self.assertEqual(self._login('victim', 'Abcd#2026xyz').status_code, 302)
+
+
+class SCRUM55PasswordResetThrottleTests(TestCase):
+    """Kiểm thử SCRUM-55: giới hạn số yêu cầu đặt lại mật khẩu theo email và IP."""
+
+    def setUp(self):
+        from django.core.cache import cache
+        cache.clear()
+        self.addCleanup(cache.clear)
+        User.objects.create_user('victim55', 'victim@example.test', 'Abcd#2026xyz')
+
+    def _reset(self, email, ip='10.0.0.1'):
+        return self.client.post(reverse('password_reset'), {'email': email}, REMOTE_ADDR=ip)
+
+    def _so_mail_toi(self, email):
+        return sum(1 for m in mail.outbox if email in m.to)
+
+    def test_3_yeu_cau_dau_van_gui_mail(self):
+        for _ in range(3):
+            self.assertEqual(self._reset('victim@example.test').status_code, 302)
+        self.assertEqual(self._so_mail_toi('victim@example.test'), 3)
+
+    def test_30_yeu_cau_chi_gui_toi_da_3_mail(self):
+        codes = [self._reset('victim@example.test').status_code for _ in range(30)]
+        self.assertEqual(codes.count(302), 3)
+        self.assertEqual(codes.count(429), 27)
+        self.assertEqual(self._so_mail_toi('victim@example.test'), 3)
+
+    def test_vuot_nguong_co_thong_bao(self):
+        for _ in range(3):
+            self._reset('victim@example.test')
+        resp = self._reset('victim@example.test')
+        self.assertContains(resp, 'quá nhiều yêu cầu đặt lại mật khẩu', status_code=429)
+
+    def test_doi_hoa_thuong_khong_lach_duoc(self):
+        for _ in range(3):
+            self._reset('victim@example.test')
+        self.assertEqual(self._reset('VICTIM@Example.TEST').status_code, 429)
+        self.assertEqual(self._so_mail_toi('victim@example.test'), 3)
+
+    def test_doi_ip_van_bi_chan_theo_email(self):
+        for i in range(3):
+            self._reset('victim@example.test', ip=f'10.0.1.{i}')
+        self.assertEqual(self._reset('victim@example.test', ip='10.0.1.99').status_code, 429)
+
+    def test_gioi_han_theo_ip(self):
+        for i in range(10):
+            self._reset(f'khac{i}@example.test', ip='10.0.0.7')
+        self.assertEqual(self._reset('victim@example.test', ip='10.0.0.7').status_code, 429)
+        self.assertEqual(self._so_mail_toi('victim@example.test'), 0)
+
+    def test_email_khong_ton_tai_cung_bi_dem(self):
+        # Không để lộ email nào đã đăng ký: email lạ cũng bị giới hạn như email thật
+        for _ in range(3):
+            self.assertEqual(self._reset('nobody@example.test').status_code, 302)
+        self.assertEqual(self._reset('nobody@example.test').status_code, 429)
+
+    def test_het_cua_so_thi_gui_lai_duoc(self):
+        from django.core.cache import cache
+        for _ in range(3):
+            self._reset('victim@example.test')
+        cache.clear()
+        self.assertEqual(self._reset('victim@example.test').status_code, 302)
+        self.assertEqual(self._so_mail_toi('victim@example.test'), 4)

@@ -7,6 +7,88 @@
   },
   "item": [
     {
+      "name": "00. Setup",
+      "item": [
+        {
+          "name": "00.1 — POST Register Account B (for duplicate email test)",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const aa = eval(pm.collectionVariables.get('aa_helpers'));   // hàm dùng chung, xem biến aa_helpers",
+                  "aa.guest('/accounts/register/');   // điều kiện: Guest + CSRF mới của /accounts/register/",
+                  "const id = Date.now();",
+                  "pm.collectionVariables.set('b_user', `aab_${id}`);",
+                  "pm.collectionVariables.set('b_email', `aab_${id}@example.test`);"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Đăng ký tài khoản B thành công', () => pm.response.to.have.status(302));",
+                  "pm.test('Về trang chủ', () => pm.expect(pm.response.headers.get('Location') || '').to.match(/\\/$/));"
+                ]
+              }
+            }
+          ],
+          "protocolProfileBehavior": {
+            "followRedirects": false
+          },
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "urlencoded",
+              "urlencoded": [
+                {
+                  "key": "csrfmiddlewaretoken",
+                  "value": "{{csrf_token}}",
+                  "type": "text"
+                },
+                {
+                  "key": "username",
+                  "value": "{{b_user}}",
+                  "type": "text"
+                },
+                {
+                  "key": "email",
+                  "value": "{{b_email}}",
+                  "type": "text"
+                },
+                {
+                  "key": "password1",
+                  "value": "{{aa_password}}",
+                  "type": "text"
+                },
+                {
+                  "key": "password2",
+                  "value": "{{aa_password}}",
+                  "type": "text"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{base_url}}/accounts/register/",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "accounts",
+                "register",
+                ""
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
       "name": "01. Registration",
       "item": [
         {
@@ -108,6 +190,8 @@
               "listen": "prerequest",
               "script": {
                 "exec": [
+                  "const aa = eval(pm.collectionVariables.get('aa_helpers'));   // hàm dùng chung, xem biến aa_helpers",
+                  "aa.guest('/accounts/register/');   // điều kiện: Guest + CSRF mới của /accounts/register/",
                   "const id = Date.now();\r",
                   "pm.collectionVariables.set(\"aa_username\", `aa_${id}`);\r",
                   "pm.collectionVariables.set(\"aa_email\", `aa_${id}@example.test`);"
@@ -211,12 +295,58 @@
           "response": []
         },
         {
-          "name": "TC-AA-005 — POST Register with Duplicate Username",
+          "name": "TC-AA-005 — GET Register Page while Authenticated",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Trả 302', () => pm.response.to.have.status(302));",
+                  "pm.test('Về trang chủ', () => pm.expect(pm.response.headers.get('Location') || '').to.match(/\\/$/));"
+                ]
+              }
+            },
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const aa = eval(pm.collectionVariables.get('aa_helpers'));   // hàm dùng chung, xem biến aa_helpers",
+                  "aa.user();   // điều kiện: đăng nhập tài khoản A"
+                ]
+              }
+            }
+          ],
+          "protocolProfileBehavior": {
+            "followRedirects": false
+          },
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/accounts/register/",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "accounts",
+                "register",
+                ""
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "TC-AA-006 — POST Register with Duplicate Username",
           "event": [
             {
               "listen": "prerequest",
               "script": {
                 "exec": [
+                  "const aa = eval(pm.collectionVariables.get('aa_helpers'));   // hàm dùng chung, xem biến aa_helpers",
+                  "aa.guest('/accounts/register/');   // điều kiện: Guest + CSRF mới của /accounts/register/",
                   "const id = Date.now();\r",
                   "pm.collectionVariables.set(\"case_email\", `duplicate_name_${id}@example.test`);"
                 ],
@@ -290,12 +420,14 @@
           "response": []
         },
         {
-          "name": "TC-AA-006 — POST Register with Duplicate Email",
+          "name": "TC-AA-007 — POST Register with Duplicate Email",
           "event": [
             {
               "listen": "prerequest",
               "script": {
                 "exec": [
+                  "const aa = eval(pm.collectionVariables.get('aa_helpers'));   // hàm dùng chung, xem biến aa_helpers",
+                  "aa.guest('/accounts/register/');   // điều kiện: Guest + CSRF mới của /accounts/register/",
                   "const id = Date.now();\r",
                   "pm.collectionVariables.set(\"case_username\", `duplicate_email_${id}`);"
                 ],
@@ -369,12 +501,14 @@
           "response": []
         },
         {
-          "name": "TC-AA-007 — POST Register with Password Mismatch",
+          "name": "TC-AA-008 — POST Register with Password Mismatch",
           "event": [
             {
               "listen": "prerequest",
               "script": {
                 "exec": [
+                  "const aa = eval(pm.collectionVariables.get('aa_helpers'));   // hàm dùng chung, xem biến aa_helpers",
+                  "aa.guest('/accounts/register/');   // điều kiện: Guest + CSRF mới của /accounts/register/",
                   "const id = Date.now();\r",
                   "pm.collectionVariables.set(\"case_username\", `mismatch_${id}`);\r",
                   "pm.collectionVariables.set(\"case_email\", `mismatch_${id}@example.test`);"
@@ -449,12 +583,14 @@
           "response": []
         },
         {
-          "name": "TC-AA-008 — POST Register with Weak Password",
+          "name": "TC-AA-009 — POST Register with Weak Password",
           "event": [
             {
               "listen": "prerequest",
               "script": {
                 "exec": [
+                  "const aa = eval(pm.collectionVariables.get('aa_helpers'));   // hàm dùng chung, xem biến aa_helpers",
+                  "aa.guest('/accounts/register/');   // điều kiện: Guest + CSRF mới của /accounts/register/",
                   "const id = Date.now();\r",
                   "pm.collectionVariables.set(\"case_username\", `weak_${id}`);\r",
                   "pm.collectionVariables.set(\"case_email\", `weak_${id}@example.test`);"
@@ -525,12 +661,14 @@
           "response": []
         },
         {
-          "name": "TC-AA-009 — POST Register with Invalid Email",
+          "name": "TC-AA-010 — POST Register with Invalid Email",
           "event": [
             {
               "listen": "prerequest",
               "script": {
                 "exec": [
+                  "const aa = eval(pm.collectionVariables.get('aa_helpers'));   // hàm dùng chung, xem biến aa_helpers",
+                  "aa.guest('/accounts/register/');   // điều kiện: Guest + CSRF mới của /accounts/register/",
                   "const id = Date.now();\r",
                   "pm.collectionVariables.set(\"case_username\", `invalid_email_${id}`);"
                 ],
@@ -600,12 +738,14 @@
           "response": []
         },
         {
-          "name": "TC-AA-010 — POST Register without CSRF Token",
+          "name": "TC-AA-011 — POST Register without CSRF Token",
           "event": [
             {
               "listen": "prerequest",
               "script": {
                 "exec": [
+                  "const aa = eval(pm.collectionVariables.get('aa_helpers'));   // hàm dùng chung, xem biến aa_helpers",
+                  "aa.guest();   // điều kiện: Guest",
                   "const id = Date.now();\r",
                   "pm.collectionVariables.set('case_username', 'aa_csrf_' + id);\r",
                   "pm.collectionVariables.set('case_email', 'aa_csrf_' + id + '@example.test');"
@@ -669,25 +809,31 @@
             }
           },
           "response": []
-        }
-      ]
-    },
-    {
-      "name": "02. Login & Session",
-      "item": [
+        },
         {
-          "name": "TC-AA-011 — POST Login as Customer",
+          "name": "TC-AA-012 — POST Register with is_staff and is_superuser",
           "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const aa = eval(pm.collectionVariables.get('aa_helpers'));   // hàm dùng chung, xem biến aa_helpers",
+                  "aa.guest('/accounts/register/');   // điều kiện: Guest + CSRF mới của /accounts/register/",
+                  "const id = Date.now();",
+                  "pm.collectionVariables.set('case_username', `aas_${id}`);",
+                  "pm.collectionVariables.set('case_email', `aas_${id}@example.test`);"
+                ]
+              }
+            },
             {
               "listen": "test",
               "script": {
-                "exec": [
-                  "pm.test(\"Customer login redirects\", () => { pm.response.to.have.status(302); });\r",
-                  "pm.test(\"Redirects to home\", () => { pm.expect(pm.response.headers.get(\"Location\")).to.eql(\"/\"); });"
-                ],
                 "type": "text/javascript",
-                "packages": {},
-                "requests": {}
+                "exec": [
+                  "pm.test('Trả 302', () => pm.response.to.have.status(302));",
+                  "pm.test('Đăng ký thành công về /', () => pm.expect(pm.response.headers.get('Location') || '').to.match(/\\/$/));"
+                ]
               }
             }
           ],
@@ -697,6 +843,17 @@
           "request": {
             "method": "POST",
             "header": [],
+            "url": {
+              "raw": "{{base_url}}/accounts/register/",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "accounts",
+                "register",
+                ""
+              ]
+            },
             "body": {
               "mode": "urlencoded",
               "urlencoded": [
@@ -707,30 +864,78 @@
                 },
                 {
                   "key": "username",
-                  "value": "{{aa_username}}",
+                  "value": "{{case_username}}",
                   "type": "text"
                 },
                 {
-                  "key": "password",
+                  "key": "email",
+                  "value": "{{case_email}}",
+                  "type": "text"
+                },
+                {
+                  "key": "password1",
                   "value": "{{aa_password}}",
                   "type": "text"
+                },
+                {
+                  "key": "password2",
+                  "value": "{{aa_password}}",
+                  "type": "text"
+                },
+                {
+                  "key": "is_staff",
+                  "value": "on",
+                  "type": "text"
+                },
+                {
+                  "key": "is_superuser",
+                  "value": "on",
+                  "type": "text"
                 }
-              ]
-            },
-            "url": {
-              "raw": "{{base_url}}/accounts/login/",
-              "host": [
-                "{{base_url}}"
-              ],
-              "path": [
-                "accounts",
-                "login",
-                ""
               ]
             }
           },
           "response": []
         },
+        {
+          "name": "TC-AA-013 — GET Admin Dashboard as Self-registered Account",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Trả 302', () => pm.response.to.have.status(302));",
+                  "pm.test('Bị chặn, về trang chủ', () => pm.expect(pm.response.headers.get('Location') || '').to.match(/\\/$/));"
+                ]
+              }
+            }
+          ],
+          "protocolProfileBehavior": {
+            "followRedirects": false
+          },
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/admin-panel/dashboard/",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "admin-panel",
+                "dashboard",
+                ""
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "02. Login & Session",
+      "item": [
         {
           "name": "TC-AA-014 — POST Login with Wrong Password",
           "event": [
@@ -744,6 +949,16 @@
                 "type": "text/javascript",
                 "packages": {},
                 "requests": {}
+              }
+            },
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const aa = eval(pm.collectionVariables.get('aa_helpers'));   // hàm dùng chung, xem biến aa_helpers",
+                  "aa.guest('/accounts/login/');   // điều kiện: Guest + CSRF mới của /accounts/login/"
+                ]
               }
             }
           ],
@@ -801,6 +1016,16 @@
                 "packages": {},
                 "requests": {}
               }
+            },
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const aa = eval(pm.collectionVariables.get('aa_helpers'));   // hàm dùng chung, xem biến aa_helpers",
+                  "aa.guest('/accounts/login/');   // điều kiện: Guest + CSRF mới của /accounts/login/"
+                ]
+              }
             }
           ],
           "protocolProfileBehavior": {
@@ -856,6 +1081,16 @@
                 "type": "text/javascript",
                 "packages": {},
                 "requests": {}
+              }
+            },
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const aa = eval(pm.collectionVariables.get('aa_helpers'));   // hàm dùng chung, xem biến aa_helpers",
+                  "aa.guest('/accounts/login/');   // điều kiện: Guest + CSRF mới của /accounts/login/"
+                ]
               }
             }
           ],
@@ -913,6 +1148,16 @@
                 "packages": {},
                 "requests": {}
               }
+            },
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const aa = eval(pm.collectionVariables.get('aa_helpers'));   // hàm dùng chung, xem biến aa_helpers",
+                  "aa.guest('/accounts/login/');   // điều kiện: Guest + CSRF mới của /accounts/login/"
+                ]
+              }
             }
           ],
           "protocolProfileBehavior": {
@@ -951,42 +1196,71 @@
           "response": []
         },
         {
-          "name": "TC-AA-012 — GET Customer Profile",
+          "name": "TC-AA-018 — POST Login with Inactive Account",
           "event": [
             {
               "listen": "test",
               "script": {
-                "exec": [
-                  "pm.test(\"Customer profile returns 200\", () => { pm.response.to.have.status(200); });\r",
-                  "pm.test(\"Profile shows customer username\", () => { pm.expect(pm.response.text()).to.include(pm.collectionVariables.get(\"aa_username\")); });\r",
-                  "const match = pm.response.text().match(/name=[\"']csrfmiddlewaretoken[\"'][^>]*value=[\"']([^\"']+)[\"']/);\r",
-                  "if (match) pm.collectionVariables.set(\"csrf_token\", match[1]);"
-                ],
                 "type": "text/javascript",
-                "packages": {},
-                "requests": {}
+                "exec": [
+                  "pm.test('Trả 200 (ở lại biểu mẫu)', () => pm.response.to.have.status(200));",
+                  "pm.test('Hiện khối lỗi đăng nhập', () => pm.expect(pm.response.text()).to.match(/auth-error-box/));"
+                ]
+              }
+            },
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const aa = eval(pm.collectionVariables.get('aa_helpers'));   // hàm dùng chung, xem biến aa_helpers",
+                  "aa.guest('/accounts/login/');   // điều kiện: Guest + CSRF mới của /accounts/login/"
+                ]
               }
             }
           ],
+          "protocolProfileBehavior": {
+            "followRedirects": false
+          },
           "request": {
-            "method": "GET",
+            "method": "POST",
             "header": [],
             "url": {
-              "raw": "{{base_url}}/accounts/profile/",
+              "raw": "{{base_url}}/accounts/login/",
               "host": [
                 "{{base_url}}"
               ],
               "path": [
                 "accounts",
-                "profile",
+                "login",
                 ""
+              ]
+            },
+            "body": {
+              "mode": "urlencoded",
+              "urlencoded": [
+                {
+                  "key": "csrfmiddlewaretoken",
+                  "value": "{{csrf_token}}",
+                  "type": "text"
+                },
+                {
+                  "key": "username",
+                  "value": "{{inactive_user}}",
+                  "type": "text"
+                },
+                {
+                  "key": "password",
+                  "value": "{{inactive_pass}}",
+                  "type": "text"
+                }
               ]
             }
           },
           "response": []
         },
         {
-          "name": "TC-AA-018 — GET Profile as Guest",
+          "name": "TC-AA-019 — GET Profile as Guest",
           "event": [
             {
               "listen": "test",
@@ -998,6 +1272,16 @@
                 "type": "text/javascript",
                 "packages": {},
                 "requests": {}
+              }
+            },
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const aa = eval(pm.collectionVariables.get('aa_helpers'));   // hàm dùng chung, xem biến aa_helpers",
+                  "aa.guest();   // điều kiện: Guest"
+                ]
               }
             }
           ],
@@ -1022,7 +1306,172 @@
           "response": []
         },
         {
-          "name": "TC-AA-013 — GET Login Page while Authenticated",
+          "name": "TC-AA-020 — POST Logout as Guest",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Trả 302', () => pm.response.to.have.status(302));",
+                  "pm.test('Chuyển sang đăng nhập', () => pm.expect(pm.response.headers.get('Location') || '').to.match(/\\/accounts\\/login\\//));"
+                ]
+              }
+            },
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const aa = eval(pm.collectionVariables.get('aa_helpers'));   // hàm dùng chung, xem biến aa_helpers",
+                  "aa.guest('/accounts/login/');   // điều kiện: Guest + CSRF mới của /accounts/login/"
+                ]
+              }
+            }
+          ],
+          "protocolProfileBehavior": {
+            "followRedirects": false
+          },
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/accounts/logout/",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "accounts",
+                "logout",
+                ""
+              ]
+            },
+            "body": {
+              "mode": "urlencoded",
+              "urlencoded": [
+                {
+                  "key": "csrfmiddlewaretoken",
+                  "value": "{{csrf_token}}",
+                  "type": "text"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "TC-AA-021 — POST Login as Customer",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Customer login redirects\", () => { pm.response.to.have.status(302); });\r",
+                  "pm.test(\"Redirects to home\", () => { pm.expect(pm.response.headers.get(\"Location\")).to.eql(\"/\"); });"
+                ],
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {}
+              }
+            },
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const aa = eval(pm.collectionVariables.get('aa_helpers'));   // hàm dùng chung, xem biến aa_helpers",
+                  "aa.guest('/accounts/login/');   // điều kiện: Guest + CSRF mới của /accounts/login/"
+                ]
+              }
+            }
+          ],
+          "protocolProfileBehavior": {
+            "followRedirects": false
+          },
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "urlencoded",
+              "urlencoded": [
+                {
+                  "key": "csrfmiddlewaretoken",
+                  "value": "{{csrf_token}}",
+                  "type": "text"
+                },
+                {
+                  "key": "username",
+                  "value": "{{aa_username}}",
+                  "type": "text"
+                },
+                {
+                  "key": "password",
+                  "value": "{{aa_password}}",
+                  "type": "text"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{base_url}}/accounts/login/",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "accounts",
+                "login",
+                ""
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "TC-AA-022 — GET Customer Profile",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Customer profile returns 200\", () => { pm.response.to.have.status(200); });\r",
+                  "pm.test(\"Profile shows customer username\", () => { pm.expect(pm.response.text()).to.include(pm.collectionVariables.get(\"aa_username\")); });\r",
+                  "const match = pm.response.text().match(/name=[\"']csrfmiddlewaretoken[\"'][^>]*value=[\"']([^\"']+)[\"']/);\r",
+                  "if (match) pm.collectionVariables.set(\"csrf_token\", match[1]);"
+                ],
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {}
+              }
+            },
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const aa = eval(pm.collectionVariables.get('aa_helpers'));   // hàm dùng chung, xem biến aa_helpers",
+                  "aa.user();   // điều kiện: đăng nhập tài khoản A"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/accounts/profile/",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "accounts",
+                "profile",
+                ""
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "TC-AA-023 — GET Login Page while Authenticated",
           "event": [
             {
               "listen": "test",
@@ -1034,6 +1483,16 @@
                 "type": "text/javascript",
                 "packages": {},
                 "requests": {}
+              }
+            },
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const aa = eval(pm.collectionVariables.get('aa_helpers'));   // hàm dùng chung, xem biến aa_helpers",
+                  "aa.user();   // điều kiện: đăng nhập tài khoản A"
+                ]
               }
             }
           ],
@@ -1056,6 +1515,150 @@
             }
           },
           "response": []
+        },
+        {
+          "name": "TC-AA-024 — POST Login with External next",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Trả 302', () => pm.response.to.have.status(302));",
+                  "pm.test('Không chuyển ra miền ngoài', () => pm.expect(pm.response.headers.get('Location') || '').to.not.match(/evil\\.example/));"
+                ]
+              }
+            },
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const aa = eval(pm.collectionVariables.get('aa_helpers'));   // hàm dùng chung, xem biến aa_helpers",
+                  "aa.guest('/accounts/login/');   // điều kiện: Guest + CSRF mới của /accounts/login/"
+                ]
+              }
+            }
+          ],
+          "protocolProfileBehavior": {
+            "followRedirects": false
+          },
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/accounts/login/",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "accounts",
+                "login",
+                ""
+              ]
+            },
+            "body": {
+              "mode": "urlencoded",
+              "urlencoded": [
+                {
+                  "key": "csrfmiddlewaretoken",
+                  "value": "{{csrf_token}}",
+                  "type": "text"
+                },
+                {
+                  "key": "username",
+                  "value": "{{aa_username}}",
+                  "type": "text"
+                },
+                {
+                  "key": "password",
+                  "value": "{{aa_password}}",
+                  "type": "text"
+                },
+                {
+                  "key": "next",
+                  "value": "https://evil.example/",
+                  "type": "text"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "TC-AA-025 — POST Login with Internal next",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Trả 302', () => pm.response.to.have.status(302));",
+                  "pm.test('Quay về /cart/', () => pm.expect(pm.response.headers.get('Location') || '').to.match(/\\/cart\\//));"
+                ]
+              }
+            },
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const aa = eval(pm.collectionVariables.get('aa_helpers'));   // hàm dùng chung, xem biến aa_helpers",
+                  "aa.guest('/accounts/login/');   // điều kiện: Guest + CSRF mới của /accounts/login/"
+                ]
+              }
+            }
+          ],
+          "protocolProfileBehavior": {
+            "followRedirects": false
+          },
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/accounts/login/?next=/cart/",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "accounts",
+                "login",
+                ""
+              ],
+              "query": [
+                {
+                  "key": "next",
+                  "value": "/cart/"
+                }
+              ]
+            },
+            "body": {
+              "mode": "urlencoded",
+              "urlencoded": [
+                {
+                  "key": "csrfmiddlewaretoken",
+                  "value": "{{csrf_token}}",
+                  "type": "text"
+                },
+                {
+                  "key": "username",
+                  "value": "{{aa_username}}",
+                  "type": "text"
+                },
+                {
+                  "key": "password",
+                  "value": "{{aa_password}}",
+                  "type": "text"
+                },
+                {
+                  "key": "next",
+                  "value": "/cart/",
+                  "type": "text"
+                }
+              ]
+            }
+          },
+          "response": []
         }
       ]
     },
@@ -1063,7 +1666,7 @@
       "name": "03. Profile",
       "item": [
         {
-          "name": "TC-AA-019 — GET Profile Edit Page",
+          "name": "TC-AA-026 — GET Profile Edit Page",
           "event": [
             {
               "listen": "test",
@@ -1079,6 +1682,16 @@
                 "type": "text/javascript",
                 "packages": {},
                 "requests": {}
+              }
+            },
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const aa = eval(pm.collectionVariables.get('aa_helpers'));   // hàm dùng chung, xem biến aa_helpers",
+                  "aa.user('/accounts/profile/edit/');   // điều kiện: đăng nhập tài khoản A + CSRF mới của /accounts/profile/edit/"
+                ]
               }
             }
           ],
@@ -1101,42 +1714,7 @@
           "response": []
         },
         {
-          "name": "TC-AA-021 — GET Verify Updated Profile",
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "exec": [
-                  "pm.test('Profile returns 200', () => pm.response.to.have.status(200));\r",
-                  "const html = pm.response.text();\r",
-                  "pm.test('Updated first and last name are shown', () => { pm.expect(html).to.include('Test'); pm.expect(html).to.include('Account'); });\r",
-                  "pm.test('Customer username is shown', () => pm.expect(html).to.include(pm.collectionVariables.get('aa_username')));"
-                ],
-                "type": "text/javascript",
-                "packages": {},
-                "requests": {}
-              }
-            }
-          ],
-          "request": {
-            "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "{{base_url}}/accounts/profile/",
-              "host": [
-                "{{base_url}}"
-              ],
-              "path": [
-                "accounts",
-                "profile",
-                ""
-              ]
-            }
-          },
-          "response": []
-        },
-        {
-          "name": "TC-AA-020 — POST Update Profile",
+          "name": "TC-AA-027 — POST Update Profile",
           "event": [
             {
               "listen": "test",
@@ -1148,6 +1726,16 @@
                 "type": "text/javascript",
                 "packages": {},
                 "requests": {}
+              }
+            },
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const aa = eval(pm.collectionVariables.get('aa_helpers'));   // hàm dùng chung, xem biến aa_helpers",
+                  "aa.user('/accounts/profile/edit/');   // điều kiện: đăng nhập tài khoản A + CSRF mới của /accounts/profile/edit/"
+                ]
               }
             }
           ],
@@ -1203,7 +1791,52 @@
           "response": []
         },
         {
-          "name": "TC-AA-022 — POST Profile with Invalid Email",
+          "name": "TC-AA-028 — GET Verify Updated Profile",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Profile returns 200', () => pm.response.to.have.status(200));\r",
+                  "const html = pm.response.text();\r",
+                  "pm.test('Updated first and last name are shown', () => { pm.expect(html).to.include('Test'); pm.expect(html).to.include('Account'); });\r",
+                  "pm.test('Customer username is shown', () => pm.expect(html).to.include(pm.collectionVariables.get('aa_username')));"
+                ],
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {}
+              }
+            },
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const aa = eval(pm.collectionVariables.get('aa_helpers'));   // hàm dùng chung, xem biến aa_helpers",
+                  "aa.user();   // điều kiện: đăng nhập tài khoản A"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/accounts/profile/",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "accounts",
+                "profile",
+                ""
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "TC-AA-029 — POST Profile with Invalid Email",
           "event": [
             {
               "listen": "test",
@@ -1215,6 +1848,16 @@
                 "type": "text/javascript",
                 "packages": {},
                 "requests": {}
+              }
+            },
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const aa = eval(pm.collectionVariables.get('aa_helpers'));   // hàm dùng chung, xem biến aa_helpers",
+                  "aa.user('/accounts/profile/edit/');   // điều kiện: đăng nhập tài khoản A + CSRF mới của /accounts/profile/edit/"
+                ]
               }
             }
           ],
@@ -1268,6 +1911,112 @@
             }
           },
           "response": []
+        },
+        {
+          "name": "TC-AA-030 — POST Profile with Email of Another Account",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Trả 200 (ở lại biểu mẫu)', () => pm.response.to.have.status(200));",
+                  "pm.test('Có lỗi email trùng', () => pm.expect(pm.response.text()).to.match(/Email này đã được sử dụng/));"
+                ]
+              }
+            },
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const aa = eval(pm.collectionVariables.get('aa_helpers'));   // hàm dùng chung, xem biến aa_helpers",
+                  "aa.user('/accounts/profile/edit/');   // điều kiện: đăng nhập tài khoản A + CSRF mới của /accounts/profile/edit/"
+                ]
+              }
+            }
+          ],
+          "protocolProfileBehavior": {
+            "followRedirects": false
+          },
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/accounts/profile/edit/",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "accounts",
+                "profile",
+                "edit",
+                ""
+              ]
+            },
+            "body": {
+              "mode": "urlencoded",
+              "urlencoded": [
+                {
+                  "key": "csrfmiddlewaretoken",
+                  "value": "{{csrf_token}}",
+                  "type": "text"
+                },
+                {
+                  "key": "first_name",
+                  "value": "Test",
+                  "type": "text"
+                },
+                {
+                  "key": "last_name",
+                  "value": "Account",
+                  "type": "text"
+                },
+                {
+                  "key": "email",
+                  "value": "{{b_email}}",
+                  "type": "text"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "TC-AA-031 — GET Profile Edit as Guest",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Trả 302', () => pm.response.to.have.status(302));",
+                  "pm.test('Chuyển sang đăng nhập', () => pm.expect(pm.response.headers.get('Location') || '').to.match(/\\/accounts\\/login\\//));"
+                ]
+              }
+            }
+          ],
+          "protocolProfileBehavior": {
+            "followRedirects": false,
+            "disableCookies": true
+          },
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/accounts/profile/edit/",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "accounts",
+                "profile",
+                "edit",
+                ""
+              ]
+            }
+          },
+          "response": []
         }
       ]
     },
@@ -1275,7 +2024,7 @@
       "name": "04. Password Change",
       "item": [
         {
-          "name": "TC-AA-024 — GET Password Change Page",
+          "name": "TC-AA-032 — GET Password Change Page",
           "event": [
             {
               "listen": "test",
@@ -1290,6 +2039,16 @@
                 "type": "text/javascript",
                 "packages": {},
                 "requests": {}
+              }
+            },
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const aa = eval(pm.collectionVariables.get('aa_helpers'));   // hàm dùng chung, xem biến aa_helpers",
+                  "aa.user('/accounts/password/change/');   // điều kiện: đăng nhập tài khoản A + CSRF mới của /accounts/password/change/"
+                ]
               }
             }
           ],
@@ -1312,7 +2071,7 @@
           "response": []
         },
         {
-          "name": "TC-AA-023 — GET Password Change as Guest",
+          "name": "TC-AA-033 — GET Password Change as Guest",
           "event": [
             {
               "listen": "test",
@@ -1350,69 +2109,7 @@
           "response": []
         },
         {
-          "name": "TC-AA-025 — POST Change Password Successfully",
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "exec": [
-                  "pm.test('Valid password change redirects to profile', () => pm.response.to.have.status(302));\r",
-                  "pm.test('Location points to profile', () => pm.expect(pm.response.headers.get('Location') || '').to.include('/accounts/profile/'));"
-                ],
-                "type": "text/javascript",
-                "packages": {},
-                "requests": {}
-              }
-            }
-          ],
-          "protocolProfileBehavior": {
-            "followRedirects": false
-          },
-          "request": {
-            "method": "POST",
-            "header": [],
-            "body": {
-              "mode": "urlencoded",
-              "urlencoded": [
-                {
-                  "key": "csrfmiddlewaretoken",
-                  "value": "{{csrf_token}}",
-                  "type": "text"
-                },
-                {
-                  "key": "old_password",
-                  "value": "{{reset_password}}",
-                  "type": "text"
-                },
-                {
-                  "key": "new_password1",
-                  "value": "{{new_password}}",
-                  "type": "text"
-                },
-                {
-                  "key": "new_password2",
-                  "value": "{{new_password}}",
-                  "type": "text"
-                }
-              ]
-            },
-            "url": {
-              "raw": "{{base_url}}/accounts/password/change/",
-              "host": [
-                "{{base_url}}"
-              ],
-              "path": [
-                "accounts",
-                "password",
-                "change",
-                ""
-              ]
-            }
-          },
-          "response": []
-        },
-        {
-          "name": "TC-AA-026 — POST Change Password with Wrong Old Password",
+          "name": "TC-AA-034 — POST Change Password with Wrong Old Password",
           "event": [
             {
               "listen": "test",
@@ -1424,6 +2121,16 @@
                 "type": "text/javascript",
                 "packages": {},
                 "requests": {}
+              }
+            },
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const aa = eval(pm.collectionVariables.get('aa_helpers'));   // hàm dùng chung, xem biến aa_helpers",
+                  "aa.user('/accounts/password/change/');   // điều kiện: đăng nhập tài khoản A + CSRF mới của /accounts/password/change/"
+                ]
               }
             }
           ],
@@ -1474,7 +2181,77 @@
           "response": []
         },
         {
-          "name": "TC-AA-027 — POST Change Password with Mismatched Confirmation",
+          "name": "TC-AA-035 — POST Change Password with Mismatched New Passwords",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Trả 200 (ở lại biểu mẫu)', () => pm.response.to.have.status(200));",
+                  "pm.test('Có lỗi không khớp', () => pm.expect(pm.response.text()).to.match(/errorlist/));"
+                ]
+              }
+            },
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const aa = eval(pm.collectionVariables.get('aa_helpers'));   // hàm dùng chung, xem biến aa_helpers",
+                  "aa.user('/accounts/password/change/');   // điều kiện: đăng nhập tài khoản A + CSRF mới của /accounts/password/change/"
+                ]
+              }
+            }
+          ],
+          "protocolProfileBehavior": {
+            "followRedirects": false
+          },
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/accounts/password/change/",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "accounts",
+                "password",
+                "change",
+                ""
+              ]
+            },
+            "body": {
+              "mode": "urlencoded",
+              "urlencoded": [
+                {
+                  "key": "csrfmiddlewaretoken",
+                  "value": "{{csrf_token}}",
+                  "type": "text"
+                },
+                {
+                  "key": "old_password",
+                  "value": "{{aa_password}}",
+                  "type": "text"
+                },
+                {
+                  "key": "new_password1",
+                  "value": "{{new_password}}",
+                  "type": "text"
+                },
+                {
+                  "key": "new_password2",
+                  "value": "{{new_password}}X",
+                  "type": "text"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "TC-AA-036 — POST Change Password with Mismatched Confirmation",
           "event": [
             {
               "listen": "test",
@@ -1485,6 +2262,16 @@
                 "type": "text/javascript",
                 "packages": {},
                 "requests": {}
+              }
+            },
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const aa = eval(pm.collectionVariables.get('aa_helpers'));   // hàm dùng chung, xem biến aa_helpers",
+                  "aa.user('/accounts/password/change/');   // điều kiện: đăng nhập tài khoản A + CSRF mới của /accounts/password/change/"
+                ]
               }
             }
           ],
@@ -1535,7 +2322,7 @@
           "response": []
         },
         {
-          "name": "TC-AA-028 — POST Change Password without CSRF Token",
+          "name": "TC-AA-037 — POST Change Password without CSRF Token",
           "event": [
             {
               "listen": "test",
@@ -1547,6 +2334,16 @@
                 "type": "text/javascript",
                 "packages": {},
                 "requests": {}
+              }
+            },
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const aa = eval(pm.collectionVariables.get('aa_helpers'));   // hàm dùng chung, xem biến aa_helpers",
+                  "aa.user();   // điều kiện: đăng nhập tài khoản A"
+                ]
               }
             }
           ],
@@ -1590,6 +2387,80 @@
             }
           },
           "response": []
+        },
+        {
+          "name": "TC-AA-038 — POST Change Password Successfully",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Valid password change redirects to profile', () => pm.response.to.have.status(302));\r",
+                  "pm.test('Location points to profile', () => pm.expect(pm.response.headers.get('Location') || '').to.include('/accounts/profile/'));",
+                  "if (pm.response.code === 302) { const o = pm.collectionVariables.get('aa_password'); pm.collectionVariables.set('aa_password', pm.collectionVariables.get('new_password')); pm.collectionVariables.set('new_password', o); }"
+                ],
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {}
+              }
+            },
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const aa = eval(pm.collectionVariables.get('aa_helpers'));   // hàm dùng chung, xem biến aa_helpers",
+                  "aa.user('/accounts/password/change/');   // điều kiện: đăng nhập tài khoản A + CSRF mới của /accounts/password/change/",
+                  "pm.collectionVariables.set('aa_old_password', pm.collectionVariables.get('aa_password'));"
+                ]
+              }
+            }
+          ],
+          "protocolProfileBehavior": {
+            "followRedirects": false
+          },
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "urlencoded",
+              "urlencoded": [
+                {
+                  "key": "csrfmiddlewaretoken",
+                  "value": "{{csrf_token}}",
+                  "type": "text"
+                },
+                {
+                  "key": "old_password",
+                  "value": "{{aa_password}}",
+                  "type": "text"
+                },
+                {
+                  "key": "new_password1",
+                  "value": "{{new_password}}",
+                  "type": "text"
+                },
+                {
+                  "key": "new_password2",
+                  "value": "{{new_password}}",
+                  "type": "text"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{base_url}}/accounts/password/change/",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "accounts",
+                "password",
+                "change",
+                ""
+              ]
+            }
+          },
+          "response": []
         }
       ]
     },
@@ -1597,7 +2468,50 @@
       "name": "05. Logout",
       "item": [
         {
-          "name": "TC-AA-029 — POST Logout",
+          "name": "TC-AA-039 — POST Logout without CSRF Token",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Trả 403 (thiếu CSRF)', () => pm.response.to.have.status(403));"
+                ]
+              }
+            },
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const aa = eval(pm.collectionVariables.get('aa_helpers'));   // hàm dùng chung, xem biến aa_helpers",
+                  "aa.user();   // điều kiện: đăng nhập tài khoản A"
+                ]
+              }
+            }
+          ],
+          "protocolProfileBehavior": {
+            "followRedirects": false
+          },
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/accounts/logout/",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "accounts",
+                "logout",
+                ""
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "TC-AA-040 — POST Logout",
           "event": [
             {
               "listen": "test",
@@ -1608,6 +2522,16 @@
                 "type": "text/javascript",
                 "packages": {},
                 "requests": {}
+              }
+            },
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const aa = eval(pm.collectionVariables.get('aa_helpers'));   // hàm dùng chung, xem biến aa_helpers",
+                  "aa.user('/accounts/password/change/');   // điều kiện: đăng nhập tài khoản A + CSRF mới của /accounts/password/change/"
+                ]
               }
             }
           ],
@@ -1642,7 +2566,7 @@
           "response": []
         },
         {
-          "name": "TC-AA-030 — GET Profile After Logout",
+          "name": "TC-AA-041 — GET Profile After Logout",
           "event": [
             {
               "listen": "test",
@@ -1678,7 +2602,7 @@
           "response": []
         },
         {
-          "name": "TC-AA-031 — GET Logout Endpoint",
+          "name": "TC-AA-042 — GET Logout Endpoint",
           "event": [
             {
               "listen": "test",
@@ -1711,25 +2635,28 @@
             }
           },
           "response": []
-        }
-      ]
-    },
-    {
-      "name": "06. Authorization",
-      "item": [
+        },
         {
-          "name": "TC-AA-032 — GET Admin Dashboard as Customer",
+          "name": "TC-AA-043 — POST Login with Old Password after Change",
           "event": [
             {
               "listen": "test",
               "script": {
-                "exec": [
-                  "pm.test('Customer cannot access admin dashboard', () => pm.expect([302, 403]).to.include(pm.response.code));\r",
-                  "if (pm.response.code === 302) pm.test('Redirect target is provided', () => pm.expect(pm.response.headers.get('Location') || '').to.not.equal(''));"
-                ],
                 "type": "text/javascript",
-                "packages": {},
-                "requests": {}
+                "exec": [
+                  "pm.test('Trả 200 (ở lại biểu mẫu)', () => pm.response.to.have.status(200));",
+                  "pm.test('Mật khẩu cũ bị từ chối', () => pm.expect(pm.response.text()).to.match(/auth-error-box/));"
+                ]
+              }
+            },
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const aa = eval(pm.collectionVariables.get('aa_helpers'));   // hàm dùng chung, xem biến aa_helpers",
+                  "aa.guest('/accounts/login/');   // điều kiện: Guest + CSRF mới của /accounts/login/"
+                ]
               }
             }
           ],
@@ -1737,24 +2664,49 @@
             "followRedirects": false
           },
           "request": {
-            "method": "GET",
+            "method": "POST",
             "header": [],
             "url": {
-              "raw": "{{base_url}}/admin-panel/dashboard/",
+              "raw": "{{base_url}}/accounts/login/",
               "host": [
                 "{{base_url}}"
               ],
               "path": [
-                "admin-panel",
-                "dashboard",
+                "accounts",
+                "login",
                 ""
+              ]
+            },
+            "body": {
+              "mode": "urlencoded",
+              "urlencoded": [
+                {
+                  "key": "csrfmiddlewaretoken",
+                  "value": "{{csrf_token}}",
+                  "type": "text"
+                },
+                {
+                  "key": "username",
+                  "value": "{{aa_username}}",
+                  "type": "text"
+                },
+                {
+                  "key": "password",
+                  "value": "{{aa_old_password}}",
+                  "type": "text"
+                }
               ]
             }
           },
           "response": []
-        },
+        }
+      ]
+    },
+    {
+      "name": "06. Authorization",
+      "item": [
         {
-          "name": "TC-AA-033 — GET Admin Dashboard as Guest",
+          "name": "TC-AA-044 — GET Admin Dashboard as Guest",
           "event": [
             {
               "listen": "test",
@@ -1791,7 +2743,117 @@
           "response": []
         },
         {
-          "name": "TC-AA-034 — GET Admin Dashboard as Admin",
+          "name": "TC-AA-045 — GET Admin Dashboard as Customer",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Customer cannot access admin dashboard', () => pm.expect([302, 403]).to.include(pm.response.code));\r",
+                  "if (pm.response.code === 302) pm.test('Redirect target is provided', () => pm.expect(pm.response.headers.get('Location') || '').to.not.equal(''));"
+                ],
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {}
+              }
+            },
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const aa = eval(pm.collectionVariables.get('aa_helpers'));   // hàm dùng chung, xem biến aa_helpers",
+                  "aa.user();   // điều kiện: đăng nhập tài khoản A"
+                ]
+              }
+            }
+          ],
+          "protocolProfileBehavior": {
+            "followRedirects": false
+          },
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/admin-panel/dashboard/",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "admin-panel",
+                "dashboard",
+                ""
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "TC-AA-046 — POST Login as Admin",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Trả 302', () => pm.response.to.have.status(302));",
+                  "pm.test('Chuyển sang dashboard', () => pm.expect(pm.response.headers.get('Location') || '').to.match(/dashboard/));"
+                ]
+              }
+            },
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const aa = eval(pm.collectionVariables.get('aa_helpers'));   // hàm dùng chung, xem biến aa_helpers",
+                  "aa.guest('/accounts/login/');   // điều kiện: Guest + CSRF mới của /accounts/login/"
+                ]
+              }
+            }
+          ],
+          "protocolProfileBehavior": {
+            "followRedirects": false
+          },
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/accounts/login/",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "accounts",
+                "login",
+                ""
+              ]
+            },
+            "body": {
+              "mode": "urlencoded",
+              "urlencoded": [
+                {
+                  "key": "csrfmiddlewaretoken",
+                  "value": "{{csrf_token}}",
+                  "type": "text"
+                },
+                {
+                  "key": "username",
+                  "value": "{{admin_user}}",
+                  "type": "text"
+                },
+                {
+                  "key": "password",
+                  "value": "{{admin_pass}}",
+                  "type": "text"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "TC-AA-047 — GET Admin Dashboard as Admin",
           "event": [
             {
               "listen": "test",
@@ -1802,6 +2864,16 @@
                 "type": "text/javascript",
                 "packages": {},
                 "requests": {}
+              }
+            },
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const aa = eval(pm.collectionVariables.get('aa_helpers'));   // hàm dùng chung, xem biến aa_helpers",
+                  "aa.admin();   // điều kiện: đăng nhập Admin"
+                ]
               }
             }
           ],
@@ -1824,6 +2896,138 @@
             }
           },
           "response": []
+        },
+        {
+          "name": "TC-AA-048 — GET Login Page while Admin",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Trả 302', () => pm.response.to.have.status(302));",
+                  "pm.test('Chuyển về dashboard', () => pm.expect(pm.response.headers.get('Location') || '').to.match(/dashboard/));"
+                ]
+              }
+            },
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const aa = eval(pm.collectionVariables.get('aa_helpers'));   // hàm dùng chung, xem biến aa_helpers",
+                  "aa.admin();   // điều kiện: đăng nhập Admin"
+                ]
+              }
+            }
+          ],
+          "protocolProfileBehavior": {
+            "followRedirects": false
+          },
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/accounts/login/",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "accounts",
+                "login",
+                ""
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "TC-AA-049 — POST Logout as Admin",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Trả 302', () => pm.response.to.have.status(302));",
+                  "pm.test('Về trang chủ', () => pm.expect(pm.response.headers.get('Location') || '').to.match(/\\/$/));"
+                ]
+              }
+            },
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const aa = eval(pm.collectionVariables.get('aa_helpers'));   // hàm dùng chung, xem biến aa_helpers",
+                  "aa.admin('/accounts/password/change/');   // điều kiện: đăng nhập Admin + CSRF mới của /accounts/password/change/"
+                ]
+              }
+            }
+          ],
+          "protocolProfileBehavior": {
+            "followRedirects": false
+          },
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/accounts/logout/",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "accounts",
+                "logout",
+                ""
+              ]
+            },
+            "body": {
+              "mode": "urlencoded",
+              "urlencoded": [
+                {
+                  "key": "csrfmiddlewaretoken",
+                  "value": "{{csrf_token}}",
+                  "type": "text"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "TC-AA-050 — GET Admin Dashboard after Admin Logout",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Trả 302', () => pm.response.to.have.status(302));",
+                  "pm.test('Chuyển sang đăng nhập', () => pm.expect(pm.response.headers.get('Location') || '').to.match(/\\/accounts\\/login\\//));"
+                ]
+              }
+            }
+          ],
+          "protocolProfileBehavior": {
+            "followRedirects": false
+          },
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/admin-panel/dashboard/",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "admin-panel",
+                "dashboard",
+                ""
+              ]
+            }
+          },
+          "response": []
         }
       ]
     },
@@ -1831,7 +3035,7 @@
       "name": "07. Password Reset",
       "item": [
         {
-          "name": "TC-AA-035 — GET Password Reset Page",
+          "name": "TC-AA-051 — GET Password Reset Page",
           "event": [
             {
               "listen": "test",
@@ -1868,7 +3072,7 @@
           "response": []
         },
         {
-          "name": "TC-AA-036 — POST Request Password Reset",
+          "name": "TC-AA-052 — POST Request Password Reset",
           "event": [
             {
               "listen": "test",
@@ -1920,7 +3124,7 @@
           "response": []
         },
         {
-          "name": "TC-AA-037 — GET Development Mailbox",
+          "name": "TC-AA-053 — GET Development Mailbox",
           "event": [
             {
               "listen": "test",
@@ -1953,7 +3157,7 @@
           "response": []
         },
         {
-          "name": "TC-AA-041 — GET Password Reset Complete",
+          "name": "TC-AA-054 — GET Password Reset Complete",
           "event": [
             {
               "listen": "test",
@@ -1988,7 +3192,7 @@
           "response": []
         },
         {
-          "name": "TC-AA-042 — POST Login with Reset Password",
+          "name": "TC-AA-055 — POST Login with Reset Password",
           "event": [
             {
               "listen": "test",
@@ -2044,7 +3248,7 @@
           "response": []
         },
         {
-          "name": "TC-AA-038 — GET Password Reset Confirmation Link",
+          "name": "TC-AA-056 — GET Password Reset Confirmation Link",
           "event": [
             {
               "listen": "test",
@@ -2080,7 +3284,7 @@
           "response": []
         },
         {
-          "name": "TC-AA-039 — POST Confirm New Password",
+          "name": "TC-AA-057 — POST Confirm New Password",
           "event": [
             {
               "listen": "test",
@@ -2139,7 +3343,7 @@
           "response": []
         },
         {
-          "name": "TC-AA-040 — GET Used Password Reset Link",
+          "name": "TC-AA-058 — GET Used Password Reset Link",
           "event": [
             {
               "listen": "test",
@@ -2220,11 +3424,11 @@
     },
     {
       "key": "aa_password",
-      "value": ""
+      "value": "AaTest#2026Aa!"
     },
     {
       "key": "new_password",
-      "value": ""
+      "value": "AaNew#2027Bb!"
     },
     {
       "key": "test_username",
@@ -2252,6 +3456,38 @@
     },
     {
       "key": "reset_password",
+      "value": ""
+    },
+    {
+      "key": "b_user",
+      "value": ""
+    },
+    {
+      "key": "b_email",
+      "value": ""
+    },
+    {
+      "key": "inactive_user",
+      "value": "tc_aa_inactive"
+    },
+    {
+      "key": "inactive_pass",
+      "value": "AaInactive#2026Aa!"
+    },
+    {
+      "key": "admin_user",
+      "value": "admin"
+    },
+    {
+      "key": "admin_pass",
+      "value": "Admin@12345"
+    },
+    {
+      "key": "aa_helpers",
+      "value": "(function () {\n  var aa = {\n    base: function () { return pm.variables.replaceIn('{{base_url}}'); },\n    tokenOf: function (html) {\n      var m = html.match(/name=[\"']csrfmiddlewaretoken[\"'][^>]*value=[\"']([^\"']+)[\"']/);\n      return m ? m[1] : '';\n    },\n    get: function (path, cb) {\n      pm.sendRequest({ url: aa.base() + path, method: 'GET' }, function (e, r) { cb(r); });\n    },\n    post: function (path, fields, cb) {\n      var body = Object.keys(fields).map(function (k) { return { key: k, value: fields[k] }; });\n      pm.sendRequest({ url: aa.base() + path, method: 'POST', body: { mode: 'urlencoded', urlencoded: body } }, function (e, r) { cb(r); });\n    },\n    // lấy CSRF mới của trang path và lưu vào biến csrf_token\n    token: function (path, cb) {\n      aa.get(path, function (r) { pm.collectionVariables.set('csrf_token', aa.tokenOf(r.text())); if (cb) { cb(); } });\n    },\n    // đưa phiên về Guest (đăng xuất nếu đang đăng nhập), rồi lấy CSRF của trang path\n    guest: function (path, cb) {\n      aa.get('/accounts/password/change/', function (r) {\n        aa.post('/accounts/logout/', { csrfmiddlewaretoken: aa.tokenOf(r.text()) }, function () {\n          if (path) { aa.token(path, cb); } else if (cb) { cb(); }\n        });\n      });\n    },\n    // đăng nhập bằng user/pass từ trạng thái Guest, rồi lấy CSRF của trang path\n    login: function (user, pass, path, cb) {\n      aa.guest('/accounts/login/', function () {\n        aa.post('/accounts/login/', { csrfmiddlewaretoken: pm.collectionVariables.get('csrf_token'), username: user, password: pass }, function () {\n          if (path) { aa.token(path, cb); } else if (cb) { cb(); }\n        });\n      });\n    },\n    user: function (path) { aa.login(pm.variables.get('aa_username'), pm.variables.get('aa_password'), path); },\n    admin: function (path) { aa.login(pm.variables.get('admin_user'), pm.variables.get('admin_pass'), path); }\n  };\n  return aa;\n})()"
+    },
+    {
+      "key": "aa_old_password",
       "value": ""
     }
   ]
