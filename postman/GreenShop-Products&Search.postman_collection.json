@@ -2031,6 +2031,399 @@
         "description": "Bảng quyết định 2 - R5: Không có SP khớp -> danh sách rỗng an toàn"
       },
       "response": []
+    },
+    {
+      "name": "43. White-Box WB-S1: GET danh sách sản phẩm (TC-PS-049)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"[WB-S1] GET danh sách sản phẩm thành công (Status 200 OK)\", function () {",
+              "    pm.response.to.have.status(200);",
+              "    pm.expect(pm.response.json()).to.be.an(\"array\");",
+              "});"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/products/api/",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "products",
+            "api",
+            ""
+          ]
+        },
+        "description": "White-Box WB-S1: Phủ nhánh D1=True (Phương thức GET lấy danh sách sản phẩm)"
+      }
+    },
+    {
+      "name": "44. White-Box WB-S2: POST khi chưa đăng nhập (TC-PS-050)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"[WB-S2] Chưa xác thực bị từ chối (Status 401 Unauthorized)\", function () {",
+              "    pm.response.to.have.status(401);",
+              "});"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json",
+            "type": "text"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"name\": \"Cây Khách Chưa Đăng Nhập\",\n  \"price\": 50000\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "{{baseUrl}}/products/api/",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "products",
+            "api",
+            ""
+          ]
+        },
+        "description": "White-Box WB-S2: Phủ nhánh D1=False, D2=True (Khách vãng lai gọi POST bị 401)"
+      }
+    },
+    {
+      "name": "45. White-Box WB-S3: POST bằng tài khoản thường (TC-PS-051)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"[WB-S3] User thường không có quyền Staff (Status 403 Forbidden)\", function () {",
+              "    pm.response.to.have.status(403);",
+              "});"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json",
+            "type": "text"
+          },
+          {
+            "key": "Authorization",
+            "value": "Basic dXNlcjE6VXNlckAxMjM0NQ==",
+            "type": "text"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"name\": \"Cây User Thường\",\n  \"price\": 50000\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "{{baseUrl}}/products/api/",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "products",
+            "api",
+            ""
+          ]
+        },
+        "description": "White-Box WB-S3: Phủ nhánh D1=False, D2=False, D3=True (User thường gọi POST bị 403)"
+      }
+    },
+    {
+      "name": "46. White-Box WB-S4: POST bằng Admin hợp lệ (TC-PS-052)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"[WB-S4] Admin tạo sản phẩm thành công (Status 201 Created)\", function () {",
+              "    pm.response.to.have.status(201);",
+              "    pm.expect(pm.response.json().name).to.eql(\"Cây Trúc Phát Tài WB\");",
+              "});"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json",
+            "type": "text"
+          },
+          {
+            "key": "Authorization",
+            "value": "Basic dGVzdF9hZG1pbjphZG1pbjEyMw==",
+            "type": "text"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"name\": \"Cây Trúc Phát Tài WB\",\n  \"price\": 60000,\n  \"old_price\": 90000\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "{{baseUrl}}/products/api/",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "products",
+            "api",
+            ""
+          ]
+        },
+        "description": "White-Box WB-S4: Phủ nhánh D1=False, D2=False, D3=False, D4=True (Admin tạo thành công 201)"
+      }
+    },
+    {
+      "name": "47. White-Box WB-S5: POST bằng Admin dữ liệu rỗng (TC-PS-053)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"[WB-S5] Admin gửi dữ liệu rỗng báo lỗi (Status 400 Bad Request)\", function () {",
+              "    pm.response.to.have.status(400);",
+              "});"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json",
+            "type": "text"
+          },
+          {
+            "key": "Authorization",
+            "value": "Basic dGVzdF9hZG1pbjphZG1pbjEyMw==",
+            "type": "text"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "{{baseUrl}}/products/api/",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "products",
+            "api",
+            ""
+          ]
+        },
+        "description": "White-Box WB-S5: Phủ nhánh D1=False, D2=False, D3=False, D4=False (Admin gửi payload rỗng bị 400)"
+      }
+    },
+    {
+      "name": "48. White-Box WB-C1: Điều kiện ghép Giá cũ <= Giá bán (TC-PS-054)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"[WB-C1] Giá cũ <= Giá bán bị từ chối (Status 400 Bad Request)\", function () {",
+              "    pm.response.to.have.status(400);",
+              "});"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json",
+            "type": "text"
+          },
+          {
+            "key": "Authorization",
+            "value": "Basic dGVzdF9hZG1pbjphZG1pbjEyMw==",
+            "type": "text"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"name\": \"Cây Giá Cũ Bằng Giá Bán\",\n  \"price\": 50000,\n  \"old_price\": 50000\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "{{baseUrl}}/products/api/",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "products",
+            "api",
+            ""
+          ]
+        },
+        "description": "White-Box WB-C1: Điều kiện ghép A=True, B=True (old_price <= price) -> 400"
+      }
+    },
+    {
+      "name": "49. White-Box WB-C2: Điều kiện ghép Giá cũ > Giá bán (TC-PS-055)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"[WB-C2] Giá cũ > Giá bán tạo thành công (Status 201 Created)\", function () {",
+              "    pm.response.to.have.status(201);",
+              "});"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json",
+            "type": "text"
+          },
+          {
+            "key": "Authorization",
+            "value": "Basic dGVzdF9hZG1pbjphZG1pbjEyMw==",
+            "type": "text"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"name\": \"Cây Giảm Giá Hợp Lệ WB\",\n  \"price\": 50000,\n  \"old_price\": 80000\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "{{baseUrl}}/products/api/",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "products",
+            "api",
+            ""
+          ]
+        },
+        "description": "White-Box WB-C2: Điều kiện ghép A=True, B=False (old_price > price) -> 201"
+      }
+    },
+    {
+      "name": "50. White-Box WB-C3: Điều kiện ghép Không có giá cũ (TC-PS-056)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"[WB-C3] Không có giá cũ tạo thành công (Status 201 Created)\", function () {",
+              "    pm.response.to.have.status(201);",
+              "});"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json",
+            "type": "text"
+          },
+          {
+            "key": "Authorization",
+            "value": "Basic dGVzdF9hZG1pbjphZG1pbjEyMw==",
+            "type": "text"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"name\": \"Cây Không Giảm Giá WB\",\n  \"price\": 50000\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "{{baseUrl}}/products/api/",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "products",
+            "api",
+            ""
+          ]
+        },
+        "description": "White-Box WB-C3: Điều kiện ghép A=False (old_price is None) -> 201"
+      }
     }
   ],
   "variable": [
