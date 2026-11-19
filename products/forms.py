@@ -1,6 +1,7 @@
 from django import forms
 from django.core.exceptions import ValidationError
 from .models import Product
+from .serializers import MIN_PRICE, MIN_PRICE_MESSAGE
 
 
 class ProductForm(forms.ModelForm):
@@ -26,7 +27,7 @@ class ProductForm(forms.ModelForm):
             else:
                 field.widget.attrs['class'] = 'form-control'
         self.fields['description'].widget.attrs['rows'] = 4
-        self.fields['price'].widget.attrs['min'] = 0
+        self.fields['price'].widget.attrs['min'] = MIN_PRICE
         self.fields['old_price'].widget.attrs['min'] = 0
 
     def clean_name(self):
@@ -37,8 +38,8 @@ class ProductForm(forms.ModelForm):
 
     def clean_price(self):
         price = self.cleaned_data.get('price')
-        if price is not None and price < 0:
-            raise ValidationError('Giá phải lớn hơn hoặc bằng 0.')
+        if price is not None and price < MIN_PRICE:
+            raise ValidationError(MIN_PRICE_MESSAGE)
         if price is not None and price > 100000000:
             raise ValidationError('Giá bán không được vượt quá 100.000.000 VNĐ.')
         return price

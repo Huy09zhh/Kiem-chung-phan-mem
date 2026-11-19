@@ -1,7 +1,9 @@
 from rest_framework import serializers
 from .models import Product
 
+MIN_PRICE = 1000       # SCRUM-46: giá bán tối thiểu 1.000 VNĐ
 MAX_PRICE = 100000000  # giá bán tối đa 100.000.000 VNĐ
+MIN_PRICE_MESSAGE = 'Giá bán sản phẩm tối thiểu phải từ 1.000 VNĐ.'
 
 
 class ProductSerializer(serializers.ModelSerializer):
@@ -30,6 +32,8 @@ class ProductSerializer(serializers.ModelSerializer):
         return value
 
     def validate_price(self, value):
+        if value < MIN_PRICE:
+            raise serializers.ValidationError(MIN_PRICE_MESSAGE)
         if value > MAX_PRICE:
             raise serializers.ValidationError(
                 'Giá bán không được vượt quá 100.000.000 VNĐ.'
