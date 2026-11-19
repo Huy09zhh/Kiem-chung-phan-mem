@@ -1,0 +1,45 @@
+$kind: http-request
+url: "{{base_url}}/orders/checkout/"
+method: POST
+body:
+  type: urlencoded
+  content:
+    csrfmiddlewaretoken: "{{csrf_token}}"
+    full_name: "Nguyen Van A"
+    phone: "0901234567"
+    address: "123 Le Loi"
+    payment_method: "cod"
+scripts:
+  - type: beforeRequest
+    code: |-
+      var sid = pm.cookies.get('sessionid');
+      var csrf = pm.cookies.get('csrftoken');
+      var cookieHdr = '';
+      if (sid) { cookieHdr += 'sessionid=' + sid + '; '; }
+      if (csrf) { 
+        cookieHdr += 'csrftoken=' + csrf; 
+        pm.collectionVariables.set('csrf_token', csrf);
+      }
+      pm.sendRequest({
+        url: pm.collectionVariables.get('base_url') + '/cart/add/' + pm.collectionVariables.get('product_id') + '/',
+        method: 'GET',
+        header: { 'Cookie': cookieHdr }
+      }, function (err, res) {});
+      var t = pm.cookies.get('csrftoken'); if (t) { pm.collectionVariables.set('csrf_token', t); }
+    language: text/javascript
+  - type: afterResponse
+    code: |-
+      pm.test('TC-WB-10 | Đặt hàng COD redirect success (302)', function () {
+        pm.expect([200, 302]).to.include(pm.response.code);
+        var loc = pm.response.headers.get('Location') || '';
+        var m = loc.match(/\/orders\/success\/(\d+)/);
+        if (!m) { m = pm.response.text().match(/\/orders\/success\/(\d+)/); }
+        if (m) {
+          pm.collectionVariables.set('wb_order_cod_id', m[1]);
+        }
+      });
+      var t = pm.cookies.get('csrftoken'); if (t) { pm.collectionVariables.set('csrf_token', t); }
+    language: text/javascript
+settings:
+  followRedirects: false
+order: 10000

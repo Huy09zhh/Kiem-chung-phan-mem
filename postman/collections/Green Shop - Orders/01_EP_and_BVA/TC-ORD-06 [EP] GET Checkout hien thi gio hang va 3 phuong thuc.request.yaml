@@ -1,0 +1,31 @@
+$kind: http-request
+url: "{{base_url}}/orders/checkout/"
+method: GET
+scripts:
+  - type: beforeRequest
+    code: |-
+      var sid = pm.cookies.get('sessionid');
+      var csrf = pm.cookies.get('csrftoken');
+      var cookieHdr = '';
+      if (sid) { cookieHdr += 'sessionid=' + sid + '; '; }
+      if (csrf) { 
+        cookieHdr += 'csrftoken=' + csrf; 
+        pm.collectionVariables.set('csrf_token', csrf);
+      }
+      pm.sendRequest({
+        url: pm.collectionVariables.get('base_url') + '/cart/add/' + pm.collectionVariables.get('product_id') + '/',
+        method: 'GET',
+        header: { 'Cookie': cookieHdr }
+      }, function (err, res) {});
+    language: text/javascript
+  - type: afterResponse
+    code: |-
+      pm.test('TC-ORD-06 | GET Checkout trả về HTTP 200', function () {
+        pm.expect(pm.response.code).to.eql(200);
+      });
+      pm.test('TC-ORD-06 | Giao diện chứa đủ 3 radio cod, qr, mock', function () {
+        const h = pm.response.text();
+        ['cod','qr','mock'].forEach(m => pm.expect(h).to.include('value="' + m + '"'));
+      });
+    language: text/javascript
+order: 1000

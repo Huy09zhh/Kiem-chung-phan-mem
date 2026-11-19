@@ -1,0 +1,27 @@
+$kind: http-request
+url: "{{base_url}}/orders/checkout/"
+method: POST
+body:
+  type: urlencoded
+  content:
+    csrfmiddlewaretoken: "{{csrf_token}}"
+    full_name: "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+    phone: "99999999999999999999"
+    address: "123 Đường ABC, Phường 1, TP.HCM"
+    note: ""
+    payment_method: "cod"
+scripts:
+  - type: beforeRequest
+    code: |-
+      pm.sendRequest({ url: pm.collectionVariables.get('base_url') + '/cart/add/' + pm.collectionVariables.get('product_id') + '/', method: 'GET' }, function () {});
+      const t = pm.cookies.get('csrftoken'); if (t) { pm.collectionVariables.set('csrf_token', t); }
+    language: text/javascript
+  - type: afterResponse
+    code: |-
+      pm.test('TC-ORD-11 | Biên max (name 255, phone 20) tạo đơn thành công (302)', function () {
+        pm.expect([200, 302]).to.include(pm.response.code);
+      });
+    language: text/javascript
+settings:
+  followRedirects: false
+order: 6000

@@ -1,6 +1,8 @@
 {% extends 'base.html' %}
 
-{% block title %}Đặt hàng thành công{% endblock %}
+{% block title %}
+{% if order.status == 'failed' %}Thanh toán thất bại{% else %}Đặt hàng thành công{% endif %}
+{% endblock %}
 
 {% block content %}
 <style>
@@ -83,10 +85,79 @@
 <div class="success-section">
     <div class="container">
         <div class="success-card">
-            <div class="success-icon">✓</div>
-            <h2>Đặt hàng thành công</h2>
-            <p>Cảm ơn bạn đã mua sắm tại Green Shop.</p>
-            <p>Đơn hàng của bạn đã được ghi nhận. Chúng tôi sẽ sớm liên hệ để xác nhận và giao hàng.</p>
+            {% if order.status == 'failed' %}
+                <div class="success-icon" style="background: linear-gradient(135deg, #e53935, #c62828);">✕</div>
+                <h2 style="color: #c62828;">Thanh toán thất bại</h2>
+                <p>Giao dịch thanh toán chưa hoàn tất hoặc bị gián đoạn.</p>
+                <p>Mã đơn hàng: <strong>#{{ order.id }}</strong></p>
+            {% else %}
+                <div class="success-icon">✓</div>
+                <h2>Đặt hàng thành công</h2>
+                <p>Cảm ơn bạn đã mua sắm tại Green Shop.</p>
+                <p>Đơn hàng của bạn đã được ghi nhận. Chúng tôi sẽ sớm liên hệ để xác nhận và giao hàng.</p>
+            {% endif %}
+
+            <div class="order-details text-start mt-4 p-4" style="background: #fdfdfd; border: 1px solid #e0e0e0; border-radius: 12px; text-align: left;">
+                <h4 class="mb-3" style="font-weight: 700; color: #2e7d32;">Thông tin đơn hàng #{{ order.id }}</h4>
+                <div class="row mb-2">
+                    <div class="col-sm-4 text-muted">Mã đơn:</div>
+                    <div class="col-sm-8 font-weight-bold"><strong>#{{ order.id }}</strong></div>
+                </div>
+                <div class="row mb-2">
+                    <div class="col-sm-4 text-muted">Người nhận:</div>
+                    <div class="col-sm-8 font-weight-bold"><strong>{{ order.full_name }}</strong></div>
+                </div>
+                <div class="row mb-2">
+                    <div class="col-sm-4 text-muted">Số điện thoại:</div>
+                    <div class="col-sm-8">{{ order.phone }}</div>
+                </div>
+                <div class="row mb-2">
+                    <div class="col-sm-4 text-muted">Địa chỉ nhận hàng:</div>
+                    <div class="col-sm-8">{{ order.address }}</div>
+                </div>
+                <div class="row mb-2">
+                    <div class="col-sm-4 text-muted">Phương thức thanh toán:</div>
+                    <div class="col-sm-8"><span class="badge badge-info">{{ order.get_payment_method_display }}</span></div>
+                </div>
+                <div class="row mb-2">
+                    <div class="col-sm-4 text-muted">Trạng thái:</div>
+                    <div class="col-sm-8"><span class="badge badge-secondary">{{ order.get_status_display }}</span></div>
+                </div>
+                {% if order.note %}
+                <div class="row mb-2">
+                    <div class="col-sm-4 text-muted">Ghi chú:</div>
+                    <div class="col-sm-8">{{ order.note }}</div>
+                </div>
+                {% endif %}
+
+                <h5 class="mt-4 mb-2 font-weight-bold">Danh sách sản phẩm</h5>
+                <table class="table table-bordered mt-2">
+                    <thead>
+                        <tr class="table-light">
+                            <th>Sản phẩm</th>
+                            <th class="text-center">Số lượng</th>
+                            <th class="text-end text-right">Đơn giá</th>
+                            <th class="text-end text-right">Thành tiền</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for item in order.items.all %}
+                        <tr>
+                            <td>{{ item.product_name }}</td>
+                            <td class="text-center">{{ item.quantity }}</td>
+                            <td class="text-end text-right">{{ item.price }} đ</td>
+                            <td class="text-end text-right">{{ item.subtotal }} đ</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                    <tfoot>
+                        <tr>
+                            <th colspan="3" class="text-end text-right">Tổng tiền:</th>
+                            <th class="text-end text-right text-success">{{ order.total_price }} đ</th>
+                        </tr>
+                    </tfoot>
+                </table>
+            </div>
 
             <div class="success-actions">
                 <a href="{% url 'home' %}" class="success-btn">Về trang chủ</a>

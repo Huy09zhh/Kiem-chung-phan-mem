@@ -1,0 +1,14 @@
+$kind: http-request
+url: "{{base_url}}/orders/qr/{{st_order_qr_id}}/"
+method: GET
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test('TC-ST-FLOW-04 | Mở trang QR trả về HTTP 200', function () {
+        pm.expect(pm.response.code).to.eql(200);
+      });
+      pm.test('TC-ST-FLOW-04 | Hiển thị nội dung chuyển khoản THANH TOAN DH', function () {
+        pm.expect(pm.response.text()).to.include('THANH TOAN DH');
+      });
+    language: text/javascript
+order: 4000

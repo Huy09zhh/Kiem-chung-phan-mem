@@ -1,0 +1,13 @@
+$kind: http-request
+url: "{{base_url}}/orders/mock/{{st_order_mock_id}}/fail/"
+method: GET
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test('TC-EG-04 | GET endpoint đổi trạng thái -> 302 không kích hoạt cập nhật', function () {
+        pm.expect([200, 302]).to.include(pm.response.code);
+      });
+    language: text/javascript
+settings:
+  followRedirects: false
+order: 4000

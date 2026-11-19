@@ -1,0 +1,38 @@
+$kind: http-request
+url: "{{base_url}}/orders/checkout/"
+method: POST
+body:
+  type: urlencoded
+  content:
+    csrfmiddlewaretoken: "{{csrf_token}}"
+    full_name: "Trần Đình Đức (ZaloPay)"
+    phone: "0901234567"
+    address: "12 Nguyễn Huệ, Quận 1, TP.HCM"
+    payment_method: "zalopay"
+scripts:
+  - type: beforeRequest
+    code: |-
+      var sid = pm.cookies.get('sessionid');
+      var csrf = pm.cookies.get('csrftoken');
+      var cookieHdr = '';
+      if (sid) { cookieHdr += 'sessionid=' + sid + '; '; }
+      if (csrf) { 
+        cookieHdr += 'csrftoken=' + csrf; 
+        pm.collectionVariables.set('csrf_token', csrf);
+      }
+      pm.sendRequest({
+        url: pm.collectionVariables.get('base_url') + '/cart/add/' + pm.collectionVariables.get('product_id') + '/',
+        method: 'GET',
+        header: { 'Cookie': cookieHdr }
+      }, function (err, res) {});
+      const t = pm.cookies.get('csrftoken'); if (t) { pm.collectionVariables.set('csrf_token', t); }
+    language: text/javascript
+  - type: afterResponse
+    code: |-
+      pm.test('TC-DT-06 | [Rule PM-R4] payment_method N -> Chặn tạo đơn, trả về 200 kèm cảnh báo', function () {
+        pm.expect(pm.response.code).to.eql(200);
+      });
+    language: text/javascript
+settings:
+  followRedirects: false
+order: 6000

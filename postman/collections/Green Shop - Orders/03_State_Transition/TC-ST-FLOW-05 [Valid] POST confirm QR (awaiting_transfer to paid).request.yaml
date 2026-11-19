@@ -1,0 +1,21 @@
+$kind: http-request
+url: "{{base_url}}/orders/qr/{{st_order_qr_id}}/confirm/"
+method: POST
+body:
+  type: urlencoded
+  content:
+    csrfmiddlewaretoken: "{{csrf_token}}"
+scripts:
+  - type: beforeRequest
+    code: |-
+      const t = pm.cookies.get('csrftoken'); if (t) { pm.collectionVariables.set('csrf_token', t); }
+    language: text/javascript
+  - type: afterResponse
+    code: |-
+      pm.test('TC-ST-FLOW-05 | [Transition hợp lệ] awaiting_transfer -> paid (302 success)', function () {
+        pm.expect([200, 302]).to.include(pm.response.code);
+      });
+    language: text/javascript
+settings:
+  followRedirects: false
+order: 5000

@@ -1,0 +1,27 @@
+$kind: http-request
+url: "{{base_url}}/orders/checkout/"
+method: POST
+body:
+  type: urlencoded
+  content:
+    csrfmiddlewaretoken: "{{csrf_token}}"
+    full_name: "Nguyễn Văn A"
+    phone: "999999999999999999999"
+    address: "12 Nguyễn Huệ, Quận 1, TP.HCM"
+    note: ""
+    payment_method: "cod"
+scripts:
+  - type: beforeRequest
+    code: |-
+      pm.sendRequest({ url: pm.collectionVariables.get('base_url') + '/cart/add/' + pm.collectionVariables.get('product_id') + '/', method: 'GET' }, function () {});
+      const t = pm.cookies.get('csrftoken'); if (t) { pm.collectionVariables.set('csrf_token', t); }
+    language: text/javascript
+  - type: afterResponse
+    code: |-
+      pm.test('TC-ORD-18 | SĐT 21 ký tự (vượt max 20) bị chặn (HTTP 200)', function () {
+        pm.expect(pm.response.code).to.eql(200);
+      });
+    language: text/javascript
+settings:
+  followRedirects: false
+order: 13000

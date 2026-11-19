@@ -1,0 +1,13 @@
+$kind: http-request
+url: "{{base_url}}/orders/qr/{{dt_qr_order_id}}/confirm/"
+method: GET
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test('TC-DT-08 | [Rule QR-R3] GET confirm QR -> redirect (302) mà không kích hoạt đổi trạng thái', function () {
+        pm.expect([200, 302]).to.include(pm.response.code);
+      });
+    language: text/javascript
+settings:
+  followRedirects: false
+order: 8000

@@ -1,0 +1,4 @@
+$kind: collection
+name: 03_State_Transition
+description: "Kiểm thử Chuyển đổi trạng thái (State Transition Testing) nối tiếp vòng đời đơn hàng và kiểm tra các ca chặn chuyển sai"
+order: 4000

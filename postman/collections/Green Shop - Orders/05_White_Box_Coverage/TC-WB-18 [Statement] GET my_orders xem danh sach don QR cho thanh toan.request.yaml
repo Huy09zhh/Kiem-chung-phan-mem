@@ -1,0 +1,16 @@
+$kind: http-request
+url: "{{base_url}}/orders/my/"
+method: GET
+scripts:
+  - type: beforeRequest
+    code: |-
+      var t = pm.cookies.get('csrftoken'); if (t) { pm.collectionVariables.set('csrf_token', t); }
+    language: text/javascript
+  - type: afterResponse
+    code: |-
+      pm.test('TC-WB-18 | GET my_orders trả về HTTP 200 danh sách đơn chờ', function () {
+        pm.expect(pm.response.code).to.eql(200);
+      });
+      var t = pm.cookies.get('csrftoken'); if (t) { pm.collectionVariables.set('csrf_token', t); }
+    language: text/javascript
+order: 18000

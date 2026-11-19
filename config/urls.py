@@ -18,6 +18,28 @@ urlpatterns = [
 if settings.DEBUG:
     urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
 
+    from django.http import HttpResponse
+
+    def dev_shutdown_view(request):
+        import os, threading, time
+        def _stop():
+            time.sleep(0.5)
+            try:
+                import coverage
+                cov = coverage.Coverage.current()
+                if cov:
+                    cov.stop()
+                    cov.save()
+            except Exception:
+                pass
+            os._exit(0)
+        threading.Thread(target=_stop).start()
+        return HttpResponse("Server shutting down and coverage saved.")
+
+    urlpatterns += [
+        path('dev/shutdown/', dev_shutdown_view, name='dev_shutdown'),
+    ]
+
 if settings.DEV_MAILBOX_ENABLED:
     from core import dev_mailbox
 
