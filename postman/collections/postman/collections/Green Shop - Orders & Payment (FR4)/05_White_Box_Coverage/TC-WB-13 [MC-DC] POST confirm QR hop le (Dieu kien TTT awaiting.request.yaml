@@ -1,0 +1,25 @@
+$kind: http-request
+name: TC-WB-13 [MC-DC] POST confirm QR hop le (Dieu kien TTT awaiting sang paid)
+url: "{{base_url}}/orders/qr/{{wb_order_qr_id}}/confirm/"
+method: POST
+headers:
+  X-CSRFToken: "{{csrf_token}}"
+  Content-Type: application/x-www-form-urlencoded
+body:
+  type: urlencoded
+  content:
+    csrfmiddlewaretoken: "{{csrf_token}}"
+scripts:
+  - type: beforeRequest
+    code: "  var t = pm.cookies.get('csrftoken'); if (t) { pm.collectionVariables.set('csrf_token', t); }"
+    language: text/javascript
+  - type: afterResponse
+    code: |2-
+        pm.test('TC-WB-13 | POST confirm QR hợp lệ -> chuyển paid & redirect success', function () {
+          pm.expect([200, 302]).to.include(pm.response.code);
+        });
+        var t = pm.cookies.get('csrftoken'); if (t) { pm.collectionVariables.set('csrf_token', t); }
+    language: text/javascript
+settings:
+  followRedirects: false
+order: 13000

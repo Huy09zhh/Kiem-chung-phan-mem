@@ -1,0 +1,43 @@
+$kind: http-request
+url: "{{base_url}}/orders/checkout/"
+method: POST
+headers:
+  X-CSRFToken: "{{csrf_token}}"
+  Content-Type: application/x-www-form-urlencoded
+body:
+  type: urlencoded
+  content:
+    csrfmiddlewaretoken: "{{csrf_token}}"
+    full_name: Nguyen Van A
+    phone: ""
+    address: 123 Le Loi
+    payment_method: cod
+scripts:
+  - type: beforeRequest
+    code: |2-
+        var sid = pm.cookies.get('sessionid');
+        var csrf = pm.cookies.get('csrftoken');
+        var cookieHdr = '';
+        if (sid) { cookieHdr += 'sessionid=' + sid + '; '; }
+        if (csrf) { 
+          cookieHdr += 'csrftoken=' + csrf; 
+          pm.collectionVariables.set('csrf_token', csrf);
+        }
+        pm.sendRequest({
+          url: pm.collectionVariables.get('base_url') + '/cart/add/' + pm.collectionVariables.get('product_id') + '/',
+          method: 'GET',
+          header: { 'Cookie': cookieHdr }
+        }, function (err, res) {});
+        var t = pm.cookies.get('csrftoken'); if (t) { pm.collectionVariables.set('csrf_token', t); }
+    language: text/javascript
+  - type: afterResponse
+    code: |2-
+        pm.test('TC-WB-05 | Số điện thoại rỗng trả về HTTP 200 báo lỗi', function () {
+          pm.expect(pm.response.code).to.eql(200);
+          pm.expect(pm.response.text()).to.include('Số điện thoại không được để trống');
+        });
+        var t = pm.cookies.get('csrftoken'); if (t) { pm.collectionVariables.set('csrf_token', t); }
+    language: text/javascript
+settings:
+  followRedirects: false
+order: 5000

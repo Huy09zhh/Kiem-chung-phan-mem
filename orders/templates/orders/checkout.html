@@ -249,6 +249,11 @@
                                 Vui lòng giảm số lượng hoặc tách thành nhiều đơn hàng.
                             </div>
                         {% endif %}
+                        {% if error %}
+                            <div class="alert alert-danger" role="alert">
+                                {{ error }}
+                            </div>
+                        {% endif %}
                         <form method="post">
                             {% csrf_token %}
 

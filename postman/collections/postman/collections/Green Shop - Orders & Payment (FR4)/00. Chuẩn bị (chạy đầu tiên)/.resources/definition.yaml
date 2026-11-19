@@ -1,0 +1,3 @@
+$kind: collection
+description: "Các bước chuẩn bị: lấy CSRF cookie, đăng nhập user test, thêm sản phẩm vào giỏ hàng"
+order: 1000

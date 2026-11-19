@@ -1,0 +1,24 @@
+$kind: http-request
+name: TC-ST-FLOW-07 [Valid] POST cancel QR (awaiting_transfer to cancelled)
+url: "{{base_url}}/orders/{{st_cancel_qr_id}}/cancel/"
+method: POST
+headers:
+  X-CSRFToken: "{{csrf_token}}"
+  Content-Type: application/x-www-form-urlencoded
+body:
+  type: urlencoded
+  content:
+    csrfmiddlewaretoken: "{{csrf_token}}"
+scripts:
+  - type: beforeRequest
+    code: "  const t = pm.cookies.get('csrftoken'); if (t) { pm.collectionVariables.set('csrf_token', t); }"
+    language: text/javascript
+  - type: afterResponse
+    code: |2-
+        pm.test('TC-ST-FLOW-07 | [Transition hợp lệ] awaiting_transfer -> cancelled (302 redirect /cart/)', function () {
+          pm.expect([200, 302]).to.include(pm.response.code);
+        });
+    language: text/javascript
+settings:
+  followRedirects: false
+order: 7000

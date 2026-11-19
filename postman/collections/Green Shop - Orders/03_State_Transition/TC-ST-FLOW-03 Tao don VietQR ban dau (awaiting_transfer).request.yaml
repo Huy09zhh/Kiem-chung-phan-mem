@@ -32,8 +32,11 @@ scripts:
       pm.test('TC-ST-FLOW-03 | Tạo đơn QR -> 302 sang trang QR (State: awaiting_transfer)', function () {
         pm.expect([200, 302]).to.include(pm.response.code);
       });
-      const loc = pm.response.headers.get("Location") || "";
-      const match = loc.match(/\/(\d+)\//);
+      var loc = pm.response.headers.get("Location") || "";
+      var match = loc.match(/\/(\d+)\//);
+      if (!match) {
+        match = pm.response.text().match(/\/orders\/(?:qr|mock|success)\/(\d+)/) || pm.response.text().match(/#(\d+)/);
+      }
       if (match) { pm.collectionVariables.set("st_order_qr_id", match[1]); }
     language: text/javascript
 settings:

@@ -1,0 +1,49 @@
+$kind: http-request
+name: TC-WB-11 [Path] POST Checkout VietQR happy path (Full path QR tao don awaiting)
+url: "{{base_url}}/orders/checkout/"
+method: POST
+headers:
+  X-CSRFToken: "{{csrf_token}}"
+  Content-Type: application/x-www-form-urlencoded
+body:
+  type: urlencoded
+  content:
+    csrfmiddlewaretoken: "{{csrf_token}}"
+    full_name: Nguyen Van A
+    phone: "0901234567"
+    address: 123 Le Loi
+    payment_method: qr
+scripts:
+  - type: beforeRequest
+    code: |2-
+        var sid = pm.cookies.get('sessionid');
+        var csrf = pm.cookies.get('csrftoken');
+        var cookieHdr = '';
+        if (sid) { cookieHdr += 'sessionid=' + sid + '; '; }
+        if (csrf) { 
+          cookieHdr += 'csrftoken=' + csrf; 
+          pm.collectionVariables.set('csrf_token', csrf);
+        }
+        pm.sendRequest({
+          url: pm.collectionVariables.get('base_url') + '/cart/add/' + pm.collectionVariables.get('product_id') + '/',
+          method: 'GET',
+          header: { 'Cookie': cookieHdr }
+        }, function (err, res) {});
+        var t = pm.cookies.get('csrftoken'); if (t) { pm.collectionVariables.set('csrf_token', t); }
+    language: text/javascript
+  - type: afterResponse
+    code: |2-
+        pm.test('TC-WB-11 | Đặt hàng VietQR redirect trang QR (302)', function () {
+          pm.expect([200, 302]).to.include(pm.response.code);
+          var loc = pm.response.headers.get('Location') || '';
+          var m = loc.match(/\/orders\/qr\/(\d+)/);
+          if (!m) { m = pm.response.text().match(/\/orders\/qr\/(\d+)/); }
+          if (m) {
+            pm.collectionVariables.set('wb_order_qr_id', m[1]);
+          }
+        });
+        var t = pm.cookies.get('csrftoken'); if (t) { pm.collectionVariables.set('csrf_token', t); }
+    language: text/javascript
+settings:
+  followRedirects: false
+order: 11000

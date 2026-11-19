@@ -1,0 +1,42 @@
+$kind: http-request
+url: "{{base_url}}/orders/checkout/"
+method: POST
+headers:
+  X-CSRFToken: "{{csrf_token}}"
+  Content-Type: application/x-www-form-urlencoded
+body:
+  type: urlencoded
+  content:
+    csrfmiddlewaretoken: "{{csrf_token}}"
+    full_name: "     "
+    phone: "0901234567"
+    address: 12 Nguyễn Huệ, Quận 1, TP.HCM
+    note: ""
+    payment_method: cod
+scripts:
+  - type: beforeRequest
+    code: |2-
+        var sid = pm.cookies.get('sessionid');
+        var csrf = pm.cookies.get('csrftoken');
+        var cookieHdr = '';
+        if (sid) { cookieHdr += 'sessionid=' + sid + '; '; }
+        if (csrf) { 
+          cookieHdr += 'csrftoken=' + csrf; 
+          pm.collectionVariables.set('csrf_token', csrf);
+        }
+        pm.sendRequest({
+          url: pm.collectionVariables.get('base_url') + '/cart/add/' + pm.collectionVariables.get('product_id') + '/',
+          method: 'GET',
+          header: { 'Cookie': cookieHdr }
+        }, function (err, res) {});
+        const t = pm.cookies.get('csrftoken'); if (t) { pm.collectionVariables.set('csrf_token', t); }
+    language: text/javascript
+  - type: afterResponse
+    code: |2-
+        pm.test('TC-ORD-13 | Họ tên toàn khoảng trắng bị chặn (HTTP 200)', function () {
+          pm.expect(pm.response.code).to.eql(200);
+        });
+    language: text/javascript
+settings:
+  followRedirects: false
+order: 8000

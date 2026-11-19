@@ -2,6 +2,8 @@ import json
 import os
 import re
 
+base_dir = "postman/collections/Green Shop - Orders"
+
 def parse_simple_yaml(text):
     data = {}
     lines = text.splitlines()
@@ -66,6 +68,22 @@ def parse_simple_yaml(text):
             data['body'] = body
             continue
 
+        # Check settings block
+        if line.startswith('settings:'):
+            settings = {}
+            i += 1
+            while i < len(lines):
+                sline = lines[i]
+                if sline and not sline.startswith(' ') and not sline.startswith('\t'):
+                    break
+                if ':' in sline:
+                    k, v = sline.strip().split(':', 1)
+                    val = v.strip().lower()
+                    settings[k.strip()] = False if val == 'false' else (True if val == 'true' else val)
+                i += 1
+            data['settings'] = settings
+            continue
+
         # Simple key-value
         if ':' in line:
             k, v = line.split(':', 1)
@@ -77,10 +95,16 @@ def parse_simple_yaml(text):
 
 def build_postman_request(yaml_data, req_name):
     url_str = yaml_data.get('url', '{{base_url}}/orders/checkout/')
-    # parse url parts
-    # e.g. {{base_url}}/orders/checkout/ -> host: ["{{base_url}}"], path: ["orders", "checkout", ""]
-    clean_path = url_str.replace('{{base_url}}', '').strip('/')
-    path_segments = [p for p in clean_path.split('/') if p]
+    if not url_str.endswith('/') and '?' not in url_str:
+        url_str += '/'
+        
+    clean_path = url_str.replace('{{base_url}}', '')
+    if clean_path.startswith('/'):
+        clean_path = clean_path[1:]
+    parts = clean_path.split('/')
+    path_segments = [p for p in parts if p]
+    if url_str.endswith('/'):
+        path_segments.append("")
     
     events = []
     for sc in yaml_data.get('scripts', []):
@@ -93,9 +117,18 @@ def build_postman_request(yaml_data, req_name):
             }
         })
     
+    headers = []
+    # Only omit CSRF header for TC-EG-07 which specifically tests missing CSRF
+    if 'TC-EG-07' not in req_name and '00.1' not in req_name:
+        headers.append({
+            "key": "X-CSRFToken",
+            "value": "{{csrf_token}}",
+            "type": "text"
+        })
+    
     request_obj = {
         "method": yaml_data.get('method', 'GET'),
-        "header": [],
+        "header": headers,
         "url": {
             "raw": url_str,
             "host": ["{{base_url}}"],
@@ -132,16 +165,22 @@ def build_postman_request(yaml_data, req_name):
                 "value": "application/json"
             })
             
+    # Explicitly set followRedirects to false so 302 responses and Location headers are preserved
+    settings = yaml_data.get('settings', {})
+    follow_redirects = settings.get('followRedirects', False)
+    
     item = {
         "name": req_name,
         "event": events,
+        "protocolProfileBehavior": {
+            "followRedirects": follow_redirects
+        },
         "request": request_obj,
         "response": []
     }
     return item
 
 def main():
-    base_dir = "postman/collections/Green Shop - Orders"
     folders = [
         ("00. Chuẩn bị (chạy đầu tiên)", "Các bước chuẩn bị: lấy CSRF cookie, đăng nhập user test, thêm sản phẩm vào giỏ hàng"),
         ("01_EP_and_BVA", "Phân hoạch lớp tương đương & Phân tích giá trị biên (Standard + Robustness) cho API Đặt hàng"),
@@ -159,7 +198,6 @@ def main():
             continue
         
         req_files = [f for f in os.listdir(folder_path) if f.endswith('.request.yaml')]
-        # Sort files by name
         req_files.sort()
         
         folder_requests = []
@@ -188,8 +226,8 @@ def main():
         "item": collection_items,
         "variable": [
             {"key": "base_url", "value": "http://127.0.0.1:8000", "type": "string"},
-            {"key": "username", "value": "test_user_orders", "type": "string"},
-            {"key": "password", "value": "TestPass123!", "type": "string"},
+            {"key": "username", "value": "khach_test", "type": "string"},
+            {"key": "password", "value": "DoiMatKhauCuaBan@123", "type": "string"},
             {"key": "product_id", "value": "1", "type": "string"},
             {"key": "csrf_token", "value": "", "type": "string"},
             {"key": "st_order_cod_id", "value": "", "type": "string"},

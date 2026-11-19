@@ -1,0 +1,21 @@
+$kind: http-request
+name: TC-ST-FLOW-10 Kiem tra trang ket qua Mock that bai (Bao that bai, khong chuc mung)
+url: "{{base_url}}/orders/success/{{st_order_mock_id}}/"
+method: GET
+headers:
+  X-CSRFToken: "{{csrf_token}}"
+scripts:
+  - type: afterResponse
+    code: |2-
+        pm.test('TC-ST-FLOW-10 | Trang kết quả trả về HTTP 200', function () {
+          pm.expect(pm.response.code).to.eql(200);
+        });
+        pm.test('TC-ST-FLOW-10 | Thông báo thanh toán thất bại, không chứa chúc mừng', function () {
+          const text = pm.response.text();
+          pm.expect(text.toLowerCase()).to.include('thất bại');
+          pm.expect(text).to.not.include('Đặt hàng thành công');
+        });
+    language: text/javascript
+settings:
+  followRedirects: false
+order: 10000

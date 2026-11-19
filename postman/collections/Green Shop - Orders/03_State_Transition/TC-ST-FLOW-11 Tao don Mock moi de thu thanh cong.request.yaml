@@ -32,8 +32,11 @@ scripts:
       pm.test('TC-ST-FLOW-11 | Tạo đơn Mock mới -> 302', function () {
         pm.expect([200, 302]).to.include(pm.response.code);
       });
-      const loc = pm.response.headers.get("Location") || "";
-      const match = loc.match(/\/(\d+)\//);
+      var loc = pm.response.headers.get("Location") || "";
+      var match = loc.match(/\/(\d+)\//);
+      if (!match) {
+        match = pm.response.text().match(/\/orders\/(?:qr|mock|success)\/(\d+)/) || pm.response.text().match(/#(\d+)/);
+      }
       if (match) { pm.collectionVariables.set("st_order_mock_success_id", match[1]); }
     language: text/javascript
 settings:

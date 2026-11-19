@@ -9,22 +9,25 @@ class Command(BaseCommand):
 
     def handle(self, *args, **options):
         User = get_user_model()
-        user, created = User.objects.get_or_create(
-            username='khach_test',
-            defaults={'email': 'khach_test@example.com'}
-        )
-        user.set_password('DoiMatKhauCuaBan@123')
-        user.is_active = True
-        user.save()
+        for uname, pwd, email in [
+            ('khach_test', 'DoiMatKhauCuaBan@123', 'khach_test@example.com'),
+            ('test_user_orders', 'TestPass123!', 'test_orders@example.com'),
+        ]:
+            user, created = User.objects.get_or_create(
+                username=uname,
+                defaults={'email': email}
+            )
+            user.set_password(pwd)
+            user.is_active = True
+            user.save()
 
-        p, _ = Product.objects.get_or_create(
-            id=1,
-            defaults={'name': 'Sản phẩm kiểm thử Postman', 'price': Decimal('50000')}
-        )
-
-        cart, _ = Cart.objects.get_or_create(user=user)
-        CartItem.objects.get_or_create(cart=cart, product=p, defaults={'quantity': 1})
+            cart, _ = Cart.objects.get_or_create(user=user)
+            p, _ = Product.objects.get_or_create(
+                id=1,
+                defaults={'name': 'Sản phẩm kiểm thử Postman', 'price': Decimal('50000')}
+            )
+            CartItem.objects.get_or_create(cart=cart, product=p, defaults={'quantity': 1})
 
         self.stdout.write(self.style.SUCCESS(
-            "Đã khởi tạo thành công tài khoản 'khach_test' (pass: 'DoiMatKhauCuaBan@123') và nạp sản phẩm vào giỏ hàng!"
+            "Đã khởi tạo thành công tài khoản 'khach_test' (pass: 'DoiMatKhauCuaBan@123') và 'test_user_orders' (pass: 'TestPass123!') kèm giỏ hàng!"
         ))

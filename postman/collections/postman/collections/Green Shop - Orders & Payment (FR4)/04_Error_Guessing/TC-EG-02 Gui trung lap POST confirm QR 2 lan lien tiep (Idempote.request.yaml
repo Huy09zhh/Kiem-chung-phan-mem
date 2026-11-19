@@ -1,0 +1,24 @@
+$kind: http-request
+name: TC-EG-02 Gui trung lap POST confirm QR 2 lan lien tiep (Idempotency)
+url: "{{base_url}}/orders/qr/{{st_order_qr_id}}/confirm/"
+method: POST
+headers:
+  X-CSRFToken: "{{csrf_token}}"
+  Content-Type: application/x-www-form-urlencoded
+body:
+  type: urlencoded
+  content:
+    csrfmiddlewaretoken: "{{csrf_token}}"
+scripts:
+  - type: beforeRequest
+    code: "  const t = pm.cookies.get('csrftoken'); if (t) { pm.collectionVariables.set('csrf_token', t); }"
+    language: text/javascript
+  - type: afterResponse
+    code: |2-
+        pm.test('TC-EG-02 | Gửi confirm QR lần 2 không gây crash 500 (trả về 302)', function () {
+          pm.expect([200, 302]).to.include(pm.response.code);
+        });
+    language: text/javascript
+settings:
+  followRedirects: false
+order: 2000

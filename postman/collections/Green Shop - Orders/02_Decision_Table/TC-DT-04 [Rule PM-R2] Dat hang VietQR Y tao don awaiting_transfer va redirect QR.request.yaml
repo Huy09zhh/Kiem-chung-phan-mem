@@ -32,9 +32,12 @@ scripts:
       pm.test('TC-DT-04 | [Rule PM-R2] VietQR Y -> Tạo đơn awaiting_transfer + redirect QR (302)', function () {
         pm.expect([200, 302]).to.include(pm.response.code);
       });
-      const loc = pm.response.headers.get("Location") || "";
-      const match = loc.match(/\/(\d+)\//);
-      if (match) { pm.collectionVariables.set("dt_qr_order_id", match[1]); }
+      var loc = pm.response.headers.get("Location") || "";
+      var m = loc.match(/\/(\d+)\//);
+      if (!m) {
+        m = pm.response.text().match(/\/orders\/(?:qr|mock|success)\/(\d+)/) || pm.response.text().match(/#(\d+)/);
+      }
+      if (m) { pm.collectionVariables.set("dt_qr_order_id", m[1]); }
     language: text/javascript
 settings:
   followRedirects: false

@@ -1,0 +1,20 @@
+$kind: http-request
+name: TC-WB-18 [Statement] GET my_orders xem danh sach don QR cho thanh toan
+url: "{{base_url}}/orders/my/"
+method: GET
+headers:
+  X-CSRFToken: "{{csrf_token}}"
+scripts:
+  - type: beforeRequest
+    code: "  var t = pm.cookies.get('csrftoken'); if (t) { pm.collectionVariables.set('csrf_token', t); }"
+    language: text/javascript
+  - type: afterResponse
+    code: |2-
+        pm.test('TC-WB-18 | GET my_orders trả về HTTP 200 danh sách đơn chờ', function () {
+          pm.expect(pm.response.code).to.eql(200);
+        });
+        var t = pm.cookies.get('csrftoken'); if (t) { pm.collectionVariables.set('csrf_token', t); }
+    language: text/javascript
+settings:
+  followRedirects: false
+order: 18000

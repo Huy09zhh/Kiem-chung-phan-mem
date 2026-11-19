@@ -1,0 +1,20 @@
+$kind: collection
+description: "Bộ Postman Collection kiểm thử toàn diện phân hệ Đặt hàng & Thanh toán (FR4) theo chuẩn 4 kỹ thuật Chương 4: EP & BVA, Bảng quyết định (Decision Table), Chuyển đổi trạng thái (State Transition), và Đoán lỗi (Error Guessing)."
+variables:
+  base_url: http://127.0.0.1:8000
+  username: khach_test
+  password: DoiMatKhauCuaBan@123
+  product_id: "1"
+  csrf_token: ""
+  st_order_cod_id: ""
+  st_order_qr_id: ""
+  st_cancel_qr_id: ""
+  st_order_mock_id: ""
+  st_order_mock_success_id: ""
+  dt_cod_order_id: ""
+  dt_qr_order_id: ""
+  dt_mock_order_id: ""
+  wb_order_cod_id: ""
+  wb_order_qr_id: ""
+  wb_order_mock_id: ""
+  order_id: ""
