@@ -535,3 +535,55 @@ class ContactMessageLengthValidationTests(TestCase):
         self.assertRedirects(good_response, self.url + '?contact_success=1')
         self.assertEqual(ContactMessage.objects.count(), 1)
         self.assertEqual(ContactMessage.objects.first().message, 'Nội dung hợp lệ')
+
+
+class SCRUM37NewsletterKeepsPageStateTests(TestCase):
+    """SCRUM-37: đăng ký nhận tin xong phải quay lại đúng trang, giữ từ khóa, danh mục, sắp xếp."""
+
+    def setUp(self):
+        cache.clear()
+        self.addCleanup(cache.clear)
+
+    def _post(self, next_url, email='filter_reset_test@example.com'):
+        return self.client.post(reverse('newsletter_subscribe'), {'email': email, 'next': next_url})
+
+    def _query(self, resp):
+        return parse_qs(urlparse(resp['Location']).query)
+
+    def test_giu_tu_khoa_danh_muc_va_sap_xep(self):
+        resp = self._post('/products/?q=cay&category=2&sort=price_asc')
+        loc = urlparse(resp['Location'])
+        self.assertEqual(loc.path, '/products/')
+        self.assertEqual(loc.fragment, 'newsletter')
+        q = self._query(resp)
+        self.assertEqual(q['q'], ['cay'])
+        self.assertEqual(q['category'], ['2'])
+        self.assertEqual(q['sort'], ['price_asc'])
+        self.assertEqual(q['newsletter'], ['pending'])
+
+    def test_tu_khoa_tieng_viet_va_khoang_trang_khong_bi_hong(self):
+        resp = self._post('/products/?q=c%C3%A2y+c%E1%BA%A3nh')
+        self.assertEqual(self._query(resp)['q'], ['cây cảnh'])
+
+    def test_khong_lap_tham_so_newsletter_cu(self):
+        resp = self._post('/products/?q=cay&newsletter=invalid')
+        q = self._query(resp)
+        self.assertEqual(q['newsletter'], ['pending'])
+        self.assertEqual(q['q'], ['cay'])
+
+    def test_email_sai_van_giu_bo_loc(self):
+        resp = self._post('/products/?category=2', email='khong-phai-email')
+        q = self._query(resp)
+        self.assertEqual(q['category'], ['2'])
+        self.assertEqual(q['newsletter'], ['invalid'])
+
+    def test_next_ra_ngoai_van_bi_chan(self):
+        resp = self._post('https://evil.example.com/?q=x')
+        loc = urlparse(resp['Location'])
+        self.assertEqual(loc.netloc, '')
+        self.assertEqual(loc.path, '/')
+        self.assertNotIn('q', self._query(resp))
+
+    def test_footer_gui_kem_query_string(self):
+        resp = self.client.get('/?q=cay&sort=price_asc')
+        self.assertContains(resp, 'name="next" value="/?q=cay&amp;sort=price_asc"')

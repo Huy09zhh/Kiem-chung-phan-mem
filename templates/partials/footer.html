@@ -49,7 +49,7 @@
 
                 <form class="footer-form" method="post" action="{% url 'newsletter_subscribe' %}">
                     {% csrf_token %}
-                    <input type="hidden" name="next" value="{{ request.path }}">
+                    <input type="hidden" name="next" value="{{ request.get_full_path }}">
                     <input type="email" name="email" placeholder="Nhập email" required>
                     <button type="submit">Gửi</button>
                 </form>
