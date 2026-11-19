@@ -40,15 +40,23 @@ class Command(BaseCommand):
         admin.set_password(ADMIN_PASSWORD)
         admin.save()
 
-        order, order_created = Order.objects.get_or_create(
-            full_name=SEED_NAME, phone=SEED_PHONE,
-            defaults={'user': admin, 'address': '1 Duong BVA', 'total_price': 100000},
-        )
-        Order.objects.get_or_create(
-            full_name='Nguyen Van BVA', phone='0987654321',
-            defaults={'user': admin, 'address': '2 Duong BVA', 'total_price': 50000,
-                      'payment_method': 'qr', 'status': 'paid'},
-        )
+        # Dùng filter().first() thay vì get_or_create: các bộ Postman cũng tạo đơn trùng tên/SĐT,
+        # get_or_create sẽ báo MultipleObjectsReturned khi có hơn 1 đơn khớp.
+        order = Order.objects.filter(full_name=SEED_NAME, phone=SEED_PHONE).order_by('pk').first()
+        order_created = order is None
+        if order_created:
+            order = Order.objects.create(
+                full_name=SEED_NAME, phone=SEED_PHONE,
+                user=admin, address='1 Duong BVA', total_price=100000,
+            )
+        # Test bảng quyết định cần ít nhất 1 đơn "Nguyen Van BVA" thanh toán QR, Đã thanh toán
+        if not Order.objects.filter(full_name='Nguyen Van BVA', phone='0987654321',
+                                    payment_method='qr', status='paid').exists():
+            Order.objects.create(
+                full_name='Nguyen Van BVA', phone='0987654321',
+                user=admin, address='2 Duong BVA', total_price=50000,
+                payment_method='qr', status='paid',
+            )
         self.stdout.write(self.style.SUCCESS(
             f'Admin: {ADMIN_USERNAME} / {ADMIN_PASSWORD}; đơn mẫu #{order.pk} '
             f'({"mới tạo" if order_created else "đã có"}), SĐT {SEED_PHONE}'))
