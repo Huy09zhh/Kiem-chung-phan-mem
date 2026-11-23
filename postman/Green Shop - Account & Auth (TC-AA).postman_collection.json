@@ -1,114 +1,27 @@
 {
   "info": {
-    "_postman_id": "577dcbf7-b2cf-4da2-8695-3f55b7065195",
+    "_postman_id": "58340651-07b8-41a7-a551-9b95741991c8",
     "name": "Green Shop - Account & Auth (TC-AA)",
-    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
-    "_exporter_id": "58973177"
+    "description": "58 test case TC-AA-001 → 058 thiết kế theo phân hoạch lớp tương đương (EP): mỗi request ghi lớp EP trong phần mô tả. Mỗi test tự tạo tài khoản và đặt trạng thái phiên bằng pre-request (biến aa_helpers). Nhóm 07 (đặt lại mật khẩu) cần máy chủ DEBUG, EMAIL_HOST_USER rỗng và Admin là superuser để đọc /dev/mailbox/.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "item": [
     {
       "name": "00. Setup",
       "item": [
         {
-          "name": "00.1 — POST Register Account B (for duplicate email test)",
-          "event": [
-            {
-              "listen": "prerequest",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "const aa = eval(pm.collectionVariables.get('aa_helpers'));   // hàm dùng chung, xem biến aa_helpers",
-                  "aa.guest('/accounts/register/');   // điều kiện: Guest + CSRF mới của /accounts/register/",
-                  "const id = Date.now();",
-                  "pm.collectionVariables.set('b_user', `aab_${id}`);",
-                  "pm.collectionVariables.set('b_email', `aab_${id}@example.test`);"
-                ]
-              }
-            },
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "pm.test('Đăng ký tài khoản B thành công', () => pm.response.to.have.status(302));",
-                  "pm.test('Về trang chủ', () => pm.expect(pm.response.headers.get('Location') || '').to.match(/\\/$/));"
-                ]
-              }
-            }
-          ],
-          "protocolProfileBehavior": {
-            "followRedirects": false
-          },
-          "request": {
-            "method": "POST",
-            "header": [],
-            "body": {
-              "mode": "urlencoded",
-              "urlencoded": [
-                {
-                  "key": "csrfmiddlewaretoken",
-                  "value": "{{csrf_token}}",
-                  "type": "text"
-                },
-                {
-                  "key": "username",
-                  "value": "{{b_user}}",
-                  "type": "text"
-                },
-                {
-                  "key": "email",
-                  "value": "{{b_email}}",
-                  "type": "text"
-                },
-                {
-                  "key": "password1",
-                  "value": "{{aa_password}}",
-                  "type": "text"
-                },
-                {
-                  "key": "password2",
-                  "value": "{{aa_password}}",
-                  "type": "text"
-                }
-              ]
-            },
-            "url": {
-              "raw": "{{base_url}}/accounts/register/",
-              "host": [
-                "{{base_url}}"
-              ],
-              "path": [
-                "accounts",
-                "register",
-                ""
-              ]
-            }
-          },
-          "response": []
-        }
-      ]
-    },
-    {
-      "name": "01. Registration",
-      "item": [
-        {
-          "name": "TC-AA-001 - GET Login Page",
+          "name": "00.1 — GET Login Page (server check)",
           "event": [
             {
               "listen": "test",
               "script": {
-                "exec": [
-                  "pm.test(\"Login page returns 200\", () => pm.response.to.have.status(200));\r",
-                  "\r",
-                  "const match = pm.response.text().match(\r",
-                  "  /name=[\"']csrfmiddlewaretoken[\"'][^>]*value=[\"']([^\"']+)[\"']/\r",
-                  ");\r",
-                  "pm.test(\"CSRF token exists\", () => pm.expect(match).to.not.be.null);\r",
-                  "if (match) pm.collectionVariables.set(\"csrf_token\", match[1]);"
-                ],
                 "type": "text/javascript",
-                "packages": {},
-                "requests": {}
+                "exec": [
+                  "pm.test('Server trả 200', () => pm.response.to.have.status(200));",
+                  "const m = pm.response.text().match(/name=[\"']csrfmiddlewaretoken[\"'][^>]*value=[\"']([^\"']+)[\"']/);",
+                  "pm.test('Có CSRF token', () => pm.expect(m).to.not.be.null);",
+                  "if (m) pm.collectionVariables.set('csrf_token', m[1]);"
+                ]
               }
             }
           ],
@@ -128,25 +41,81 @@
             }
           },
           "response": []
-        },
+        }
+      ]
+    },
+    {
+      "name": "01. Registration",
+      "item": [
         {
-          "name": "TC-AA-002 GET Register Page",
+          "name": "TC-AA-001 — GET Login Page as Guest",
           "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const aa = eval(pm.collectionVariables.get('aa_helpers'));   // hàm dùng chung, xem biến aa_helpers",
+                  "aa.guest(null);"
+                ]
+              }
+            },
             {
               "listen": "test",
               "script": {
-                "exec": [
-                  "pm.test(\"Registration page returns 200\", () => pm.response.to.have.status(200));\r",
-                  "\r",
-                  "const match = pm.response.text().match(\r",
-                  "  /name=[\"']csrfmiddlewaretoken[\"'][^>]*value=[\"']([^\"']+)[\"']/\r",
-                  ");\r",
-                  "pm.test(\"CSRF token exists\", () => pm.expect(match).to.not.be.null);\r",
-                  "if (match) pm.collectionVariables.set(\"csrf_token\", match[1]);"
-                ],
                 "type": "text/javascript",
-                "packages": {},
-                "requests": {}
+                "exec": [
+                  "const base = pm.variables.replaceIn('{{base_url}}');",
+                  "const loc = pm.response.headers.get('Location') || '';",
+                  "const hasSession = (cb) => pm.sendRequest({ url: base + '/accounts/password/change/', method: 'GET' }, (e, r) => cb(!e && r.text().indexOf('old_password') !== -1));",
+                  "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Trang đăng nhập có biểu mẫu', () => pm.expect(pm.response.text()).to.include('csrfmiddlewaretoken'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/accounts/login/",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "accounts",
+                "login",
+                ""
+              ]
+            },
+            "description": "Lớp EP: V – Guest mở trang đăng nhập."
+          },
+          "response": []
+        },
+        {
+          "name": "TC-AA-002 — GET Register Page as Guest",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const aa = eval(pm.collectionVariables.get('aa_helpers'));   // hàm dùng chung, xem biến aa_helpers",
+                  "aa.guest(null);"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const base = pm.variables.replaceIn('{{base_url}}');",
+                  "const loc = pm.response.headers.get('Location') || '';",
+                  "const hasSession = (cb) => pm.sendRequest({ url: base + '/accounts/password/change/', method: 'GET' }, (e, r) => cb(!e && r.text().indexOf('old_password') !== -1));",
+                  "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Trang đăng ký có biểu mẫu', () => pm.expect(pm.response.text()).to.include('csrfmiddlewaretoken'));"
+                ]
               }
             }
           ],
@@ -163,86 +132,48 @@
                 "register",
                 ""
               ]
-            }
+            },
+            "description": "Lớp EP: V – Guest mở trang đăng ký."
           },
           "response": []
         },
         {
-          "name": "TC-AA-003 POST Register New Account",
+          "name": "TC-AA-003 — POST Register with Valid Data",
           "event": [
-            {
-              "listen": "test",
-              "script": {
-                "exec": [
-                  "pm.test(\"Valid registration redirects\", () => {\r",
-                  "  pm.response.to.have.status(302);\r",
-                  "});\r",
-                  "pm.test(\"Redirects to home\", () => {\r",
-                  "  pm.expect(pm.response.headers.get(\"Location\") || \"\").to.match(/\\/$/);\r",
-                  "});"
-                ],
-                "type": "text/javascript",
-                "packages": {},
-                "requests": {}
-              }
-            },
             {
               "listen": "prerequest",
               "script": {
+                "type": "text/javascript",
                 "exec": [
                   "const aa = eval(pm.collectionVariables.get('aa_helpers'));   // hàm dùng chung, xem biến aa_helpers",
-                  "aa.guest('/accounts/register/');   // điều kiện: Guest + CSRF mới của /accounts/register/",
-                  "const id = Date.now();\r",
-                  "pm.collectionVariables.set(\"aa_username\", `aa_${id}`);\r",
-                  "pm.collectionVariables.set(\"aa_email\", `aa_${id}@example.test`);"
-                ],
+                  "const id = aa.uniq('ep');",
+                  "pm.collectionVariables.set('r_user', id);",
+                  "pm.collectionVariables.set('r_email', id + '@example.test');",
+                  "pm.collectionVariables.set('r_pw1', pm.variables.get('aa_password'));",
+                  "pm.collectionVariables.set('r_pw2', pm.variables.get('aa_password'));",
+                  "aa.guest('/accounts/register/');"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
                 "type": "text/javascript",
-                "packages": {},
-                "requests": {}
+                "exec": [
+                  "const base = pm.variables.replaceIn('{{base_url}}');",
+                  "const loc = pm.response.headers.get('Location') || '';",
+                  "const hasSession = (cb) => pm.sendRequest({ url: base + '/accounts/password/change/', method: 'GET' }, (e, r) => cb(!e && r.text().indexOf('old_password') !== -1));",
+                  "pm.test('HTTP 302', () => pm.response.to.have.status(302));",
+                  "pm.test('Location là /', () => pm.expect(loc).to.eql('/'));",
+                  "hasSession((s) => pm.test('Có phiên đăng nhập (đã tự đăng nhập)', () => pm.expect(s).to.be.true));",
+                  "pm.sendRequest({ url: base + '/accounts/profile/', method: 'GET' }, (e, r) => pm.test('Hồ sơ hiện đúng username', () => pm.expect(r.text()).to.include(pm.collectionVariables.get('r_user'))));"
+                ]
               }
             }
           ],
-          "protocolProfileBehavior": {
-            "followRedirects": false
-          },
           "request": {
             "method": "POST",
             "header": [],
-            "body": {
-              "mode": "urlencoded",
-              "urlencoded": [
-                {
-                  "key": "csrfmiddlewaretoken",
-                  "value": "{{csrf_token}}",
-                  "type": "text",
-                  "uuid": "e449d0e4-14c6-4ba8-bb18-c7f7989869ca"
-                },
-                {
-                  "key": "username",
-                  "value": "{{aa_username}}",
-                  "type": "text",
-                  "uuid": "589220a2-a665-4f33-b965-71984c0c2694"
-                },
-                {
-                  "key": "email",
-                  "value": "{{aa_email}}",
-                  "type": "text",
-                  "uuid": "0155d3af-558a-449f-a0b0-6352682fd0f3"
-                },
-                {
-                  "key": "password1",
-                  "value": "{{aa_password}}",
-                  "type": "text",
-                  "uuid": "ff8b9f6d-38a9-4267-8a08-050b46af7847"
-                },
-                {
-                  "key": "password2",
-                  "value": "{{aa_password}}",
-                  "type": "text",
-                  "uuid": "109a803f-79c5-4c8c-8811-9680aff42a6f"
-                }
-              ]
-            },
             "url": {
               "raw": "{{base_url}}/accounts/register/",
               "host": [
@@ -253,27 +184,68 @@
                 "register",
                 ""
               ]
+            },
+            "description": "Lớp EP: V – mọi lớp hợp lệ của đăng ký (V1–V6).",
+            "body": {
+              "mode": "urlencoded",
+              "urlencoded": [
+                {
+                  "key": "csrfmiddlewaretoken",
+                  "value": "{{csrf_token}}",
+                  "type": "text"
+                },
+                {
+                  "key": "username",
+                  "value": "{{r_user}}",
+                  "type": "text"
+                },
+                {
+                  "key": "email",
+                  "value": "{{r_email}}",
+                  "type": "text"
+                },
+                {
+                  "key": "password1",
+                  "value": "{{r_pw1}}",
+                  "type": "text"
+                },
+                {
+                  "key": "password2",
+                  "value": "{{r_pw2}}",
+                  "type": "text"
+                }
+              ]
             }
           },
-          "response": []
+          "response": [],
+          "protocolProfileBehavior": {
+            "followRedirects": false
+          }
         },
         {
-          "name": "TC-AA-004 View Profile After Registration",
+          "name": "TC-AA-004 — GET Profile after Registration",
           "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const aa = eval(pm.collectionVariables.get('aa_helpers'));   // hàm dùng chung, xem biến aa_helpers",
+                  "aa.newUser(null);"
+                ]
+              }
+            },
             {
               "listen": "test",
               "script": {
-                "exec": [
-                  "pm.test(\"Profile is accessible after registration\", () => {\r",
-                  "  pm.response.to.have.status(200);\r",
-                  "});\r",
-                  "pm.test(\"Registered username appears\", () => {\r",
-                  "  pm.expect(pm.response.text()).to.include(pm.collectionVariables.get(\"aa_username\"));\r",
-                  "});"
-                ],
                 "type": "text/javascript",
-                "packages": {},
-                "requests": {}
+                "exec": [
+                  "const base = pm.variables.replaceIn('{{base_url}}');",
+                  "const loc = pm.response.headers.get('Location') || '';",
+                  "const hasSession = (cb) => pm.sendRequest({ url: base + '/accounts/password/change/', method: 'GET' }, (e, r) => cb(!e && r.text().indexOf('old_password') !== -1));",
+                  "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Hồ sơ hiện đúng username', () => pm.expect(pm.response.text()).to.include(pm.collectionVariables.get('ep_user')));"
+                ]
               }
             }
           ],
@@ -290,37 +262,41 @@
                 "profile",
                 ""
               ]
-            }
+            },
+            "description": "Lớp EP: V – tài khoản vừa đăng ký xem được hồ sơ (kiểm tra tiếp sau TC-AA-003)."
           },
-          "response": []
+          "response": [],
+          "protocolProfileBehavior": {
+            "followRedirects": false
+          }
         },
         {
           "name": "TC-AA-005 — GET Register Page while Authenticated",
           "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "pm.test('Trả 302', () => pm.response.to.have.status(302));",
-                  "pm.test('Về trang chủ', () => pm.expect(pm.response.headers.get('Location') || '').to.match(/\\/$/));"
-                ]
-              }
-            },
             {
               "listen": "prerequest",
               "script": {
                 "type": "text/javascript",
                 "exec": [
                   "const aa = eval(pm.collectionVariables.get('aa_helpers'));   // hàm dùng chung, xem biến aa_helpers",
-                  "aa.user();   // điều kiện: đăng nhập tài khoản A"
+                  "aa.newUser(null);"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const base = pm.variables.replaceIn('{{base_url}}');",
+                  "const loc = pm.response.headers.get('Location') || '';",
+                  "const hasSession = (cb) => pm.sendRequest({ url: base + '/accounts/password/change/', method: 'GET' }, (e, r) => cb(!e && r.text().indexOf('old_password') !== -1));",
+                  "pm.test('HTTP 302', () => pm.response.to.have.status(302));",
+                  "pm.test('Location là /', () => pm.expect(loc).to.eql('/'));"
                 ]
               }
             }
           ],
-          "protocolProfileBehavior": {
-            "followRedirects": false
-          },
           "request": {
             "method": "GET",
             "header": [],
@@ -334,9 +310,13 @@
                 "register",
                 ""
               ]
-            }
+            },
+            "description": "Lớp EP: X – đã đăng nhập mở trang đăng ký."
           },
-          "response": []
+          "response": [],
+          "protocolProfileBehavior": {
+            "followRedirects": false
+          }
         },
         {
           "name": "TC-AA-006 — POST Register with Duplicate Username",
@@ -344,67 +324,36 @@
             {
               "listen": "prerequest",
               "script": {
+                "type": "text/javascript",
                 "exec": [
                   "const aa = eval(pm.collectionVariables.get('aa_helpers'));   // hàm dùng chung, xem biến aa_helpers",
-                  "aa.guest('/accounts/register/');   // điều kiện: Guest + CSRF mới của /accounts/register/",
-                  "const id = Date.now();\r",
-                  "pm.collectionVariables.set(\"case_email\", `duplicate_name_${id}@example.test`);"
-                ],
-                "type": "text/javascript",
-                "packages": {},
-                "requests": {}
+                  "const id = aa.uniq('ep');",
+                  "pm.collectionVariables.set('r_user', id);",
+                  "pm.collectionVariables.set('r_email', id + '@example.test');",
+                  "pm.collectionVariables.set('r_pw1', pm.variables.get('aa_password'));",
+                  "pm.collectionVariables.set('r_pw2', pm.variables.get('aa_password'));",
+                  "aa.other(function () { pm.collectionVariables.set('r_user', pm.collectionVariables.get('ep_b_user')); aa.guest('/accounts/register/'); });"
+                ]
               }
             },
             {
               "listen": "test",
               "script": {
-                "exec": [
-                  "pm.test(\"Duplicate username stays on registration form\", () => {\r",
-                  "  pm.response.to.have.status(200);\r",
-                  "});\r",
-                  "pm.test(\"Username field is present\", () => {\r",
-                  "  pm.expect(pm.response.text()).to.include('name=\"username\"');\r",
-                  "});"
-                ],
                 "type": "text/javascript",
-                "packages": {},
-                "requests": {}
+                "exec": [
+                  "const base = pm.variables.replaceIn('{{base_url}}');",
+                  "const loc = pm.response.headers.get('Location') || '';",
+                  "const hasSession = (cb) => pm.sendRequest({ url: base + '/accounts/password/change/', method: 'GET' }, (e, r) => cb(!e && r.text().indexOf('old_password') !== -1));",
+                  "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Hiện thông báo lỗi', () => pm.expect(pm.response.text()).to.match(/errorlist|auth-error/));",
+                  "hasSession((s) => pm.test('Chưa có phiên đăng nhập', () => pm.expect(s).to.be.false));"
+                ]
               }
             }
           ],
           "request": {
             "method": "POST",
             "header": [],
-            "body": {
-              "mode": "urlencoded",
-              "urlencoded": [
-                {
-                  "key": "csrfmiddlewaretoken",
-                  "value": "{{csrf_token}}",
-                  "type": "text"
-                },
-                {
-                  "key": "username",
-                  "value": "{{aa_username}}",
-                  "type": "text"
-                },
-                {
-                  "key": "email",
-                  "value": "{{case_email}}",
-                  "type": "text"
-                },
-                {
-                  "key": "password1",
-                  "value": "{{aa_password}}",
-                  "type": "text"
-                },
-                {
-                  "key": "password2",
-                  "value": "{{aa_password}}",
-                  "type": "text"
-                }
-              ]
-            },
             "url": {
               "raw": "{{base_url}}/accounts/register/",
               "host": [
@@ -415,9 +364,43 @@
                 "register",
                 ""
               ]
+            },
+            "description": "Lớp EP: X – username đã tồn tại.",
+            "body": {
+              "mode": "urlencoded",
+              "urlencoded": [
+                {
+                  "key": "csrfmiddlewaretoken",
+                  "value": "{{csrf_token}}",
+                  "type": "text"
+                },
+                {
+                  "key": "username",
+                  "value": "{{r_user}}",
+                  "type": "text"
+                },
+                {
+                  "key": "email",
+                  "value": "{{r_email}}",
+                  "type": "text"
+                },
+                {
+                  "key": "password1",
+                  "value": "{{r_pw1}}",
+                  "type": "text"
+                },
+                {
+                  "key": "password2",
+                  "value": "{{r_pw2}}",
+                  "type": "text"
+                }
+              ]
             }
           },
-          "response": []
+          "response": [],
+          "protocolProfileBehavior": {
+            "followRedirects": false
+          }
         },
         {
           "name": "TC-AA-007 — POST Register with Duplicate Email",
@@ -425,67 +408,36 @@
             {
               "listen": "prerequest",
               "script": {
+                "type": "text/javascript",
                 "exec": [
                   "const aa = eval(pm.collectionVariables.get('aa_helpers'));   // hàm dùng chung, xem biến aa_helpers",
-                  "aa.guest('/accounts/register/');   // điều kiện: Guest + CSRF mới của /accounts/register/",
-                  "const id = Date.now();\r",
-                  "pm.collectionVariables.set(\"case_username\", `duplicate_email_${id}`);"
-                ],
-                "type": "text/javascript",
-                "packages": {},
-                "requests": {}
+                  "const id = aa.uniq('ep');",
+                  "pm.collectionVariables.set('r_user', id);",
+                  "pm.collectionVariables.set('r_email', id + '@example.test');",
+                  "pm.collectionVariables.set('r_pw1', pm.variables.get('aa_password'));",
+                  "pm.collectionVariables.set('r_pw2', pm.variables.get('aa_password'));",
+                  "aa.other(function () { pm.collectionVariables.set('r_email', pm.collectionVariables.get('ep_b_email')); aa.guest('/accounts/register/'); });"
+                ]
               }
             },
             {
               "listen": "test",
               "script": {
-                "exec": [
-                  "pm.test(\"Duplicate email stays on registration form\", () => {\r",
-                  "  pm.response.to.have.status(200);\r",
-                  "});\r",
-                  "pm.test(\"Duplicate email error appears\", () => {\r",
-                  "  pm.expect(pm.response.text()).to.include(\"Email này đã được sử dụng\");\r",
-                  "});"
-                ],
                 "type": "text/javascript",
-                "packages": {},
-                "requests": {}
+                "exec": [
+                  "const base = pm.variables.replaceIn('{{base_url}}');",
+                  "const loc = pm.response.headers.get('Location') || '';",
+                  "const hasSession = (cb) => pm.sendRequest({ url: base + '/accounts/password/change/', method: 'GET' }, (e, r) => cb(!e && r.text().indexOf('old_password') !== -1));",
+                  "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Hiện thông báo lỗi', () => pm.expect(pm.response.text()).to.match(/errorlist|auth-error/));",
+                  "hasSession((s) => pm.test('Chưa có phiên đăng nhập', () => pm.expect(s).to.be.false));"
+                ]
               }
             }
           ],
           "request": {
             "method": "POST",
             "header": [],
-            "body": {
-              "mode": "urlencoded",
-              "urlencoded": [
-                {
-                  "key": "csrfmiddlewaretoken",
-                  "value": "{{csrf_token}}",
-                  "type": "text"
-                },
-                {
-                  "key": "username",
-                  "value": "{{case_username}}",
-                  "type": "text"
-                },
-                {
-                  "key": "email",
-                  "value": "{{aa_email}}",
-                  "type": "text"
-                },
-                {
-                  "key": "password1",
-                  "value": "{{aa_password}}",
-                  "type": "text"
-                },
-                {
-                  "key": "password2",
-                  "value": "{{aa_password}}",
-                  "type": "text"
-                }
-              ]
-            },
             "url": {
               "raw": "{{base_url}}/accounts/register/",
               "host": [
@@ -496,9 +448,43 @@
                 "register",
                 ""
               ]
+            },
+            "description": "Lớp EP: X – email đã được dùng.",
+            "body": {
+              "mode": "urlencoded",
+              "urlencoded": [
+                {
+                  "key": "csrfmiddlewaretoken",
+                  "value": "{{csrf_token}}",
+                  "type": "text"
+                },
+                {
+                  "key": "username",
+                  "value": "{{r_user}}",
+                  "type": "text"
+                },
+                {
+                  "key": "email",
+                  "value": "{{r_email}}",
+                  "type": "text"
+                },
+                {
+                  "key": "password1",
+                  "value": "{{r_pw1}}",
+                  "type": "text"
+                },
+                {
+                  "key": "password2",
+                  "value": "{{r_pw2}}",
+                  "type": "text"
+                }
+              ]
             }
           },
-          "response": []
+          "response": [],
+          "protocolProfileBehavior": {
+            "followRedirects": false
+          }
         },
         {
           "name": "TC-AA-008 — POST Register with Password Mismatch",
@@ -506,68 +492,37 @@
             {
               "listen": "prerequest",
               "script": {
+                "type": "text/javascript",
                 "exec": [
                   "const aa = eval(pm.collectionVariables.get('aa_helpers'));   // hàm dùng chung, xem biến aa_helpers",
-                  "aa.guest('/accounts/register/');   // điều kiện: Guest + CSRF mới của /accounts/register/",
-                  "const id = Date.now();\r",
-                  "pm.collectionVariables.set(\"case_username\", `mismatch_${id}`);\r",
-                  "pm.collectionVariables.set(\"case_email\", `mismatch_${id}@example.test`);"
-                ],
-                "type": "text/javascript",
-                "packages": {},
-                "requests": {}
+                  "const id = aa.uniq('ep');",
+                  "pm.collectionVariables.set('r_user', id);",
+                  "pm.collectionVariables.set('r_email', id + '@example.test');",
+                  "pm.collectionVariables.set('r_pw1', pm.variables.get('aa_password'));",
+                  "pm.collectionVariables.set('r_pw2', pm.variables.get('aa_password'));",
+                  "pm.collectionVariables.set('r_pw2', pm.variables.get('aa_password') + 'X');",
+                  "aa.guest('/accounts/register/');"
+                ]
               }
             },
             {
               "listen": "test",
               "script": {
-                "exec": [
-                  "pm.test(\"Password mismatch stays on registration form\", () => {\r",
-                  "  pm.response.to.have.status(200);\r",
-                  "});\r",
-                  "pm.test(\"Confirmation field is present\", () => {\r",
-                  "  pm.expect(pm.response.text()).to.include('name=\"password2\"');\r",
-                  "});"
-                ],
                 "type": "text/javascript",
-                "packages": {},
-                "requests": {}
+                "exec": [
+                  "const base = pm.variables.replaceIn('{{base_url}}');",
+                  "const loc = pm.response.headers.get('Location') || '';",
+                  "const hasSession = (cb) => pm.sendRequest({ url: base + '/accounts/password/change/', method: 'GET' }, (e, r) => cb(!e && r.text().indexOf('old_password') !== -1));",
+                  "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Hiện thông báo lỗi', () => pm.expect(pm.response.text()).to.match(/errorlist|auth-error/));",
+                  "hasSession((s) => pm.test('Chưa có phiên đăng nhập', () => pm.expect(s).to.be.false));"
+                ]
               }
             }
           ],
           "request": {
             "method": "POST",
             "header": [],
-            "body": {
-              "mode": "urlencoded",
-              "urlencoded": [
-                {
-                  "key": "csrfmiddlewaretoken",
-                  "value": "{{csrf_token}}",
-                  "type": "text"
-                },
-                {
-                  "key": "username",
-                  "value": "{{case_username}}",
-                  "type": "text"
-                },
-                {
-                  "key": "email",
-                  "value": "{{case_email}}",
-                  "type": "text"
-                },
-                {
-                  "key": "password1",
-                  "value": "{{aa_password}}",
-                  "type": "text"
-                },
-                {
-                  "key": "password2",
-                  "value": "DifferentPassword@2026",
-                  "type": "text"
-                }
-              ]
-            },
             "url": {
               "raw": "{{base_url}}/accounts/register/",
               "host": [
@@ -578,74 +533,82 @@
                 "register",
                 ""
               ]
+            },
+            "description": "Lớp EP: X – hai ô mật khẩu không khớp.",
+            "body": {
+              "mode": "urlencoded",
+              "urlencoded": [
+                {
+                  "key": "csrfmiddlewaretoken",
+                  "value": "{{csrf_token}}",
+                  "type": "text"
+                },
+                {
+                  "key": "username",
+                  "value": "{{r_user}}",
+                  "type": "text"
+                },
+                {
+                  "key": "email",
+                  "value": "{{r_email}}",
+                  "type": "text"
+                },
+                {
+                  "key": "password1",
+                  "value": "{{r_pw1}}",
+                  "type": "text"
+                },
+                {
+                  "key": "password2",
+                  "value": "{{r_pw2}}",
+                  "type": "text"
+                }
+              ]
             }
           },
-          "response": []
+          "response": [],
+          "protocolProfileBehavior": {
+            "followRedirects": false
+          }
         },
         {
-          "name": "TC-AA-009 — POST Register with Weak Password",
+          "name": "TC-AA-009 — POST Register with Common Password",
           "event": [
             {
               "listen": "prerequest",
               "script": {
+                "type": "text/javascript",
                 "exec": [
                   "const aa = eval(pm.collectionVariables.get('aa_helpers'));   // hàm dùng chung, xem biến aa_helpers",
-                  "aa.guest('/accounts/register/');   // điều kiện: Guest + CSRF mới của /accounts/register/",
-                  "const id = Date.now();\r",
-                  "pm.collectionVariables.set(\"case_username\", `weak_${id}`);\r",
-                  "pm.collectionVariables.set(\"case_email\", `weak_${id}@example.test`);"
-                ],
-                "type": "text/javascript",
-                "packages": {},
-                "requests": {}
+                  "const id = aa.uniq('ep');",
+                  "pm.collectionVariables.set('r_user', id);",
+                  "pm.collectionVariables.set('r_email', id + '@example.test');",
+                  "pm.collectionVariables.set('r_pw1', pm.variables.get('aa_password'));",
+                  "pm.collectionVariables.set('r_pw2', pm.variables.get('aa_password'));",
+                  "pm.collectionVariables.set('r_pw1', 'password');",
+                  "pm.collectionVariables.set('r_pw2', 'password');",
+                  "aa.guest('/accounts/register/');"
+                ]
               }
             },
             {
               "listen": "test",
               "script": {
-                "exec": [
-                  "pm.test(\"Weak password stays on registration form\", () => { pm.response.to.have.status(200); });\r",
-                  "pm.test(\"Password validation error appears\", () => { pm.expect(pm.response.text()).to.match(/mật khẩu|password/i); });"
-                ],
                 "type": "text/javascript",
-                "packages": {},
-                "requests": {}
+                "exec": [
+                  "const base = pm.variables.replaceIn('{{base_url}}');",
+                  "const loc = pm.response.headers.get('Location') || '';",
+                  "const hasSession = (cb) => pm.sendRequest({ url: base + '/accounts/password/change/', method: 'GET' }, (e, r) => cb(!e && r.text().indexOf('old_password') !== -1));",
+                  "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Hiện thông báo lỗi', () => pm.expect(pm.response.text()).to.match(/errorlist|auth-error/));",
+                  "hasSession((s) => pm.test('Chưa có phiên đăng nhập', () => pm.expect(s).to.be.false));"
+                ]
               }
             }
           ],
           "request": {
             "method": "POST",
             "header": [],
-            "body": {
-              "mode": "urlencoded",
-              "urlencoded": [
-                {
-                  "key": "csrfmiddlewaretoken",
-                  "value": "{{csrf_token}}",
-                  "type": "text"
-                },
-                {
-                  "key": "username",
-                  "value": "{{case_username}}",
-                  "type": "text"
-                },
-                {
-                  "key": "email",
-                  "value": "{{case_email}}",
-                  "type": "text"
-                },
-                {
-                  "key": "password1",
-                  "value": "123",
-                  "type": "text"
-                },
-                {
-                  "key": "password2",
-                  "value": "123",
-                  "type": "text"
-                }
-              ]
-            },
             "url": {
               "raw": "{{base_url}}/accounts/register/",
               "host": [
@@ -656,73 +619,81 @@
                 "register",
                 ""
               ]
+            },
+            "description": "Lớp EP: X – mật khẩu quá phổ biến.",
+            "body": {
+              "mode": "urlencoded",
+              "urlencoded": [
+                {
+                  "key": "csrfmiddlewaretoken",
+                  "value": "{{csrf_token}}",
+                  "type": "text"
+                },
+                {
+                  "key": "username",
+                  "value": "{{r_user}}",
+                  "type": "text"
+                },
+                {
+                  "key": "email",
+                  "value": "{{r_email}}",
+                  "type": "text"
+                },
+                {
+                  "key": "password1",
+                  "value": "{{r_pw1}}",
+                  "type": "text"
+                },
+                {
+                  "key": "password2",
+                  "value": "{{r_pw2}}",
+                  "type": "text"
+                }
+              ]
             }
           },
-          "response": []
+          "response": [],
+          "protocolProfileBehavior": {
+            "followRedirects": false
+          }
         },
         {
-          "name": "TC-AA-010 — POST Register with Invalid Email",
+          "name": "TC-AA-010 — POST Register with Invalid Email Format",
           "event": [
             {
               "listen": "prerequest",
               "script": {
+                "type": "text/javascript",
                 "exec": [
                   "const aa = eval(pm.collectionVariables.get('aa_helpers'));   // hàm dùng chung, xem biến aa_helpers",
-                  "aa.guest('/accounts/register/');   // điều kiện: Guest + CSRF mới của /accounts/register/",
-                  "const id = Date.now();\r",
-                  "pm.collectionVariables.set(\"case_username\", `invalid_email_${id}`);"
-                ],
-                "type": "text/javascript",
-                "packages": {},
-                "requests": {}
+                  "const id = aa.uniq('ep');",
+                  "pm.collectionVariables.set('r_user', id);",
+                  "pm.collectionVariables.set('r_email', id + '@example.test');",
+                  "pm.collectionVariables.set('r_pw1', pm.variables.get('aa_password'));",
+                  "pm.collectionVariables.set('r_pw2', pm.variables.get('aa_password'));",
+                  "pm.collectionVariables.set('r_email', 'email-sai-dinh-dang');",
+                  "aa.guest('/accounts/register/');"
+                ]
               }
             },
             {
               "listen": "test",
               "script": {
-                "exec": [
-                  "pm.test(\"Invalid email stays on registration form\", () => { pm.response.to.have.status(200); });\r",
-                  "pm.test(\"Email validation error appears\", () => { pm.expect(pm.response.text()).to.include(\"Enter a valid email address.\"); });"
-                ],
                 "type": "text/javascript",
-                "packages": {},
-                "requests": {}
+                "exec": [
+                  "const base = pm.variables.replaceIn('{{base_url}}');",
+                  "const loc = pm.response.headers.get('Location') || '';",
+                  "const hasSession = (cb) => pm.sendRequest({ url: base + '/accounts/password/change/', method: 'GET' }, (e, r) => cb(!e && r.text().indexOf('old_password') !== -1));",
+                  "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Hiện thông báo lỗi', () => pm.expect(pm.response.text()).to.match(/errorlist|auth-error/));",
+                  "hasSession((s) => pm.test('Chưa có phiên đăng nhập', () => pm.expect(s).to.be.false));"
+                ]
               }
             }
           ],
           "request": {
             "method": "POST",
             "header": [],
-            "body": {
-              "mode": "urlencoded",
-              "urlencoded": [
-                {
-                  "key": "csrfmiddlewaretoken",
-                  "value": "{{csrf_token}}",
-                  "type": "text"
-                },
-                {
-                  "key": "username",
-                  "value": "{{case_username}}",
-                  "type": "text"
-                },
-                {
-                  "key": "email",
-                  "value": "not-an-email",
-                  "type": "text"
-                },
-                {
-                  "key": "password1",
-                  "value": "{{aa_password}}",
-                  "type": "text"
-                },
-                {
-                  "key": "password2",
-                  "value": "{{aa_password}}",
-                  "type": "text"
-                }
-              ]
-            },
             "url": {
               "raw": "{{base_url}}/accounts/register/",
               "host": [
@@ -733,9 +704,43 @@
                 "register",
                 ""
               ]
+            },
+            "description": "Lớp EP: X – email sai định dạng.",
+            "body": {
+              "mode": "urlencoded",
+              "urlencoded": [
+                {
+                  "key": "csrfmiddlewaretoken",
+                  "value": "{{csrf_token}}",
+                  "type": "text"
+                },
+                {
+                  "key": "username",
+                  "value": "{{r_user}}",
+                  "type": "text"
+                },
+                {
+                  "key": "email",
+                  "value": "{{r_email}}",
+                  "type": "text"
+                },
+                {
+                  "key": "password1",
+                  "value": "{{r_pw1}}",
+                  "type": "text"
+                },
+                {
+                  "key": "password2",
+                  "value": "{{r_pw2}}",
+                  "type": "text"
+                }
+              ]
             }
           },
-          "response": []
+          "response": [],
+          "protocolProfileBehavior": {
+            "followRedirects": false
+          }
         },
         {
           "name": "TC-AA-011 — POST Register without CSRF Token",
@@ -743,59 +748,35 @@
             {
               "listen": "prerequest",
               "script": {
+                "type": "text/javascript",
                 "exec": [
                   "const aa = eval(pm.collectionVariables.get('aa_helpers'));   // hàm dùng chung, xem biến aa_helpers",
-                  "aa.guest();   // điều kiện: Guest",
-                  "const id = Date.now();\r",
-                  "pm.collectionVariables.set('case_username', 'aa_csrf_' + id);\r",
-                  "pm.collectionVariables.set('case_email', 'aa_csrf_' + id + '@example.test');"
-                ],
-                "type": "text/javascript",
-                "packages": {},
-                "requests": {}
+                  "const id = aa.uniq('ep');",
+                  "pm.collectionVariables.set('r_user', id);",
+                  "pm.collectionVariables.set('r_email', id + '@example.test');",
+                  "pm.collectionVariables.set('r_pw1', pm.variables.get('aa_password'));",
+                  "pm.collectionVariables.set('r_pw2', pm.variables.get('aa_password'));",
+                  "aa.guest('/accounts/register/');"
+                ]
               }
             },
             {
               "listen": "test",
               "script": {
-                "exec": [
-                  "pm.test(\"Registration without CSRF is forbidden\", () => { pm.response.to.have.status(403); });\r",
-                  "pm.test(\"CSRF rejection is reported\", () => { pm.expect(pm.response.text()).to.match(/CSRF/i); });"
-                ],
                 "type": "text/javascript",
-                "packages": {},
-                "requests": {}
+                "exec": [
+                  "const base = pm.variables.replaceIn('{{base_url}}');",
+                  "const loc = pm.response.headers.get('Location') || '';",
+                  "const hasSession = (cb) => pm.sendRequest({ url: base + '/accounts/password/change/', method: 'GET' }, (e, r) => cb(!e && r.text().indexOf('old_password') !== -1));",
+                  "pm.test('HTTP 403', () => pm.response.to.have.status(403));",
+                  "hasSession((s) => pm.test('Chưa có phiên đăng nhập', () => pm.expect(s).to.be.false));"
+                ]
               }
             }
           ],
           "request": {
             "method": "POST",
             "header": [],
-            "body": {
-              "mode": "urlencoded",
-              "urlencoded": [
-                {
-                  "key": "username",
-                  "value": "{{case_username}}",
-                  "type": "text"
-                },
-                {
-                  "key": "email",
-                  "value": "{{case_email}}",
-                  "type": "text"
-                },
-                {
-                  "key": "password1",
-                  "value": "{{aa_password}}",
-                  "type": "text"
-                },
-                {
-                  "key": "password2",
-                  "value": "{{aa_password}}",
-                  "type": "text"
-                }
-              ]
-            },
             "url": {
               "raw": "{{base_url}}/accounts/register/",
               "host": [
@@ -806,9 +787,38 @@
                 "register",
                 ""
               ]
+            },
+            "description": "Lớp EP: X – thiếu CSRF token.",
+            "body": {
+              "mode": "urlencoded",
+              "urlencoded": [
+                {
+                  "key": "username",
+                  "value": "{{r_user}}",
+                  "type": "text"
+                },
+                {
+                  "key": "email",
+                  "value": "{{r_email}}",
+                  "type": "text"
+                },
+                {
+                  "key": "password1",
+                  "value": "{{r_pw1}}",
+                  "type": "text"
+                },
+                {
+                  "key": "password2",
+                  "value": "{{r_pw2}}",
+                  "type": "text"
+                }
+              ]
             }
           },
-          "response": []
+          "response": [],
+          "protocolProfileBehavior": {
+            "followRedirects": false
+          }
         },
         {
           "name": "TC-AA-012 — POST Register with is_staff and is_superuser",
@@ -819,10 +829,12 @@
                 "type": "text/javascript",
                 "exec": [
                   "const aa = eval(pm.collectionVariables.get('aa_helpers'));   // hàm dùng chung, xem biến aa_helpers",
-                  "aa.guest('/accounts/register/');   // điều kiện: Guest + CSRF mới của /accounts/register/",
-                  "const id = Date.now();",
-                  "pm.collectionVariables.set('case_username', `aas_${id}`);",
-                  "pm.collectionVariables.set('case_email', `aas_${id}@example.test`);"
+                  "const id = aa.uniq('ep');",
+                  "pm.collectionVariables.set('r_user', id);",
+                  "pm.collectionVariables.set('r_email', id + '@example.test');",
+                  "pm.collectionVariables.set('r_pw1', pm.variables.get('aa_password'));",
+                  "pm.collectionVariables.set('r_pw2', pm.variables.get('aa_password'));",
+                  "aa.guest('/accounts/register/');"
                 ]
               }
             },
@@ -831,15 +843,16 @@
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "pm.test('Trả 302', () => pm.response.to.have.status(302));",
-                  "pm.test('Đăng ký thành công về /', () => pm.expect(pm.response.headers.get('Location') || '').to.match(/\\/$/));"
+                  "const base = pm.variables.replaceIn('{{base_url}}');",
+                  "const loc = pm.response.headers.get('Location') || '';",
+                  "const hasSession = (cb) => pm.sendRequest({ url: base + '/accounts/password/change/', method: 'GET' }, (e, r) => cb(!e && r.text().indexOf('old_password') !== -1));",
+                  "pm.test('HTTP 302', () => pm.response.to.have.status(302));",
+                  "pm.test('Location là /', () => pm.expect(loc).to.eql('/'));",
+                  "hasSession((s) => pm.test('Tài khoản được tạo và tự đăng nhập', () => pm.expect(s).to.be.true));"
                 ]
               }
             }
           ],
-          "protocolProfileBehavior": {
-            "followRedirects": false
-          },
           "request": {
             "method": "POST",
             "header": [],
@@ -854,6 +867,7 @@
                 ""
               ]
             },
+            "description": "Lớp EP: X – gửi kèm is_staff, is_superuser.",
             "body": {
               "mode": "urlencoded",
               "urlencoded": [
@@ -864,22 +878,22 @@
                 },
                 {
                   "key": "username",
-                  "value": "{{case_username}}",
+                  "value": "{{r_user}}",
                   "type": "text"
                 },
                 {
                   "key": "email",
-                  "value": "{{case_email}}",
+                  "value": "{{r_email}}",
                   "type": "text"
                 },
                 {
                   "key": "password1",
-                  "value": "{{aa_password}}",
+                  "value": "{{r_pw1}}",
                   "type": "text"
                 },
                 {
                   "key": "password2",
-                  "value": "{{aa_password}}",
+                  "value": "{{r_pw2}}",
                   "type": "text"
                 },
                 {
@@ -895,25 +909,38 @@
               ]
             }
           },
-          "response": []
+          "response": [],
+          "protocolProfileBehavior": {
+            "followRedirects": false
+          }
         },
         {
           "name": "TC-AA-013 — GET Admin Dashboard as Self-registered Account",
           "event": [
             {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const aa = eval(pm.collectionVariables.get('aa_helpers'));   // hàm dùng chung, xem biến aa_helpers",
+                  "aa.guest('/accounts/register/', function () { var id = aa.uniq('ep'), pw = pm.variables.get('aa_password'); aa.post('/accounts/register/', { csrfmiddlewaretoken: pm.collectionVariables.get('csrf_token'), username: id, email: id + '@example.test', password1: pw, password2: pw, is_staff: 'on', is_superuser: 'on' }, function () {}); });"
+                ]
+              }
+            },
+            {
               "listen": "test",
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "pm.test('Trả 302', () => pm.response.to.have.status(302));",
-                  "pm.test('Bị chặn, về trang chủ', () => pm.expect(pm.response.headers.get('Location') || '').to.match(/\\/$/));"
+                  "const base = pm.variables.replaceIn('{{base_url}}');",
+                  "const loc = pm.response.headers.get('Location') || '';",
+                  "const hasSession = (cb) => pm.sendRequest({ url: base + '/accounts/password/change/', method: 'GET' }, (e, r) => cb(!e && r.text().indexOf('old_password') !== -1));",
+                  "pm.test('HTTP 302', () => pm.response.to.have.status(302));",
+                  "pm.test('Location là /', () => pm.expect(loc).to.eql('/'));"
                 ]
               }
             }
           ],
-          "protocolProfileBehavior": {
-            "followRedirects": false
-          },
           "request": {
             "method": "GET",
             "header": [],
@@ -927,9 +954,13 @@
                 "dashboard",
                 ""
               ]
-            }
+            },
+            "description": "Lớp EP: X – tài khoản tự đăng ký kèm quyền vào trang quản trị bị chặn."
           },
-          "response": []
+          "response": [],
+          "protocolProfileBehavior": {
+            "followRedirects": false
+          }
         }
       ]
     },
@@ -940,54 +971,33 @@
           "name": "TC-AA-014 — POST Login with Wrong Password",
           "event": [
             {
-              "listen": "test",
-              "script": {
-                "exec": [
-                  "pm.test(\"Wrong password does not authenticate\", () => { pm.response.to.have.status(200); });\r",
-                  "pm.test(\"Login form remains visible\", () => { pm.expect(pm.response.text()).to.include(\"<title>Đăng nhập</title>\"); });"
-                ],
-                "type": "text/javascript",
-                "packages": {},
-                "requests": {}
-              }
-            },
-            {
               "listen": "prerequest",
               "script": {
                 "type": "text/javascript",
                 "exec": [
                   "const aa = eval(pm.collectionVariables.get('aa_helpers'));   // hàm dùng chung, xem biến aa_helpers",
-                  "aa.guest('/accounts/login/');   // điều kiện: Guest + CSRF mới của /accounts/login/"
+                  "aa.newUserGuest('/accounts/login/', function () { pm.collectionVariables.set('l_user', pm.collectionVariables.get('ep_user')); pm.collectionVariables.set('l_pw', pm.variables.get('aa_password')); pm.collectionVariables.set('l_next', ''); pm.collectionVariables.set('l_pw', 'Sai#Mat#Khau1'); });"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const base = pm.variables.replaceIn('{{base_url}}');",
+                  "const loc = pm.response.headers.get('Location') || '';",
+                  "const hasSession = (cb) => pm.sendRequest({ url: base + '/accounts/password/change/', method: 'GET' }, (e, r) => cb(!e && r.text().indexOf('old_password') !== -1));",
+                  "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Hiện thông báo lỗi', () => pm.expect(pm.response.text()).to.match(/errorlist|auth-error/));",
+                  "hasSession((s) => pm.test('Chưa có phiên đăng nhập', () => pm.expect(s).to.be.false));"
                 ]
               }
             }
           ],
-          "protocolProfileBehavior": {
-            "followRedirects": false
-          },
           "request": {
             "method": "POST",
             "header": [],
-            "body": {
-              "mode": "urlencoded",
-              "urlencoded": [
-                {
-                  "key": "csrfmiddlewaretoken",
-                  "value": "{{csrf_token}}",
-                  "type": "text"
-                },
-                {
-                  "key": "username",
-                  "value": "{{aa_username}}",
-                  "type": "text"
-                },
-                {
-                  "key": "password",
-                  "value": "WrongPassword@2026",
-                  "type": "text"
-                }
-              ]
-            },
             "url": {
               "raw": "{{base_url}}/accounts/login/",
               "host": [
@@ -998,62 +1008,67 @@
                 "login",
                 ""
               ]
+            },
+            "description": "Lớp EP: X – sai mật khẩu.",
+            "body": {
+              "mode": "urlencoded",
+              "urlencoded": [
+                {
+                  "key": "csrfmiddlewaretoken",
+                  "value": "{{csrf_token}}",
+                  "type": "text"
+                },
+                {
+                  "key": "username",
+                  "value": "{{l_user}}",
+                  "type": "text"
+                },
+                {
+                  "key": "password",
+                  "value": "{{l_pw}}",
+                  "type": "text"
+                }
+              ]
             }
           },
-          "response": []
+          "response": [],
+          "protocolProfileBehavior": {
+            "followRedirects": false
+          }
         },
         {
           "name": "TC-AA-015 — POST Login with Unknown Username",
           "event": [
             {
-              "listen": "test",
-              "script": {
-                "exec": [
-                  "pm.test(\"Unknown username does not authenticate\", () => { pm.response.to.have.status(200); });\r",
-                  "pm.test(\"Login form remains visible\", () => { pm.expect(pm.response.text()).to.include(\"<title>Đăng nhập</title>\"); });"
-                ],
-                "type": "text/javascript",
-                "packages": {},
-                "requests": {}
-              }
-            },
-            {
               "listen": "prerequest",
               "script": {
                 "type": "text/javascript",
                 "exec": [
                   "const aa = eval(pm.collectionVariables.get('aa_helpers'));   // hàm dùng chung, xem biến aa_helpers",
-                  "aa.guest('/accounts/login/');   // điều kiện: Guest + CSRF mới của /accounts/login/"
+                  "pm.collectionVariables.set('l_user', aa.uniq('khongco'));",
+                  "pm.collectionVariables.set('l_pw', pm.variables.get('aa_password'));",
+                  "aa.guest('/accounts/login/');"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const base = pm.variables.replaceIn('{{base_url}}');",
+                  "const loc = pm.response.headers.get('Location') || '';",
+                  "const hasSession = (cb) => pm.sendRequest({ url: base + '/accounts/password/change/', method: 'GET' }, (e, r) => cb(!e && r.text().indexOf('old_password') !== -1));",
+                  "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Hiện thông báo lỗi', () => pm.expect(pm.response.text()).to.match(/errorlist|auth-error/));",
+                  "hasSession((s) => pm.test('Chưa có phiên đăng nhập', () => pm.expect(s).to.be.false));"
                 ]
               }
             }
           ],
-          "protocolProfileBehavior": {
-            "followRedirects": false
-          },
           "request": {
             "method": "POST",
             "header": [],
-            "body": {
-              "mode": "urlencoded",
-              "urlencoded": [
-                {
-                  "key": "csrfmiddlewaretoken",
-                  "value": "{{csrf_token}}",
-                  "type": "text"
-                },
-                {
-                  "key": "username",
-                  "value": "no_such_user_999999",
-                  "type": "text"
-                },
-                {
-                  "key": "password",
-                  "value": "{{aa_password}}",
-                  "type": "text"
-                }
-              ]
-            },
             "url": {
               "raw": "{{base_url}}/accounts/login/",
               "host": [
@@ -1064,62 +1079,67 @@
                 "login",
                 ""
               ]
+            },
+            "description": "Lớp EP: X – username không tồn tại.",
+            "body": {
+              "mode": "urlencoded",
+              "urlencoded": [
+                {
+                  "key": "csrfmiddlewaretoken",
+                  "value": "{{csrf_token}}",
+                  "type": "text"
+                },
+                {
+                  "key": "username",
+                  "value": "{{l_user}}",
+                  "type": "text"
+                },
+                {
+                  "key": "password",
+                  "value": "{{l_pw}}",
+                  "type": "text"
+                }
+              ]
             }
           },
-          "response": []
+          "response": [],
+          "protocolProfileBehavior": {
+            "followRedirects": false
+          }
         },
         {
           "name": "TC-AA-016 — POST Login with Empty Credentials",
           "event": [
             {
-              "listen": "test",
-              "script": {
-                "exec": [
-                  "pm.test(\"Empty credentials do not authenticate\", () => { pm.response.to.have.status(200); });\r",
-                  "pm.test(\"Login form remains visible\", () => { pm.expect(pm.response.text()).to.include(\"<title>Đăng nhập</title>\"); });"
-                ],
-                "type": "text/javascript",
-                "packages": {},
-                "requests": {}
-              }
-            },
-            {
               "listen": "prerequest",
               "script": {
                 "type": "text/javascript",
                 "exec": [
                   "const aa = eval(pm.collectionVariables.get('aa_helpers'));   // hàm dùng chung, xem biến aa_helpers",
-                  "aa.guest('/accounts/login/');   // điều kiện: Guest + CSRF mới của /accounts/login/"
+                  "pm.collectionVariables.set('l_user', '');",
+                  "pm.collectionVariables.set('l_pw', '');",
+                  "aa.guest('/accounts/login/');"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const base = pm.variables.replaceIn('{{base_url}}');",
+                  "const loc = pm.response.headers.get('Location') || '';",
+                  "const hasSession = (cb) => pm.sendRequest({ url: base + '/accounts/password/change/', method: 'GET' }, (e, r) => cb(!e && r.text().indexOf('old_password') !== -1));",
+                  "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Hiện thông báo lỗi', () => pm.expect(pm.response.text()).to.match(/errorlist|auth-error/));",
+                  "hasSession((s) => pm.test('Chưa có phiên đăng nhập', () => pm.expect(s).to.be.false));"
                 ]
               }
             }
           ],
-          "protocolProfileBehavior": {
-            "followRedirects": false
-          },
           "request": {
             "method": "POST",
             "header": [],
-            "body": {
-              "mode": "urlencoded",
-              "urlencoded": [
-                {
-                  "key": "csrfmiddlewaretoken",
-                  "value": "{{csrf_token}}",
-                  "type": "text"
-                },
-                {
-                  "key": "username",
-                  "value": "",
-                  "type": "text"
-                },
-                {
-                  "key": "password",
-                  "value": "",
-                  "type": "text"
-                }
-              ]
-            },
             "url": {
               "raw": "{{base_url}}/accounts/login/",
               "host": [
@@ -1130,98 +1150,127 @@
                 "login",
                 ""
               ]
+            },
+            "description": "Lớp EP: X – để trống username và mật khẩu.",
+            "body": {
+              "mode": "urlencoded",
+              "urlencoded": [
+                {
+                  "key": "csrfmiddlewaretoken",
+                  "value": "{{csrf_token}}",
+                  "type": "text"
+                },
+                {
+                  "key": "username",
+                  "value": "{{l_user}}",
+                  "type": "text"
+                },
+                {
+                  "key": "password",
+                  "value": "{{l_pw}}",
+                  "type": "text"
+                }
+              ]
             }
           },
-          "response": []
+          "response": [],
+          "protocolProfileBehavior": {
+            "followRedirects": false
+          }
         },
         {
           "name": "TC-AA-017 — POST Login without CSRF Token",
           "event": [
             {
-              "listen": "test",
-              "script": {
-                "exec": [
-                  "pm.test(\"Login without CSRF is forbidden\", () => { pm.response.to.have.status(403); });\r",
-                  "pm.test(\"CSRF rejection is reported\", () => { pm.expect(pm.response.text()).to.match(/CSRF/i); });"
-                ],
-                "type": "text/javascript",
-                "packages": {},
-                "requests": {}
-              }
-            },
-            {
               "listen": "prerequest",
               "script": {
                 "type": "text/javascript",
                 "exec": [
                   "const aa = eval(pm.collectionVariables.get('aa_helpers'));   // hàm dùng chung, xem biến aa_helpers",
-                  "aa.guest('/accounts/login/');   // điều kiện: Guest + CSRF mới của /accounts/login/"
+                  "aa.newUserGuest('/accounts/login/', function () { pm.collectionVariables.set('l_user', pm.collectionVariables.get('ep_user')); pm.collectionVariables.set('l_pw', pm.variables.get('aa_password')); pm.collectionVariables.set('l_next', ''); });"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const base = pm.variables.replaceIn('{{base_url}}');",
+                  "const loc = pm.response.headers.get('Location') || '';",
+                  "const hasSession = (cb) => pm.sendRequest({ url: base + '/accounts/password/change/', method: 'GET' }, (e, r) => cb(!e && r.text().indexOf('old_password') !== -1));",
+                  "pm.test('HTTP 403', () => pm.response.to.have.status(403));",
+                  "hasSession((s) => pm.test('Chưa có phiên đăng nhập', () => pm.expect(s).to.be.false));"
                 ]
               }
             }
           ],
-          "protocolProfileBehavior": {
-            "followRedirects": false
-          },
           "request": {
             "method": "POST",
             "header": [],
+            "url": {
+              "raw": "{{base_url}}/accounts/login/",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "accounts",
+                "login",
+                ""
+              ]
+            },
+            "description": "Lớp EP: X – thiếu CSRF token.",
             "body": {
               "mode": "urlencoded",
               "urlencoded": [
                 {
                   "key": "username",
-                  "value": "{{aa_username}}",
+                  "value": "{{l_user}}",
                   "type": "text"
                 },
                 {
                   "key": "password",
-                  "value": "{{aa_password}}",
+                  "value": "{{l_pw}}",
                   "type": "text"
                 }
               ]
-            },
-            "url": {
-              "raw": "{{base_url}}/accounts/login/",
-              "host": [
-                "{{base_url}}"
-              ],
-              "path": [
-                "accounts",
-                "login",
-                ""
-              ]
             }
           },
-          "response": []
+          "response": [],
+          "protocolProfileBehavior": {
+            "followRedirects": false
+          }
         },
         {
           "name": "TC-AA-018 — POST Login with Inactive Account",
           "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "pm.test('Trả 200 (ở lại biểu mẫu)', () => pm.response.to.have.status(200));",
-                  "pm.test('Hiện khối lỗi đăng nhập', () => pm.expect(pm.response.text()).to.match(/auth-error-box/));"
-                ]
-              }
-            },
             {
               "listen": "prerequest",
               "script": {
                 "type": "text/javascript",
                 "exec": [
                   "const aa = eval(pm.collectionVariables.get('aa_helpers'));   // hàm dùng chung, xem biến aa_helpers",
-                  "aa.guest('/accounts/login/');   // điều kiện: Guest + CSRF mới của /accounts/login/"
+                  "pm.collectionVariables.set('l_user', pm.variables.get('inactive_user'));",
+                  "pm.collectionVariables.set('l_pw', pm.variables.get('inactive_pass'));",
+                  "aa.guest('/accounts/login/');"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const base = pm.variables.replaceIn('{{base_url}}');",
+                  "const loc = pm.response.headers.get('Location') || '';",
+                  "const hasSession = (cb) => pm.sendRequest({ url: base + '/accounts/password/change/', method: 'GET' }, (e, r) => cb(!e && r.text().indexOf('old_password') !== -1));",
+                  "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Hiện thông báo lỗi', () => pm.expect(pm.response.text()).to.match(/errorlist|auth-error/));",
+                  "hasSession((s) => pm.test('Chưa có phiên đăng nhập', () => pm.expect(s).to.be.false));"
                 ]
               }
             }
           ],
-          "protocolProfileBehavior": {
-            "followRedirects": false
-          },
           "request": {
             "method": "POST",
             "header": [],
@@ -1236,6 +1285,7 @@
                 ""
               ]
             },
+            "description": "Lớp EP: X – tài khoản bị khóa.",
             "body": {
               "mode": "urlencoded",
               "urlencoded": [
@@ -1246,48 +1296,49 @@
                 },
                 {
                   "key": "username",
-                  "value": "{{inactive_user}}",
+                  "value": "{{l_user}}",
                   "type": "text"
                 },
                 {
                   "key": "password",
-                  "value": "{{inactive_pass}}",
+                  "value": "{{l_pw}}",
                   "type": "text"
                 }
               ]
             }
           },
-          "response": []
+          "response": [],
+          "protocolProfileBehavior": {
+            "followRedirects": false
+          }
         },
         {
           "name": "TC-AA-019 — GET Profile as Guest",
           "event": [
-            {
-              "listen": "test",
-              "script": {
-                "exec": [
-                  "pm.test(\"Guest is redirected from profile\", () => { pm.response.to.have.status(302); });\r",
-                  "pm.test(\"Redirect points to login\", () => { pm.expect(pm.response.headers.get(\"Location\") || \"\").to.include(\"/accounts/login/\"); });"
-                ],
-                "type": "text/javascript",
-                "packages": {},
-                "requests": {}
-              }
-            },
             {
               "listen": "prerequest",
               "script": {
                 "type": "text/javascript",
                 "exec": [
                   "const aa = eval(pm.collectionVariables.get('aa_helpers'));   // hàm dùng chung, xem biến aa_helpers",
-                  "aa.guest();   // điều kiện: Guest"
+                  "aa.guest(null);"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const base = pm.variables.replaceIn('{{base_url}}');",
+                  "const loc = pm.response.headers.get('Location') || '';",
+                  "const hasSession = (cb) => pm.sendRequest({ url: base + '/accounts/password/change/', method: 'GET' }, (e, r) => cb(!e && r.text().indexOf('old_password') !== -1));",
+                  "pm.test('HTTP 302', () => pm.response.to.have.status(302));",
+                  "pm.test('Location chứa /accounts/login/', () => pm.expect(loc).to.include('/accounts/login/'));"
                 ]
               }
             }
           ],
-          "protocolProfileBehavior": {
-            "followRedirects": false
-          },
           "request": {
             "method": "GET",
             "header": [],
@@ -1301,37 +1352,41 @@
                 "profile",
                 ""
               ]
-            }
+            },
+            "description": "Lớp EP: X – Guest xem hồ sơ."
           },
-          "response": []
+          "response": [],
+          "protocolProfileBehavior": {
+            "followRedirects": false
+          }
         },
         {
           "name": "TC-AA-020 — POST Logout as Guest",
           "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "pm.test('Trả 302', () => pm.response.to.have.status(302));",
-                  "pm.test('Chuyển sang đăng nhập', () => pm.expect(pm.response.headers.get('Location') || '').to.match(/\\/accounts\\/login\\//));"
-                ]
-              }
-            },
             {
               "listen": "prerequest",
               "script": {
                 "type": "text/javascript",
                 "exec": [
                   "const aa = eval(pm.collectionVariables.get('aa_helpers'));   // hàm dùng chung, xem biến aa_helpers",
-                  "aa.guest('/accounts/login/');   // điều kiện: Guest + CSRF mới của /accounts/login/"
+                  "aa.guest('/accounts/login/');"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const base = pm.variables.replaceIn('{{base_url}}');",
+                  "const loc = pm.response.headers.get('Location') || '';",
+                  "const hasSession = (cb) => pm.sendRequest({ url: base + '/accounts/password/change/', method: 'GET' }, (e, r) => cb(!e && r.text().indexOf('old_password') !== -1));",
+                  "pm.test('HTTP 302', () => pm.response.to.have.status(302));",
+                  "pm.test('Location chứa /accounts/login/', () => pm.expect(loc).to.include('/accounts/login/'));"
                 ]
               }
             }
           ],
-          "protocolProfileBehavior": {
-            "followRedirects": false
-          },
           "request": {
             "method": "POST",
             "header": [],
@@ -1346,6 +1401,7 @@
                 ""
               ]
             },
+            "description": "Lớp EP: X – Guest đăng xuất.",
             "body": {
               "mode": "urlencoded",
               "urlencoded": [
@@ -1357,60 +1413,42 @@
               ]
             }
           },
-          "response": []
+          "response": [],
+          "protocolProfileBehavior": {
+            "followRedirects": false
+          }
         },
         {
           "name": "TC-AA-021 — POST Login as Customer",
           "event": [
-            {
-              "listen": "test",
-              "script": {
-                "exec": [
-                  "pm.test(\"Customer login redirects\", () => { pm.response.to.have.status(302); });\r",
-                  "pm.test(\"Redirects to home\", () => { pm.expect(pm.response.headers.get(\"Location\")).to.eql(\"/\"); });"
-                ],
-                "type": "text/javascript",
-                "packages": {},
-                "requests": {}
-              }
-            },
             {
               "listen": "prerequest",
               "script": {
                 "type": "text/javascript",
                 "exec": [
                   "const aa = eval(pm.collectionVariables.get('aa_helpers'));   // hàm dùng chung, xem biến aa_helpers",
-                  "aa.guest('/accounts/login/');   // điều kiện: Guest + CSRF mới của /accounts/login/"
+                  "aa.newUserGuest('/accounts/login/', function () { pm.collectionVariables.set('l_user', pm.collectionVariables.get('ep_user')); pm.collectionVariables.set('l_pw', pm.variables.get('aa_password')); pm.collectionVariables.set('l_next', ''); });"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const base = pm.variables.replaceIn('{{base_url}}');",
+                  "const loc = pm.response.headers.get('Location') || '';",
+                  "const hasSession = (cb) => pm.sendRequest({ url: base + '/accounts/password/change/', method: 'GET' }, (e, r) => cb(!e && r.text().indexOf('old_password') !== -1));",
+                  "pm.test('HTTP 302', () => pm.response.to.have.status(302));",
+                  "pm.test('Location là /', () => pm.expect(loc).to.eql('/'));",
+                  "hasSession((s) => pm.test('Có phiên đăng nhập', () => pm.expect(s).to.be.true));"
                 ]
               }
             }
           ],
-          "protocolProfileBehavior": {
-            "followRedirects": false
-          },
           "request": {
             "method": "POST",
             "header": [],
-            "body": {
-              "mode": "urlencoded",
-              "urlencoded": [
-                {
-                  "key": "csrfmiddlewaretoken",
-                  "value": "{{csrf_token}}",
-                  "type": "text"
-                },
-                {
-                  "key": "username",
-                  "value": "{{aa_username}}",
-                  "type": "text"
-                },
-                {
-                  "key": "password",
-                  "value": "{{aa_password}}",
-                  "type": "text"
-                }
-              ]
-            },
             "url": {
               "raw": "{{base_url}}/accounts/login/",
               "host": [
@@ -1421,34 +1459,57 @@
                 "login",
                 ""
               ]
+            },
+            "description": "Lớp EP: V – Customer đăng nhập đúng.",
+            "body": {
+              "mode": "urlencoded",
+              "urlencoded": [
+                {
+                  "key": "csrfmiddlewaretoken",
+                  "value": "{{csrf_token}}",
+                  "type": "text"
+                },
+                {
+                  "key": "username",
+                  "value": "{{l_user}}",
+                  "type": "text"
+                },
+                {
+                  "key": "password",
+                  "value": "{{l_pw}}",
+                  "type": "text"
+                }
+              ]
             }
           },
-          "response": []
+          "response": [],
+          "protocolProfileBehavior": {
+            "followRedirects": false
+          }
         },
         {
           "name": "TC-AA-022 — GET Customer Profile",
           "event": [
-            {
-              "listen": "test",
-              "script": {
-                "exec": [
-                  "pm.test(\"Customer profile returns 200\", () => { pm.response.to.have.status(200); });\r",
-                  "pm.test(\"Profile shows customer username\", () => { pm.expect(pm.response.text()).to.include(pm.collectionVariables.get(\"aa_username\")); });\r",
-                  "const match = pm.response.text().match(/name=[\"']csrfmiddlewaretoken[\"'][^>]*value=[\"']([^\"']+)[\"']/);\r",
-                  "if (match) pm.collectionVariables.set(\"csrf_token\", match[1]);"
-                ],
-                "type": "text/javascript",
-                "packages": {},
-                "requests": {}
-              }
-            },
             {
               "listen": "prerequest",
               "script": {
                 "type": "text/javascript",
                 "exec": [
                   "const aa = eval(pm.collectionVariables.get('aa_helpers'));   // hàm dùng chung, xem biến aa_helpers",
-                  "aa.user();   // điều kiện: đăng nhập tài khoản A"
+                  "aa.newUser(null, function () { aa.login(pm.collectionVariables.get('ep_user'), pm.variables.get('aa_password'), null); });"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const base = pm.variables.replaceIn('{{base_url}}');",
+                  "const loc = pm.response.headers.get('Location') || '';",
+                  "const hasSession = (cb) => pm.sendRequest({ url: base + '/accounts/password/change/', method: 'GET' }, (e, r) => cb(!e && r.text().indexOf('old_password') !== -1));",
+                  "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Hồ sơ hiện đúng username', () => pm.expect(pm.response.text()).to.include(pm.collectionVariables.get('ep_user')));"
                 ]
               }
             }
@@ -1466,39 +1527,42 @@
                 "profile",
                 ""
               ]
-            }
+            },
+            "description": "Lớp EP: V – Customer đã đăng nhập xem hồ sơ."
           },
-          "response": []
+          "response": [],
+          "protocolProfileBehavior": {
+            "followRedirects": false
+          }
         },
         {
           "name": "TC-AA-023 — GET Login Page while Authenticated",
           "event": [
-            {
-              "listen": "test",
-              "script": {
-                "exec": [
-                  "pm.test(\"Authenticated user is redirected from login\", () => { pm.response.to.have.status(302); });\r",
-                  "pm.test(\"Redirects to home\", () => { pm.expect(pm.response.headers.get(\"Location\")).to.eql(\"/\"); });"
-                ],
-                "type": "text/javascript",
-                "packages": {},
-                "requests": {}
-              }
-            },
             {
               "listen": "prerequest",
               "script": {
                 "type": "text/javascript",
                 "exec": [
                   "const aa = eval(pm.collectionVariables.get('aa_helpers'));   // hàm dùng chung, xem biến aa_helpers",
-                  "aa.user();   // điều kiện: đăng nhập tài khoản A"
+                  "aa.newUser(null);"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const base = pm.variables.replaceIn('{{base_url}}');",
+                  "const loc = pm.response.headers.get('Location') || '';",
+                  "const hasSession = (cb) => pm.sendRequest({ url: base + '/accounts/password/change/', method: 'GET' }, (e, r) => cb(!e && r.text().indexOf('old_password') !== -1));",
+                  "pm.test('HTTP 302', () => pm.response.to.have.status(302));",
+                  "pm.test('Location là /', () => pm.expect(loc).to.eql('/'));",
+                  "hasSession((s) => pm.test('Phiên giữ nguyên', () => pm.expect(s).to.be.true));"
                 ]
               }
             }
           ],
-          "protocolProfileBehavior": {
-            "followRedirects": false
-          },
           "request": {
             "method": "GET",
             "header": [],
@@ -1512,37 +1576,41 @@
                 "login",
                 ""
               ]
-            }
+            },
+            "description": "Lớp EP: X – đã đăng nhập mở trang đăng nhập."
           },
-          "response": []
+          "response": [],
+          "protocolProfileBehavior": {
+            "followRedirects": false
+          }
         },
         {
           "name": "TC-AA-024 — POST Login with External next",
           "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "pm.test('Trả 302', () => pm.response.to.have.status(302));",
-                  "pm.test('Không chuyển ra miền ngoài', () => pm.expect(pm.response.headers.get('Location') || '').to.not.match(/evil\\.example/));"
-                ]
-              }
-            },
             {
               "listen": "prerequest",
               "script": {
                 "type": "text/javascript",
                 "exec": [
                   "const aa = eval(pm.collectionVariables.get('aa_helpers'));   // hàm dùng chung, xem biến aa_helpers",
-                  "aa.guest('/accounts/login/');   // điều kiện: Guest + CSRF mới của /accounts/login/"
+                  "aa.newUserGuest('/accounts/login/', function () { pm.collectionVariables.set('l_user', pm.collectionVariables.get('ep_user')); pm.collectionVariables.set('l_pw', pm.variables.get('aa_password')); pm.collectionVariables.set('l_next', ''); pm.collectionVariables.set('l_next', 'https://evil.example/'); });"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const base = pm.variables.replaceIn('{{base_url}}');",
+                  "const loc = pm.response.headers.get('Location') || '';",
+                  "const hasSession = (cb) => pm.sendRequest({ url: base + '/accounts/password/change/', method: 'GET' }, (e, r) => cb(!e && r.text().indexOf('old_password') !== -1));",
+                  "pm.test('HTTP 302', () => pm.response.to.have.status(302));",
+                  "pm.test('Không chuyển ra miền ngoài', () => pm.expect(loc).to.not.include('evil.example'));"
                 ]
               }
             }
           ],
-          "protocolProfileBehavior": {
-            "followRedirects": false
-          },
           "request": {
             "method": "POST",
             "header": [],
@@ -1557,6 +1625,7 @@
                 ""
               ]
             },
+            "description": "Lớp EP: X – next trỏ ra miền ngoài.",
             "body": {
               "mode": "urlencoded",
               "urlencoded": [
@@ -1567,51 +1636,54 @@
                 },
                 {
                   "key": "username",
-                  "value": "{{aa_username}}",
+                  "value": "{{l_user}}",
                   "type": "text"
                 },
                 {
                   "key": "password",
-                  "value": "{{aa_password}}",
+                  "value": "{{l_pw}}",
                   "type": "text"
                 },
                 {
                   "key": "next",
-                  "value": "https://evil.example/",
+                  "value": "{{l_next}}",
                   "type": "text"
                 }
               ]
             }
           },
-          "response": []
+          "response": [],
+          "protocolProfileBehavior": {
+            "followRedirects": false
+          }
         },
         {
           "name": "TC-AA-025 — POST Login with Internal next",
           "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "pm.test('Trả 302', () => pm.response.to.have.status(302));",
-                  "pm.test('Quay về /cart/', () => pm.expect(pm.response.headers.get('Location') || '').to.match(/\\/cart\\//));"
-                ]
-              }
-            },
             {
               "listen": "prerequest",
               "script": {
                 "type": "text/javascript",
                 "exec": [
                   "const aa = eval(pm.collectionVariables.get('aa_helpers'));   // hàm dùng chung, xem biến aa_helpers",
-                  "aa.guest('/accounts/login/');   // điều kiện: Guest + CSRF mới của /accounts/login/"
+                  "aa.newUserGuest('/accounts/login/?next=/cart/', function () { pm.collectionVariables.set('l_user', pm.collectionVariables.get('ep_user')); pm.collectionVariables.set('l_pw', pm.variables.get('aa_password')); pm.collectionVariables.set('l_next', ''); pm.collectionVariables.set('l_next', '/cart/'); });"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const base = pm.variables.replaceIn('{{base_url}}');",
+                  "const loc = pm.response.headers.get('Location') || '';",
+                  "const hasSession = (cb) => pm.sendRequest({ url: base + '/accounts/password/change/', method: 'GET' }, (e, r) => cb(!e && r.text().indexOf('old_password') !== -1));",
+                  "pm.test('HTTP 302', () => pm.response.to.have.status(302));",
+                  "pm.test('Location là /cart/', () => pm.expect(loc).to.eql('/cart/'));"
                 ]
               }
             }
           ],
-          "protocolProfileBehavior": {
-            "followRedirects": false
-          },
           "request": {
             "method": "POST",
             "header": [],
@@ -1632,6 +1704,7 @@
                 }
               ]
             },
+            "description": "Lớp EP: V – next là đường dẫn nội bộ.",
             "body": {
               "mode": "urlencoded",
               "urlencoded": [
@@ -1642,23 +1715,26 @@
                 },
                 {
                   "key": "username",
-                  "value": "{{aa_username}}",
+                  "value": "{{l_user}}",
                   "type": "text"
                 },
                 {
                   "key": "password",
-                  "value": "{{aa_password}}",
+                  "value": "{{l_pw}}",
                   "type": "text"
                 },
                 {
                   "key": "next",
-                  "value": "/cart/",
+                  "value": "{{l_next}}",
                   "type": "text"
                 }
               ]
             }
           },
-          "response": []
+          "response": [],
+          "protocolProfileBehavior": {
+            "followRedirects": false
+          }
         }
       ]
     },
@@ -1669,28 +1745,25 @@
           "name": "TC-AA-026 — GET Profile Edit Page",
           "event": [
             {
-              "listen": "test",
-              "script": {
-                "exec": [
-                  "pm.test('Profile edit page returns 200', () => pm.response.to.have.status(200));\r",
-                  "const html = pm.response.text();\r",
-                  "pm.test('Profile edit form is present', () => pm.expect(html).to.include('name=\"email\"'));\r",
-                  "const match = html.match(/name=\"csrfmiddlewaretoken\" value=\"([^\"]+)\"/);\r",
-                  "pm.test('CSRF token is present', () => pm.expect(match).to.not.be.null);\r",
-                  "if (match) pm.collectionVariables.set('csrf_token', match[1]);"
-                ],
-                "type": "text/javascript",
-                "packages": {},
-                "requests": {}
-              }
-            },
-            {
               "listen": "prerequest",
               "script": {
                 "type": "text/javascript",
                 "exec": [
                   "const aa = eval(pm.collectionVariables.get('aa_helpers'));   // hàm dùng chung, xem biến aa_helpers",
-                  "aa.user('/accounts/profile/edit/');   // điều kiện: đăng nhập tài khoản A + CSRF mới của /accounts/profile/edit/"
+                  "aa.newUser(null);"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const base = pm.variables.replaceIn('{{base_url}}');",
+                  "const loc = pm.response.headers.get('Location') || '';",
+                  "const hasSession = (cb) => pm.sendRequest({ url: base + '/accounts/password/change/', method: 'GET' }, (e, r) => cb(!e && r.text().indexOf('old_password') !== -1));",
+                  "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Form có trường email', () => pm.expect(pm.response.text()).to.include('name=\"email\"'));"
                 ]
               }
             }
@@ -1709,72 +1782,44 @@
                 "edit",
                 ""
               ]
-            }
+            },
+            "description": "Lớp EP: V – đã đăng nhập mở form hồ sơ."
           },
-          "response": []
+          "response": [],
+          "protocolProfileBehavior": {
+            "followRedirects": false
+          }
         },
         {
           "name": "TC-AA-027 — POST Update Profile",
           "event": [
-            {
-              "listen": "test",
-              "script": {
-                "exec": [
-                  "pm.test('Valid profile update redirects', () => pm.response.to.have.status(302));\r",
-                  "pm.test('Redirects to profile', () => pm.expect(pm.response.headers.get('Location') || '').to.include('/accounts/profile/'));"
-                ],
-                "type": "text/javascript",
-                "packages": {},
-                "requests": {}
-              }
-            },
             {
               "listen": "prerequest",
               "script": {
                 "type": "text/javascript",
                 "exec": [
                   "const aa = eval(pm.collectionVariables.get('aa_helpers'));   // hàm dùng chung, xem biến aa_helpers",
-                  "aa.user('/accounts/profile/edit/');   // điều kiện: đăng nhập tài khoản A + CSRF mới của /accounts/profile/edit/"
+                  "aa.newUser('/accounts/profile/edit/', function () { pm.collectionVariables.set('p_first', 'An'); pm.collectionVariables.set('p_last', 'Nguyen'); pm.collectionVariables.set('p_email', pm.collectionVariables.get('ep_email')); pm.collectionVariables.set('p_email', 'new_' + pm.collectionVariables.get('ep_email')); });"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const base = pm.variables.replaceIn('{{base_url}}');",
+                  "const loc = pm.response.headers.get('Location') || '';",
+                  "const hasSession = (cb) => pm.sendRequest({ url: base + '/accounts/password/change/', method: 'GET' }, (e, r) => cb(!e && r.text().indexOf('old_password') !== -1));",
+                  "pm.test('HTTP 302', () => pm.response.to.have.status(302));",
+                  "pm.test('Location là /accounts/profile/', () => pm.expect(loc).to.eql('/accounts/profile/'));"
                 ]
               }
             }
           ],
-          "protocolProfileBehavior": {
-            "followRedirects": false
-          },
           "request": {
             "method": "POST",
             "header": [],
-            "body": {
-              "mode": "urlencoded",
-              "urlencoded": [
-                {
-                  "key": "csrfmiddlewaretoken",
-                  "value": "{{csrf_token}}",
-                  "type": "text"
-                },
-                {
-                  "key": "username",
-                  "value": "{{aa_username}}",
-                  "type": "text"
-                },
-                {
-                  "key": "first_name",
-                  "value": "Test",
-                  "type": "text"
-                },
-                {
-                  "key": "last_name",
-                  "value": "Account",
-                  "type": "text"
-                },
-                {
-                  "key": "email",
-                  "value": "{{aa_email}}",
-                  "type": "text"
-                }
-              ]
-            },
             "url": {
               "raw": "{{base_url}}/accounts/profile/edit/",
               "host": [
@@ -1786,34 +1831,62 @@
                 "edit",
                 ""
               ]
+            },
+            "description": "Lớp EP: V – dữ liệu hồ sơ hợp lệ.",
+            "body": {
+              "mode": "urlencoded",
+              "urlencoded": [
+                {
+                  "key": "csrfmiddlewaretoken",
+                  "value": "{{csrf_token}}",
+                  "type": "text"
+                },
+                {
+                  "key": "first_name",
+                  "value": "{{p_first}}",
+                  "type": "text"
+                },
+                {
+                  "key": "last_name",
+                  "value": "{{p_last}}",
+                  "type": "text"
+                },
+                {
+                  "key": "email",
+                  "value": "{{p_email}}",
+                  "type": "text"
+                }
+              ]
             }
           },
-          "response": []
+          "response": [],
+          "protocolProfileBehavior": {
+            "followRedirects": false
+          }
         },
         {
           "name": "TC-AA-028 — GET Verify Updated Profile",
           "event": [
-            {
-              "listen": "test",
-              "script": {
-                "exec": [
-                  "pm.test('Profile returns 200', () => pm.response.to.have.status(200));\r",
-                  "const html = pm.response.text();\r",
-                  "pm.test('Updated first and last name are shown', () => { pm.expect(html).to.include('Test'); pm.expect(html).to.include('Account'); });\r",
-                  "pm.test('Customer username is shown', () => pm.expect(html).to.include(pm.collectionVariables.get('aa_username')));"
-                ],
-                "type": "text/javascript",
-                "packages": {},
-                "requests": {}
-              }
-            },
             {
               "listen": "prerequest",
               "script": {
                 "type": "text/javascript",
                 "exec": [
                   "const aa = eval(pm.collectionVariables.get('aa_helpers'));   // hàm dùng chung, xem biến aa_helpers",
-                  "aa.user();   // điều kiện: đăng nhập tài khoản A"
+                  "aa.newUser('/accounts/profile/edit/', function () { aa.post('/accounts/profile/edit/', { csrfmiddlewaretoken: pm.collectionVariables.get('csrf_token'), first_name: 'An', last_name: 'Nguyen', email: pm.collectionVariables.get('ep_email') }, function () {}); });"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const base = pm.variables.replaceIn('{{base_url}}');",
+                  "const loc = pm.response.headers.get('Location') || '';",
+                  "const hasSession = (cb) => pm.sendRequest({ url: base + '/accounts/password/change/', method: 'GET' }, (e, r) => cb(!e && r.text().indexOf('old_password') !== -1));",
+                  "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Hồ sơ hiện họ tên mới', () => pm.expect(pm.response.text()).to.include('Nguyen'));"
                 ]
               }
             }
@@ -1831,72 +1904,45 @@
                 "profile",
                 ""
               ]
-            }
+            },
+            "description": "Lớp EP: V – hồ sơ hiển thị dữ liệu đã lưu (kiểm tra tiếp sau TC-AA-027)."
           },
-          "response": []
+          "response": [],
+          "protocolProfileBehavior": {
+            "followRedirects": false
+          }
         },
         {
           "name": "TC-AA-029 — POST Profile with Invalid Email",
           "event": [
             {
-              "listen": "test",
-              "script": {
-                "exec": [
-                  "pm.test('Invalid email stays on form', () => pm.response.to.have.status(200));\r",
-                  "pm.test('Email validation error appears', () => pm.expect(pm.response.text()).to.include('Enter a valid email address.'));"
-                ],
-                "type": "text/javascript",
-                "packages": {},
-                "requests": {}
-              }
-            },
-            {
               "listen": "prerequest",
               "script": {
                 "type": "text/javascript",
                 "exec": [
                   "const aa = eval(pm.collectionVariables.get('aa_helpers'));   // hàm dùng chung, xem biến aa_helpers",
-                  "aa.user('/accounts/profile/edit/');   // điều kiện: đăng nhập tài khoản A + CSRF mới của /accounts/profile/edit/"
+                  "aa.newUser('/accounts/profile/edit/', function () { pm.collectionVariables.set('p_first', 'An'); pm.collectionVariables.set('p_last', 'Nguyen'); pm.collectionVariables.set('p_email', pm.collectionVariables.get('ep_email')); pm.collectionVariables.set('p_email', 'email-sai-dinh-dang'); });"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const base = pm.variables.replaceIn('{{base_url}}');",
+                  "const loc = pm.response.headers.get('Location') || '';",
+                  "const hasSession = (cb) => pm.sendRequest({ url: base + '/accounts/password/change/', method: 'GET' }, (e, r) => cb(!e && r.text().indexOf('old_password') !== -1));",
+                  "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Hiện thông báo lỗi', () => pm.expect(pm.response.text()).to.match(/errorlist|auth-error/));",
+                  "hasSession((s) => pm.test('Vẫn đăng nhập', () => pm.expect(s).to.be.true));"
                 ]
               }
             }
           ],
-          "protocolProfileBehavior": {
-            "followRedirects": false
-          },
           "request": {
             "method": "POST",
             "header": [],
-            "body": {
-              "mode": "urlencoded",
-              "urlencoded": [
-                {
-                  "key": "csrfmiddlewaretoken",
-                  "value": "{{csrf_token}}",
-                  "type": "text"
-                },
-                {
-                  "key": "username",
-                  "value": "{{aa_username}}",
-                  "type": "text"
-                },
-                {
-                  "key": "first_name",
-                  "value": "Test",
-                  "type": "text"
-                },
-                {
-                  "key": "last_name",
-                  "value": "Account",
-                  "type": "text"
-                },
-                {
-                  "key": "email",
-                  "value": "not-an-email",
-                  "type": "text"
-                }
-              ]
-            },
             "url": {
               "raw": "{{base_url}}/accounts/profile/edit/",
               "host": [
@@ -1908,37 +1954,67 @@
                 "edit",
                 ""
               ]
+            },
+            "description": "Lớp EP: X – email hồ sơ sai định dạng.",
+            "body": {
+              "mode": "urlencoded",
+              "urlencoded": [
+                {
+                  "key": "csrfmiddlewaretoken",
+                  "value": "{{csrf_token}}",
+                  "type": "text"
+                },
+                {
+                  "key": "first_name",
+                  "value": "{{p_first}}",
+                  "type": "text"
+                },
+                {
+                  "key": "last_name",
+                  "value": "{{p_last}}",
+                  "type": "text"
+                },
+                {
+                  "key": "email",
+                  "value": "{{p_email}}",
+                  "type": "text"
+                }
+              ]
             }
           },
-          "response": []
+          "response": [],
+          "protocolProfileBehavior": {
+            "followRedirects": false
+          }
         },
         {
           "name": "TC-AA-030 — POST Profile with Email of Another Account",
           "event": [
             {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "pm.test('Trả 200 (ở lại biểu mẫu)', () => pm.response.to.have.status(200));",
-                  "pm.test('Có lỗi email trùng', () => pm.expect(pm.response.text()).to.match(/Email này đã được sử dụng/));"
-                ]
-              }
-            },
-            {
               "listen": "prerequest",
               "script": {
                 "type": "text/javascript",
                 "exec": [
                   "const aa = eval(pm.collectionVariables.get('aa_helpers'));   // hàm dùng chung, xem biến aa_helpers",
-                  "aa.user('/accounts/profile/edit/');   // điều kiện: đăng nhập tài khoản A + CSRF mới của /accounts/profile/edit/"
+                  "aa.other(function () { aa.newUser('/accounts/profile/edit/', function () { pm.collectionVariables.set('p_first', 'An'); pm.collectionVariables.set('p_last', 'Nguyen'); pm.collectionVariables.set('p_email', pm.collectionVariables.get('ep_email')); pm.collectionVariables.set('p_email', pm.collectionVariables.get('ep_b_email')); }); });"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const base = pm.variables.replaceIn('{{base_url}}');",
+                  "const loc = pm.response.headers.get('Location') || '';",
+                  "const hasSession = (cb) => pm.sendRequest({ url: base + '/accounts/password/change/', method: 'GET' }, (e, r) => cb(!e && r.text().indexOf('old_password') !== -1));",
+                  "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Hiện thông báo lỗi', () => pm.expect(pm.response.text()).to.match(/errorlist|auth-error/));",
+                  "hasSession((s) => pm.test('Vẫn đăng nhập', () => pm.expect(s).to.be.true));"
                 ]
               }
             }
           ],
-          "protocolProfileBehavior": {
-            "followRedirects": false
-          },
           "request": {
             "method": "POST",
             "header": [],
@@ -1954,6 +2030,7 @@
                 ""
               ]
             },
+            "description": "Lớp EP: X – email hồ sơ thuộc tài khoản khác.",
             "body": {
               "mode": "urlencoded",
               "urlencoded": [
@@ -1964,42 +2041,54 @@
                 },
                 {
                   "key": "first_name",
-                  "value": "Test",
+                  "value": "{{p_first}}",
                   "type": "text"
                 },
                 {
                   "key": "last_name",
-                  "value": "Account",
+                  "value": "{{p_last}}",
                   "type": "text"
                 },
                 {
                   "key": "email",
-                  "value": "{{b_email}}",
+                  "value": "{{p_email}}",
                   "type": "text"
                 }
               ]
             }
           },
-          "response": []
+          "response": [],
+          "protocolProfileBehavior": {
+            "followRedirects": false
+          }
         },
         {
           "name": "TC-AA-031 — GET Profile Edit as Guest",
           "event": [
             {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const aa = eval(pm.collectionVariables.get('aa_helpers'));   // hàm dùng chung, xem biến aa_helpers",
+                  "aa.guest(null);"
+                ]
+              }
+            },
+            {
               "listen": "test",
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "pm.test('Trả 302', () => pm.response.to.have.status(302));",
-                  "pm.test('Chuyển sang đăng nhập', () => pm.expect(pm.response.headers.get('Location') || '').to.match(/\\/accounts\\/login\\//));"
+                  "const base = pm.variables.replaceIn('{{base_url}}');",
+                  "const loc = pm.response.headers.get('Location') || '';",
+                  "const hasSession = (cb) => pm.sendRequest({ url: base + '/accounts/password/change/', method: 'GET' }, (e, r) => cb(!e && r.text().indexOf('old_password') !== -1));",
+                  "pm.test('HTTP 302', () => pm.response.to.have.status(302));",
+                  "pm.test('Location chứa /accounts/login/', () => pm.expect(loc).to.include('/accounts/login/'));"
                 ]
               }
             }
           ],
-          "protocolProfileBehavior": {
-            "followRedirects": false,
-            "disableCookies": true
-          },
           "request": {
             "method": "GET",
             "header": [],
@@ -2014,9 +2103,13 @@
                 "edit",
                 ""
               ]
-            }
+            },
+            "description": "Lớp EP: X – Guest mở form hồ sơ."
           },
-          "response": []
+          "response": [],
+          "protocolProfileBehavior": {
+            "followRedirects": false
+          }
         }
       ]
     },
@@ -2027,27 +2120,25 @@
           "name": "TC-AA-032 — GET Password Change Page",
           "event": [
             {
-              "listen": "test",
-              "script": {
-                "exec": [
-                  "pm.test('Password change page returns 200', () => pm.response.to.have.status(200));\r",
-                  "const html = pm.response.text();\r",
-                  "pm.test('Password change form is present', () => pm.expect(html).to.include('name=\"old_password\"'));\r",
-                  "const match = html.match(/name=\"csrfmiddlewaretoken\" value=\"([^\"]+)\"/);\r",
-                  "if (match) pm.collectionVariables.set('csrf_token', match[1]);"
-                ],
-                "type": "text/javascript",
-                "packages": {},
-                "requests": {}
-              }
-            },
-            {
               "listen": "prerequest",
               "script": {
                 "type": "text/javascript",
                 "exec": [
                   "const aa = eval(pm.collectionVariables.get('aa_helpers'));   // hàm dùng chung, xem biến aa_helpers",
-                  "aa.user('/accounts/password/change/');   // điều kiện: đăng nhập tài khoản A + CSRF mới của /accounts/password/change/"
+                  "aa.newUser(null);"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const base = pm.variables.replaceIn('{{base_url}}');",
+                  "const loc = pm.response.headers.get('Location') || '';",
+                  "const hasSession = (cb) => pm.sendRequest({ url: base + '/accounts/password/change/', method: 'GET' }, (e, r) => cb(!e && r.text().indexOf('old_password') !== -1));",
+                  "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Form có trường mật khẩu cũ', () => pm.expect(pm.response.text()).to.include('old_password'));"
                 ]
               }
             }
@@ -2066,30 +2157,41 @@
                 "change",
                 ""
               ]
-            }
+            },
+            "description": "Lớp EP: V – đã đăng nhập mở form đổi mật khẩu."
           },
-          "response": []
+          "response": [],
+          "protocolProfileBehavior": {
+            "followRedirects": false
+          }
         },
         {
           "name": "TC-AA-033 — GET Password Change as Guest",
           "event": [
             {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const aa = eval(pm.collectionVariables.get('aa_helpers'));   // hàm dùng chung, xem biến aa_helpers",
+                  "aa.guest(null);"
+                ]
+              }
+            },
+            {
               "listen": "test",
               "script": {
-                "exec": [
-                  "pm.test('Guest is redirected to login', () => pm.response.to.have.status(302));\r",
-                  "pm.test('Location points to login', () => pm.expect(pm.response.headers.get('Location') || '').to.include('/accounts/login/'));"
-                ],
                 "type": "text/javascript",
-                "packages": {},
-                "requests": {}
+                "exec": [
+                  "const base = pm.variables.replaceIn('{{base_url}}');",
+                  "const loc = pm.response.headers.get('Location') || '';",
+                  "const hasSession = (cb) => pm.sendRequest({ url: base + '/accounts/password/change/', method: 'GET' }, (e, r) => cb(!e && r.text().indexOf('old_password') !== -1));",
+                  "pm.test('HTTP 302', () => pm.response.to.have.status(302));",
+                  "pm.test('Location chứa /accounts/login/', () => pm.expect(loc).to.include('/accounts/login/'));"
+                ]
               }
             }
           ],
-          "protocolProfileBehavior": {
-            "followRedirects": false,
-            "disableCookies": true
-          },
           "request": {
             "method": "GET",
             "header": [],
@@ -2104,67 +2206,45 @@
                 "change",
                 ""
               ]
-            }
+            },
+            "description": "Lớp EP: X – Guest mở form đổi mật khẩu."
           },
-          "response": []
+          "response": [],
+          "protocolProfileBehavior": {
+            "followRedirects": false
+          }
         },
         {
           "name": "TC-AA-034 — POST Change Password with Wrong Old Password",
           "event": [
             {
-              "listen": "test",
-              "script": {
-                "exec": [
-                  "pm.test('Wrong old password stays on form', () => pm.response.to.have.status(200));\r",
-                  "pm.test('Password error is shown', () => pm.expect(pm.response.text()).to.include('old_password'));"
-                ],
-                "type": "text/javascript",
-                "packages": {},
-                "requests": {}
-              }
-            },
-            {
               "listen": "prerequest",
               "script": {
                 "type": "text/javascript",
                 "exec": [
                   "const aa = eval(pm.collectionVariables.get('aa_helpers'));   // hàm dùng chung, xem biến aa_helpers",
-                  "aa.user('/accounts/password/change/');   // điều kiện: đăng nhập tài khoản A + CSRF mới của /accounts/password/change/"
+                  "aa.newUser('/accounts/password/change/', function () { pm.collectionVariables.set('c_old', pm.variables.get('aa_password')); pm.collectionVariables.set('c_new1', pm.variables.get('new_password')); pm.collectionVariables.set('c_new2', pm.variables.get('new_password')); pm.collectionVariables.set('c_old', 'Sai#Mat#Khau1'); });"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const base = pm.variables.replaceIn('{{base_url}}');",
+                  "const loc = pm.response.headers.get('Location') || '';",
+                  "const hasSession = (cb) => pm.sendRequest({ url: base + '/accounts/password/change/', method: 'GET' }, (e, r) => cb(!e && r.text().indexOf('old_password') !== -1));",
+                  "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Hiện thông báo lỗi', () => pm.expect(pm.response.text()).to.match(/errorlist|auth-error/));",
+                  "hasSession((s) => pm.test('Vẫn đăng nhập', () => pm.expect(s).to.be.true));"
                 ]
               }
             }
           ],
-          "protocolProfileBehavior": {
-            "followRedirects": false
-          },
           "request": {
             "method": "POST",
             "header": [],
-            "body": {
-              "mode": "urlencoded",
-              "urlencoded": [
-                {
-                  "key": "csrfmiddlewaretoken",
-                  "value": "{{csrf_token}}",
-                  "type": "text"
-                },
-                {
-                  "key": "old_password",
-                  "value": "wrong-old-password",
-                  "type": "text"
-                },
-                {
-                  "key": "new_password1",
-                  "value": "{{new_password}}",
-                  "type": "text"
-                },
-                {
-                  "key": "new_password2",
-                  "value": "{{new_password}}",
-                  "type": "text"
-                }
-              ]
-            },
             "url": {
               "raw": "{{base_url}}/accounts/password/change/",
               "host": [
@@ -2176,37 +2256,67 @@
                 "change",
                 ""
               ]
+            },
+            "description": "Lớp EP: X – mật khẩu cũ sai.",
+            "body": {
+              "mode": "urlencoded",
+              "urlencoded": [
+                {
+                  "key": "csrfmiddlewaretoken",
+                  "value": "{{csrf_token}}",
+                  "type": "text"
+                },
+                {
+                  "key": "old_password",
+                  "value": "{{c_old}}",
+                  "type": "text"
+                },
+                {
+                  "key": "new_password1",
+                  "value": "{{c_new1}}",
+                  "type": "text"
+                },
+                {
+                  "key": "new_password2",
+                  "value": "{{c_new2}}",
+                  "type": "text"
+                }
+              ]
             }
           },
-          "response": []
+          "response": [],
+          "protocolProfileBehavior": {
+            "followRedirects": false
+          }
         },
         {
           "name": "TC-AA-035 — POST Change Password with Mismatched New Passwords",
           "event": [
             {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "pm.test('Trả 200 (ở lại biểu mẫu)', () => pm.response.to.have.status(200));",
-                  "pm.test('Có lỗi không khớp', () => pm.expect(pm.response.text()).to.match(/errorlist/));"
-                ]
-              }
-            },
-            {
               "listen": "prerequest",
               "script": {
                 "type": "text/javascript",
                 "exec": [
                   "const aa = eval(pm.collectionVariables.get('aa_helpers'));   // hàm dùng chung, xem biến aa_helpers",
-                  "aa.user('/accounts/password/change/');   // điều kiện: đăng nhập tài khoản A + CSRF mới của /accounts/password/change/"
+                  "aa.newUser('/accounts/password/change/', function () { pm.collectionVariables.set('c_old', pm.variables.get('aa_password')); pm.collectionVariables.set('c_new1', pm.variables.get('new_password')); pm.collectionVariables.set('c_new2', pm.variables.get('new_password')); pm.collectionVariables.set('c_new2', pm.variables.get('new_password') + 'X'); });"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const base = pm.variables.replaceIn('{{base_url}}');",
+                  "const loc = pm.response.headers.get('Location') || '';",
+                  "const hasSession = (cb) => pm.sendRequest({ url: base + '/accounts/password/change/', method: 'GET' }, (e, r) => cb(!e && r.text().indexOf('old_password') !== -1));",
+                  "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Hiện thông báo lỗi', () => pm.expect(pm.response.text()).to.match(/errorlist|auth-error/));",
+                  "hasSession((s) => pm.test('Vẫn đăng nhập', () => pm.expect(s).to.be.true));"
                 ]
               }
             }
           ],
-          "protocolProfileBehavior": {
-            "followRedirects": false
-          },
           "request": {
             "method": "POST",
             "header": [],
@@ -2222,6 +2332,7 @@
                 ""
               ]
             },
+            "description": "Lớp EP: X – hai ô mật khẩu mới không khớp (ô nhập lại khác).",
             "body": {
               "mode": "urlencoded",
               "urlencoded": [
@@ -2232,80 +2343,58 @@
                 },
                 {
                   "key": "old_password",
-                  "value": "{{aa_password}}",
+                  "value": "{{c_old}}",
                   "type": "text"
                 },
                 {
                   "key": "new_password1",
-                  "value": "{{new_password}}",
+                  "value": "{{c_new1}}",
                   "type": "text"
                 },
                 {
                   "key": "new_password2",
-                  "value": "{{new_password}}X",
+                  "value": "{{c_new2}}",
                   "type": "text"
                 }
               ]
             }
           },
-          "response": []
+          "response": [],
+          "protocolProfileBehavior": {
+            "followRedirects": false
+          }
         },
         {
           "name": "TC-AA-036 — POST Change Password with Mismatched Confirmation",
           "event": [
             {
-              "listen": "test",
-              "script": {
-                "exec": [
-                  "pm.test('Mismatched passwords remain on form', () => pm.response.to.have.status(200));"
-                ],
-                "type": "text/javascript",
-                "packages": {},
-                "requests": {}
-              }
-            },
-            {
               "listen": "prerequest",
               "script": {
                 "type": "text/javascript",
                 "exec": [
                   "const aa = eval(pm.collectionVariables.get('aa_helpers'));   // hàm dùng chung, xem biến aa_helpers",
-                  "aa.user('/accounts/password/change/');   // điều kiện: đăng nhập tài khoản A + CSRF mới của /accounts/password/change/"
+                  "aa.newUser('/accounts/password/change/', function () { pm.collectionVariables.set('c_old', pm.variables.get('aa_password')); pm.collectionVariables.set('c_new1', pm.variables.get('new_password')); pm.collectionVariables.set('c_new2', pm.variables.get('new_password')); pm.collectionVariables.set('c_new1', pm.variables.get('new_password') + 'X'); });"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const base = pm.variables.replaceIn('{{base_url}}');",
+                  "const loc = pm.response.headers.get('Location') || '';",
+                  "const hasSession = (cb) => pm.sendRequest({ url: base + '/accounts/password/change/', method: 'GET' }, (e, r) => cb(!e && r.text().indexOf('old_password') !== -1));",
+                  "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Hiện thông báo lỗi', () => pm.expect(pm.response.text()).to.match(/errorlist|auth-error/));",
+                  "hasSession((s) => pm.test('Vẫn đăng nhập', () => pm.expect(s).to.be.true));"
                 ]
               }
             }
           ],
-          "protocolProfileBehavior": {
-            "followRedirects": false
-          },
           "request": {
             "method": "POST",
             "header": [],
-            "body": {
-              "mode": "urlencoded",
-              "urlencoded": [
-                {
-                  "key": "csrfmiddlewaretoken",
-                  "value": "{{csrf_token}}",
-                  "type": "text"
-                },
-                {
-                  "key": "old_password",
-                  "value": "wrong-old-password",
-                  "type": "text"
-                },
-                {
-                  "key": "new_password1",
-                  "value": "NewPass-For-Test-Only-1!",
-                  "type": "text"
-                },
-                {
-                  "key": "new_password2",
-                  "value": "DifferentPass-For-Test-Only-2!",
-                  "type": "text"
-                }
-              ]
-            },
             "url": {
               "raw": "{{base_url}}/accounts/password/change/",
               "host": [
@@ -2317,62 +2406,69 @@
                 "change",
                 ""
               ]
+            },
+            "description": "Lớp EP: X – hai ô mật khẩu mới không khớp (ô mật khẩu mới khác).",
+            "body": {
+              "mode": "urlencoded",
+              "urlencoded": [
+                {
+                  "key": "csrfmiddlewaretoken",
+                  "value": "{{csrf_token}}",
+                  "type": "text"
+                },
+                {
+                  "key": "old_password",
+                  "value": "{{c_old}}",
+                  "type": "text"
+                },
+                {
+                  "key": "new_password1",
+                  "value": "{{c_new1}}",
+                  "type": "text"
+                },
+                {
+                  "key": "new_password2",
+                  "value": "{{c_new2}}",
+                  "type": "text"
+                }
+              ]
             }
           },
-          "response": []
+          "response": [],
+          "protocolProfileBehavior": {
+            "followRedirects": false
+          }
         },
         {
           "name": "TC-AA-037 — POST Change Password without CSRF Token",
           "event": [
             {
-              "listen": "test",
-              "script": {
-                "exec": [
-                  "pm.test('POST without CSRF is rejected', () => pm.response.to.have.status(403));\r",
-                  "pm.test('CSRF failure is reported', () => pm.expect(pm.response.text()).to.include('CSRF'));"
-                ],
-                "type": "text/javascript",
-                "packages": {},
-                "requests": {}
-              }
-            },
-            {
               "listen": "prerequest",
               "script": {
                 "type": "text/javascript",
                 "exec": [
                   "const aa = eval(pm.collectionVariables.get('aa_helpers'));   // hàm dùng chung, xem biến aa_helpers",
-                  "aa.user();   // điều kiện: đăng nhập tài khoản A"
+                  "aa.newUser('/accounts/password/change/', function () { pm.collectionVariables.set('c_old', pm.variables.get('aa_password')); pm.collectionVariables.set('c_new1', pm.variables.get('new_password')); pm.collectionVariables.set('c_new2', pm.variables.get('new_password')); });"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const base = pm.variables.replaceIn('{{base_url}}');",
+                  "const loc = pm.response.headers.get('Location') || '';",
+                  "const hasSession = (cb) => pm.sendRequest({ url: base + '/accounts/password/change/', method: 'GET' }, (e, r) => cb(!e && r.text().indexOf('old_password') !== -1));",
+                  "pm.test('HTTP 403', () => pm.response.to.have.status(403));",
+                  "hasSession((s) => pm.test('Vẫn đăng nhập', () => pm.expect(s).to.be.true));"
                 ]
               }
             }
           ],
-          "protocolProfileBehavior": {
-            "followRedirects": false
-          },
           "request": {
             "method": "POST",
             "header": [],
-            "body": {
-              "mode": "urlencoded",
-              "urlencoded": [
-                {
-                  "key": "old_password",
-                  "value": "wrong-old-password",
-                  "type": "text"
-                },
-                {
-                  "key": "new_password1",
-                  "value": "NewPass-For-Test-Only-1!",
-                  "type": "text"
-                },
-                {
-                  "key": "new_password2",
-                  "value": "NewPass-For-Test-Only-1!",
-                  "type": "text"
-                }
-              ]
-            },
             "url": {
               "raw": "{{base_url}}/accounts/password/change/",
               "host": [
@@ -2384,44 +2480,80 @@
                 "change",
                 ""
               ]
+            },
+            "description": "Lớp EP: X – thiếu CSRF token.",
+            "body": {
+              "mode": "urlencoded",
+              "urlencoded": [
+                {
+                  "key": "old_password",
+                  "value": "{{c_old}}",
+                  "type": "text"
+                },
+                {
+                  "key": "new_password1",
+                  "value": "{{c_new1}}",
+                  "type": "text"
+                },
+                {
+                  "key": "new_password2",
+                  "value": "{{c_new2}}",
+                  "type": "text"
+                }
+              ]
             }
           },
-          "response": []
+          "response": [],
+          "protocolProfileBehavior": {
+            "followRedirects": false
+          }
         },
         {
           "name": "TC-AA-038 — POST Change Password Successfully",
           "event": [
-            {
-              "listen": "test",
-              "script": {
-                "exec": [
-                  "pm.test('Valid password change redirects to profile', () => pm.response.to.have.status(302));\r",
-                  "pm.test('Location points to profile', () => pm.expect(pm.response.headers.get('Location') || '').to.include('/accounts/profile/'));",
-                  "if (pm.response.code === 302) { const o = pm.collectionVariables.get('aa_password'); pm.collectionVariables.set('aa_password', pm.collectionVariables.get('new_password')); pm.collectionVariables.set('new_password', o); }"
-                ],
-                "type": "text/javascript",
-                "packages": {},
-                "requests": {}
-              }
-            },
             {
               "listen": "prerequest",
               "script": {
                 "type": "text/javascript",
                 "exec": [
                   "const aa = eval(pm.collectionVariables.get('aa_helpers'));   // hàm dùng chung, xem biến aa_helpers",
-                  "aa.user('/accounts/password/change/');   // điều kiện: đăng nhập tài khoản A + CSRF mới của /accounts/password/change/",
-                  "pm.collectionVariables.set('aa_old_password', pm.collectionVariables.get('aa_password'));"
+                  "aa.newUser('/accounts/password/change/', function () { pm.collectionVariables.set('c_old', pm.variables.get('aa_password')); pm.collectionVariables.set('c_new1', pm.variables.get('new_password')); pm.collectionVariables.set('c_new2', pm.variables.get('new_password')); });"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const base = pm.variables.replaceIn('{{base_url}}');",
+                  "const loc = pm.response.headers.get('Location') || '';",
+                  "const hasSession = (cb) => pm.sendRequest({ url: base + '/accounts/password/change/', method: 'GET' }, (e, r) => cb(!e && r.text().indexOf('old_password') !== -1));",
+                  "pm.test('HTTP 302', () => pm.response.to.have.status(302));",
+                  "pm.test('Location là /accounts/profile/', () => pm.expect(loc).to.eql('/accounts/profile/'));",
+                  "hasSession((s) => pm.test('Vẫn đăng nhập (giữ phiên)', () => pm.expect(s).to.be.true));",
+                  "const aa = eval(pm.collectionVariables.get('aa_helpers'));",
+                  "aa.login(pm.collectionVariables.get('ep_user'), pm.variables.get('new_password'), null, () => hasSession((s) => pm.test('Đăng nhập được bằng mật khẩu mới', () => pm.expect(s).to.be.true)));"
                 ]
               }
             }
           ],
-          "protocolProfileBehavior": {
-            "followRedirects": false
-          },
           "request": {
             "method": "POST",
             "header": [],
+            "url": {
+              "raw": "{{base_url}}/accounts/password/change/",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "accounts",
+                "password",
+                "change",
+                ""
+              ]
+            },
+            "description": "Lớp EP: V – mọi lớp hợp lệ của đổi mật khẩu (V14, V15).",
             "body": {
               "mode": "urlencoded",
               "urlencoded": [
@@ -2432,35 +2564,26 @@
                 },
                 {
                   "key": "old_password",
-                  "value": "{{aa_password}}",
+                  "value": "{{c_old}}",
                   "type": "text"
                 },
                 {
                   "key": "new_password1",
-                  "value": "{{new_password}}",
+                  "value": "{{c_new1}}",
                   "type": "text"
                 },
                 {
                   "key": "new_password2",
-                  "value": "{{new_password}}",
+                  "value": "{{c_new2}}",
                   "type": "text"
                 }
               ]
-            },
-            "url": {
-              "raw": "{{base_url}}/accounts/password/change/",
-              "host": [
-                "{{base_url}}"
-              ],
-              "path": [
-                "accounts",
-                "password",
-                "change",
-                ""
-              ]
             }
           },
-          "response": []
+          "response": [],
+          "protocolProfileBehavior": {
+            "followRedirects": false
+          }
         }
       ]
     },
@@ -2471,28 +2594,29 @@
           "name": "TC-AA-039 — POST Logout without CSRF Token",
           "event": [
             {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "pm.test('Trả 403 (thiếu CSRF)', () => pm.response.to.have.status(403));"
-                ]
-              }
-            },
-            {
               "listen": "prerequest",
               "script": {
                 "type": "text/javascript",
                 "exec": [
                   "const aa = eval(pm.collectionVariables.get('aa_helpers'));   // hàm dùng chung, xem biến aa_helpers",
-                  "aa.user();   // điều kiện: đăng nhập tài khoản A"
+                  "aa.newUser(null);"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const base = pm.variables.replaceIn('{{base_url}}');",
+                  "const loc = pm.response.headers.get('Location') || '';",
+                  "const hasSession = (cb) => pm.sendRequest({ url: base + '/accounts/password/change/', method: 'GET' }, (e, r) => cb(!e && r.text().indexOf('old_password') !== -1));",
+                  "pm.test('HTTP 403', () => pm.response.to.have.status(403));",
+                  "hasSession((s) => pm.test('Phiên giữ nguyên', () => pm.expect(s).to.be.true));"
                 ]
               }
             }
           ],
-          "protocolProfileBehavior": {
-            "followRedirects": false
-          },
           "request": {
             "method": "POST",
             "header": [],
@@ -2506,41 +2630,61 @@
                 "logout",
                 ""
               ]
+            },
+            "description": "Lớp EP: X – thiếu CSRF token.",
+            "body": {
+              "mode": "urlencoded",
+              "urlencoded": []
             }
           },
-          "response": []
+          "response": [],
+          "protocolProfileBehavior": {
+            "followRedirects": false
+          }
         },
         {
           "name": "TC-AA-040 — POST Logout",
           "event": [
-            {
-              "listen": "test",
-              "script": {
-                "exec": [
-                  "pm.test(\"Logout redirects\", () => { pm.response.to.have.status(302); });"
-                ],
-                "type": "text/javascript",
-                "packages": {},
-                "requests": {}
-              }
-            },
             {
               "listen": "prerequest",
               "script": {
                 "type": "text/javascript",
                 "exec": [
                   "const aa = eval(pm.collectionVariables.get('aa_helpers'));   // hàm dùng chung, xem biến aa_helpers",
-                  "aa.user('/accounts/password/change/');   // điều kiện: đăng nhập tài khoản A + CSRF mới của /accounts/password/change/"
+                  "aa.newUser('/accounts/password/change/');"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const base = pm.variables.replaceIn('{{base_url}}');",
+                  "const loc = pm.response.headers.get('Location') || '';",
+                  "const hasSession = (cb) => pm.sendRequest({ url: base + '/accounts/password/change/', method: 'GET' }, (e, r) => cb(!e && r.text().indexOf('old_password') !== -1));",
+                  "pm.test('HTTP 302', () => pm.response.to.have.status(302));",
+                  "pm.test('Location là /', () => pm.expect(loc).to.eql('/'));",
+                  "hasSession((s) => pm.test('Phiên đã bị xóa', () => pm.expect(s).to.be.false));"
                 ]
               }
             }
           ],
-          "protocolProfileBehavior": {
-            "followRedirects": false
-          },
           "request": {
             "method": "POST",
             "header": [],
+            "url": {
+              "raw": "{{base_url}}/accounts/logout/",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "accounts",
+                "logout",
+                ""
+              ]
+            },
+            "description": "Lớp EP: V – POST đăng xuất hợp lệ.",
             "body": {
               "mode": "urlencoded",
               "urlencoded": [
@@ -2550,40 +2694,40 @@
                   "type": "text"
                 }
               ]
-            },
-            "url": {
-              "raw": "{{base_url}}/accounts/logout/",
-              "host": [
-                "{{base_url}}"
-              ],
-              "path": [
-                "accounts",
-                "logout",
-                ""
-              ]
             }
           },
-          "response": []
+          "response": [],
+          "protocolProfileBehavior": {
+            "followRedirects": false
+          }
         },
         {
           "name": "TC-AA-041 — GET Profile After Logout",
           "event": [
             {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const aa = eval(pm.collectionVariables.get('aa_helpers'));   // hàm dùng chung, xem biến aa_helpers",
+                  "aa.newUser('/accounts/password/change/', function () { aa.post('/accounts/logout/', { csrfmiddlewaretoken: pm.collectionVariables.get('csrf_token') }, function () {}); });"
+                ]
+              }
+            },
+            {
               "listen": "test",
               "script": {
-                "exec": [
-                  "pm.test(\"Guest is redirected from profile\", () => { pm.response.to.have.status(302); });\r",
-                  "pm.test(\"Redirect points to login\", () => { pm.expect(pm.response.headers.get(\"Location\") || \"\").to.include(\"/accounts/login/\"); });"
-                ],
                 "type": "text/javascript",
-                "packages": {},
-                "requests": {}
+                "exec": [
+                  "const base = pm.variables.replaceIn('{{base_url}}');",
+                  "const loc = pm.response.headers.get('Location') || '';",
+                  "const hasSession = (cb) => pm.sendRequest({ url: base + '/accounts/password/change/', method: 'GET' }, (e, r) => cb(!e && r.text().indexOf('old_password') !== -1));",
+                  "pm.test('HTTP 302', () => pm.response.to.have.status(302));",
+                  "pm.test('Location chứa /accounts/login/', () => pm.expect(loc).to.include('/accounts/login/'));"
+                ]
               }
             }
           ],
-          "protocolProfileBehavior": {
-            "followRedirects": false
-          },
           "request": {
             "method": "GET",
             "header": [],
@@ -2597,28 +2741,41 @@
                 "profile",
                 ""
               ]
-            }
+            },
+            "description": "Lớp EP: V – sau đăng xuất hồ sơ bị chặn (kiểm tra tiếp)."
           },
-          "response": []
+          "response": [],
+          "protocolProfileBehavior": {
+            "followRedirects": false
+          }
         },
         {
           "name": "TC-AA-042 — GET Logout Endpoint",
           "event": [
             {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const aa = eval(pm.collectionVariables.get('aa_helpers'));   // hàm dùng chung, xem biến aa_helpers",
+                  "aa.newUser(null);"
+                ]
+              }
+            },
+            {
               "listen": "test",
               "script": {
-                "exec": [
-                  "pm.test('Logout rejects GET', () => pm.response.to.have.status(405));"
-                ],
                 "type": "text/javascript",
-                "packages": {},
-                "requests": {}
+                "exec": [
+                  "const base = pm.variables.replaceIn('{{base_url}}');",
+                  "const loc = pm.response.headers.get('Location') || '';",
+                  "const hasSession = (cb) => pm.sendRequest({ url: base + '/accounts/password/change/', method: 'GET' }, (e, r) => cb(!e && r.text().indexOf('old_password') !== -1));",
+                  "pm.test('HTTP 405', () => pm.response.to.have.status(405));",
+                  "hasSession((s) => pm.test('Phiên giữ nguyên', () => pm.expect(s).to.be.true));"
+                ]
               }
             }
           ],
-          "protocolProfileBehavior": {
-            "followRedirects": false
-          },
           "request": {
             "method": "GET",
             "header": [],
@@ -2632,37 +2789,42 @@
                 "logout",
                 ""
               ]
-            }
+            },
+            "description": "Lớp EP: X – đăng xuất bằng GET."
           },
-          "response": []
+          "response": [],
+          "protocolProfileBehavior": {
+            "followRedirects": false
+          }
         },
         {
           "name": "TC-AA-043 — POST Login with Old Password after Change",
           "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "pm.test('Trả 200 (ở lại biểu mẫu)', () => pm.response.to.have.status(200));",
-                  "pm.test('Mật khẩu cũ bị từ chối', () => pm.expect(pm.response.text()).to.match(/auth-error-box/));"
-                ]
-              }
-            },
             {
               "listen": "prerequest",
               "script": {
                 "type": "text/javascript",
                 "exec": [
                   "const aa = eval(pm.collectionVariables.get('aa_helpers'));   // hàm dùng chung, xem biến aa_helpers",
-                  "aa.guest('/accounts/login/');   // điều kiện: Guest + CSRF mới của /accounts/login/"
+                  "aa.newUser('/accounts/password/change/', function () { aa.post('/accounts/password/change/', { csrfmiddlewaretoken: pm.collectionVariables.get('csrf_token'), old_password: pm.variables.get('aa_password'), new_password1: pm.variables.get('new_password'), new_password2: pm.variables.get('new_password') }, function () { aa.guest('/accounts/login/', function () { pm.collectionVariables.set('l_user', pm.collectionVariables.get('ep_user')); pm.collectionVariables.set('l_pw', pm.variables.get('aa_password')); pm.collectionVariables.set('l_next', ''); }); }); });"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const base = pm.variables.replaceIn('{{base_url}}');",
+                  "const loc = pm.response.headers.get('Location') || '';",
+                  "const hasSession = (cb) => pm.sendRequest({ url: base + '/accounts/password/change/', method: 'GET' }, (e, r) => cb(!e && r.text().indexOf('old_password') !== -1));",
+                  "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Hiện thông báo lỗi', () => pm.expect(pm.response.text()).to.match(/errorlist|auth-error/));",
+                  "hasSession((s) => pm.test('Mật khẩu cũ bị từ chối', () => pm.expect(s).to.be.false));"
                 ]
               }
             }
           ],
-          "protocolProfileBehavior": {
-            "followRedirects": false
-          },
           "request": {
             "method": "POST",
             "header": [],
@@ -2677,6 +2839,7 @@
                 ""
               ]
             },
+            "description": "Lớp EP: X – mật khẩu cũ sau khi đã đổi.",
             "body": {
               "mode": "urlencoded",
               "urlencoded": [
@@ -2687,18 +2850,21 @@
                 },
                 {
                   "key": "username",
-                  "value": "{{aa_username}}",
+                  "value": "{{l_user}}",
                   "type": "text"
                 },
                 {
                   "key": "password",
-                  "value": "{{aa_old_password}}",
+                  "value": "{{l_pw}}",
                   "type": "text"
                 }
               ]
             }
           },
-          "response": []
+          "response": [],
+          "protocolProfileBehavior": {
+            "followRedirects": false
+          }
         }
       ]
     },
@@ -2709,68 +2875,29 @@
           "name": "TC-AA-044 — GET Admin Dashboard as Guest",
           "event": [
             {
-              "listen": "test",
-              "script": {
-                "exec": [
-                  "pm.test('Guest is redirected to login', () => pm.response.to.have.status(302));\r",
-                  "pm.test('Location points to login', () => pm.expect(pm.response.headers.get('Location') || '').to.include('/accounts/login/'));"
-                ],
-                "type": "text/javascript",
-                "packages": {},
-                "requests": {}
-              }
-            }
-          ],
-          "protocolProfileBehavior": {
-            "followRedirects": false,
-            "disableCookies": true
-          },
-          "request": {
-            "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "{{base_url}}/accounts/admin-dashboard/",
-              "host": [
-                "{{base_url}}"
-              ],
-              "path": [
-                "accounts",
-                "admin-dashboard",
-                ""
-              ]
-            }
-          },
-          "response": []
-        },
-        {
-          "name": "TC-AA-045 — GET Admin Dashboard as Customer",
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "exec": [
-                  "pm.test('Customer cannot access admin dashboard', () => pm.expect([302, 403]).to.include(pm.response.code));\r",
-                  "if (pm.response.code === 302) pm.test('Redirect target is provided', () => pm.expect(pm.response.headers.get('Location') || '').to.not.equal(''));"
-                ],
-                "type": "text/javascript",
-                "packages": {},
-                "requests": {}
-              }
-            },
-            {
               "listen": "prerequest",
               "script": {
                 "type": "text/javascript",
                 "exec": [
                   "const aa = eval(pm.collectionVariables.get('aa_helpers'));   // hàm dùng chung, xem biến aa_helpers",
-                  "aa.user();   // điều kiện: đăng nhập tài khoản A"
+                  "aa.guest(null);"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const base = pm.variables.replaceIn('{{base_url}}');",
+                  "const loc = pm.response.headers.get('Location') || '';",
+                  "const hasSession = (cb) => pm.sendRequest({ url: base + '/accounts/password/change/', method: 'GET' }, (e, r) => cb(!e && r.text().indexOf('old_password') !== -1));",
+                  "pm.test('HTTP 302', () => pm.response.to.have.status(302));",
+                  "pm.test('Location chứa /accounts/login/', () => pm.expect(loc).to.include('/accounts/login/'));"
                 ]
               }
             }
           ],
-          "protocolProfileBehavior": {
-            "followRedirects": false
-          },
           "request": {
             "method": "GET",
             "header": [],
@@ -2784,37 +2911,92 @@
                 "dashboard",
                 ""
               ]
-            }
+            },
+            "description": "Lớp EP: X – Guest vào trang quản trị."
           },
-          "response": []
+          "response": [],
+          "protocolProfileBehavior": {
+            "followRedirects": false
+          }
         },
         {
-          "name": "TC-AA-046 — POST Login as Admin",
+          "name": "TC-AA-045 — GET Admin Dashboard as Customer",
           "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "pm.test('Trả 302', () => pm.response.to.have.status(302));",
-                  "pm.test('Chuyển sang dashboard', () => pm.expect(pm.response.headers.get('Location') || '').to.match(/dashboard/));"
-                ]
-              }
-            },
             {
               "listen": "prerequest",
               "script": {
                 "type": "text/javascript",
                 "exec": [
                   "const aa = eval(pm.collectionVariables.get('aa_helpers'));   // hàm dùng chung, xem biến aa_helpers",
-                  "aa.guest('/accounts/login/');   // điều kiện: Guest + CSRF mới của /accounts/login/"
+                  "aa.newUser(null);"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const base = pm.variables.replaceIn('{{base_url}}');",
+                  "const loc = pm.response.headers.get('Location') || '';",
+                  "const hasSession = (cb) => pm.sendRequest({ url: base + '/accounts/password/change/', method: 'GET' }, (e, r) => cb(!e && r.text().indexOf('old_password') !== -1));",
+                  "pm.test('HTTP 302', () => pm.response.to.have.status(302));",
+                  "pm.test('Location là /', () => pm.expect(loc).to.eql('/'));"
                 ]
               }
             }
           ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/admin-panel/dashboard/",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "admin-panel",
+                "dashboard",
+                ""
+              ]
+            },
+            "description": "Lớp EP: X – Customer vào trang quản trị."
+          },
+          "response": [],
           "protocolProfileBehavior": {
             "followRedirects": false
-          },
+          }
+        },
+        {
+          "name": "TC-AA-046 — POST Login as Admin",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const aa = eval(pm.collectionVariables.get('aa_helpers'));   // hàm dùng chung, xem biến aa_helpers",
+                  "pm.collectionVariables.set('l_user', pm.variables.get('admin_user'));",
+                  "pm.collectionVariables.set('l_pw', pm.variables.get('admin_pass'));",
+                  "aa.guest('/accounts/login/');"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const base = pm.variables.replaceIn('{{base_url}}');",
+                  "const loc = pm.response.headers.get('Location') || '';",
+                  "const hasSession = (cb) => pm.sendRequest({ url: base + '/accounts/password/change/', method: 'GET' }, (e, r) => cb(!e && r.text().indexOf('old_password') !== -1));",
+                  "pm.test('HTTP 302', () => pm.response.to.have.status(302));",
+                  "pm.test('Location là /admin-panel/dashboard/', () => pm.expect(loc).to.eql('/admin-panel/dashboard/'));",
+                  "hasSession((s) => pm.test('Có phiên đăng nhập', () => pm.expect(s).to.be.true));"
+                ]
+              }
+            }
+          ],
           "request": {
             "method": "POST",
             "header": [],
@@ -2829,6 +3011,7 @@
                 ""
               ]
             },
+            "description": "Lớp EP: V – Admin đăng nhập đúng.",
             "body": {
               "mode": "urlencoded",
               "urlencoded": [
@@ -2839,91 +3022,98 @@
                 },
                 {
                   "key": "username",
-                  "value": "{{admin_user}}",
+                  "value": "{{l_user}}",
                   "type": "text"
                 },
                 {
                   "key": "password",
-                  "value": "{{admin_pass}}",
+                  "value": "{{l_pw}}",
                   "type": "text"
                 }
               ]
             }
           },
-          "response": []
+          "response": [],
+          "protocolProfileBehavior": {
+            "followRedirects": false
+          }
         },
         {
           "name": "TC-AA-047 — GET Admin Dashboard as Admin",
           "event": [
             {
-              "listen": "test",
-              "script": {
-                "exec": [
-                  "pm.test('Admin dashboard returns 200 for admin', () => pm.response.to.have.status(200));"
-                ],
-                "type": "text/javascript",
-                "packages": {},
-                "requests": {}
-              }
-            },
-            {
               "listen": "prerequest",
               "script": {
                 "type": "text/javascript",
                 "exec": [
                   "const aa = eval(pm.collectionVariables.get('aa_helpers'));   // hàm dùng chung, xem biến aa_helpers",
-                  "aa.admin();   // điều kiện: đăng nhập Admin"
+                  "aa.admin(null);"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const base = pm.variables.replaceIn('{{base_url}}');",
+                  "const loc = pm.response.headers.get('Location') || '';",
+                  "const hasSession = (cb) => pm.sendRequest({ url: base + '/accounts/password/change/', method: 'GET' }, (e, r) => cb(!e && r.text().indexOf('old_password') !== -1));",
+                  "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+                  "pm.sendRequest({ url: base + '/accounts/admin-dashboard/', method: 'GET' }, (e, r) => pm.test('/accounts/admin-dashboard/ trả 200', () => pm.expect(r.code).to.eql(200)));"
                 ]
               }
             }
           ],
-          "protocolProfileBehavior": {
-            "followRedirects": false
-          },
           "request": {
             "method": "GET",
             "header": [],
             "url": {
-              "raw": "{{base_url}}/accounts/admin-dashboard/",
+              "raw": "{{base_url}}/admin-panel/dashboard/",
               "host": [
                 "{{base_url}}"
               ],
               "path": [
-                "accounts",
-                "admin-dashboard",
+                "admin-panel",
+                "dashboard",
                 ""
               ]
-            }
+            },
+            "description": "Lớp EP: V – Admin vào trang quản trị."
           },
-          "response": []
+          "response": [],
+          "protocolProfileBehavior": {
+            "followRedirects": false
+          }
         },
         {
           "name": "TC-AA-048 — GET Login Page while Admin",
           "event": [
             {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "pm.test('Trả 302', () => pm.response.to.have.status(302));",
-                  "pm.test('Chuyển về dashboard', () => pm.expect(pm.response.headers.get('Location') || '').to.match(/dashboard/));"
-                ]
-              }
-            },
-            {
               "listen": "prerequest",
               "script": {
                 "type": "text/javascript",
                 "exec": [
                   "const aa = eval(pm.collectionVariables.get('aa_helpers'));   // hàm dùng chung, xem biến aa_helpers",
-                  "aa.admin();   // điều kiện: đăng nhập Admin"
+                  "aa.admin(null);"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const base = pm.variables.replaceIn('{{base_url}}');",
+                  "const loc = pm.response.headers.get('Location') || '';",
+                  "const hasSession = (cb) => pm.sendRequest({ url: base + '/accounts/password/change/', method: 'GET' }, (e, r) => cb(!e && r.text().indexOf('old_password') !== -1));",
+                  "pm.test('HTTP 302', () => pm.response.to.have.status(302));",
+                  "pm.test('Location là /admin-panel/dashboard/', () => pm.expect(loc).to.eql('/admin-panel/dashboard/'));",
+                  "hasSession((s) => pm.test('Phiên giữ nguyên', () => pm.expect(s).to.be.true));"
                 ]
               }
             }
           ],
-          "protocolProfileBehavior": {
-            "followRedirects": false
-          },
           "request": {
             "method": "GET",
             "header": [],
@@ -2937,37 +3127,42 @@
                 "login",
                 ""
               ]
-            }
+            },
+            "description": "Lớp EP: X – Admin đã đăng nhập mở trang đăng nhập."
           },
-          "response": []
+          "response": [],
+          "protocolProfileBehavior": {
+            "followRedirects": false
+          }
         },
         {
           "name": "TC-AA-049 — POST Logout as Admin",
           "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "pm.test('Trả 302', () => pm.response.to.have.status(302));",
-                  "pm.test('Về trang chủ', () => pm.expect(pm.response.headers.get('Location') || '').to.match(/\\/$/));"
-                ]
-              }
-            },
             {
               "listen": "prerequest",
               "script": {
                 "type": "text/javascript",
                 "exec": [
                   "const aa = eval(pm.collectionVariables.get('aa_helpers'));   // hàm dùng chung, xem biến aa_helpers",
-                  "aa.admin('/accounts/password/change/');   // điều kiện: đăng nhập Admin + CSRF mới của /accounts/password/change/"
+                  "aa.admin('/accounts/password/change/');"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const base = pm.variables.replaceIn('{{base_url}}');",
+                  "const loc = pm.response.headers.get('Location') || '';",
+                  "const hasSession = (cb) => pm.sendRequest({ url: base + '/accounts/password/change/', method: 'GET' }, (e, r) => cb(!e && r.text().indexOf('old_password') !== -1));",
+                  "pm.test('HTTP 302', () => pm.response.to.have.status(302));",
+                  "pm.test('Location là /', () => pm.expect(loc).to.eql('/'));",
+                  "hasSession((s) => pm.test('Phiên đã bị xóa', () => pm.expect(s).to.be.false));"
                 ]
               }
             }
           ],
-          "protocolProfileBehavior": {
-            "followRedirects": false
-          },
           "request": {
             "method": "POST",
             "header": [],
@@ -2982,6 +3177,7 @@
                 ""
               ]
             },
+            "description": "Lớp EP: V – Admin đăng xuất.",
             "body": {
               "mode": "urlencoded",
               "urlencoded": [
@@ -2993,25 +3189,38 @@
               ]
             }
           },
-          "response": []
+          "response": [],
+          "protocolProfileBehavior": {
+            "followRedirects": false
+          }
         },
         {
           "name": "TC-AA-050 — GET Admin Dashboard after Admin Logout",
           "event": [
             {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const aa = eval(pm.collectionVariables.get('aa_helpers'));   // hàm dùng chung, xem biến aa_helpers",
+                  "aa.admin('/accounts/password/change/', function () { aa.post('/accounts/logout/', { csrfmiddlewaretoken: pm.collectionVariables.get('csrf_token') }, function () {}); });"
+                ]
+              }
+            },
+            {
               "listen": "test",
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "pm.test('Trả 302', () => pm.response.to.have.status(302));",
-                  "pm.test('Chuyển sang đăng nhập', () => pm.expect(pm.response.headers.get('Location') || '').to.match(/\\/accounts\\/login\\//));"
+                  "const base = pm.variables.replaceIn('{{base_url}}');",
+                  "const loc = pm.response.headers.get('Location') || '';",
+                  "const hasSession = (cb) => pm.sendRequest({ url: base + '/accounts/password/change/', method: 'GET' }, (e, r) => cb(!e && r.text().indexOf('old_password') !== -1));",
+                  "pm.test('HTTP 302', () => pm.response.to.have.status(302));",
+                  "pm.test('Location chứa /accounts/login/', () => pm.expect(loc).to.include('/accounts/login/'));"
                 ]
               }
             }
           ],
-          "protocolProfileBehavior": {
-            "followRedirects": false
-          },
           "request": {
             "method": "GET",
             "header": [],
@@ -3025,9 +3234,13 @@
                 "dashboard",
                 ""
               ]
-            }
+            },
+            "description": "Lớp EP: V – sau Admin đăng xuất trang quản trị bị chặn."
           },
-          "response": []
+          "response": [],
+          "protocolProfileBehavior": {
+            "followRedirects": false
+          }
         }
       ]
     },
@@ -3038,18 +3251,26 @@
           "name": "TC-AA-051 — GET Password Reset Page",
           "event": [
             {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const aa = eval(pm.collectionVariables.get('aa_helpers'));   // hàm dùng chung, xem biến aa_helpers",
+                  "aa.guest(null);"
+                ]
+              }
+            },
+            {
               "listen": "test",
               "script": {
-                "exec": [
-                  "pm.test('Password reset page returns 200', () => pm.response.to.have.status(200));\r",
-                  "const html = pm.response.text();\r",
-                  "pm.test('Email form is present', () => pm.expect(html).to.include('name=\"email\"'));\r",
-                  "const match = html.match(/name=\"csrfmiddlewaretoken\" value=\"([^\"]+)\"/);\r",
-                  "if (match) pm.collectionVariables.set('csrf_token', match[1]);"
-                ],
                 "type": "text/javascript",
-                "packages": {},
-                "requests": {}
+                "exec": [
+                  "const base = pm.variables.replaceIn('{{base_url}}');",
+                  "const loc = pm.response.headers.get('Location') || '';",
+                  "const hasSession = (cb) => pm.sendRequest({ url: base + '/accounts/password/change/', method: 'GET' }, (e, r) => cb(!e && r.text().indexOf('old_password') !== -1));",
+                  "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Form có trường email', () => pm.expect(pm.response.text()).to.include('name=\"email\"'));"
+                ]
               }
             }
           ],
@@ -3067,7 +3288,8 @@
                 "reset",
                 ""
               ]
-            }
+            },
+            "description": "Lớp EP: V – Guest mở trang yêu cầu đặt lại mật khẩu."
           },
           "response": []
         },
@@ -3075,39 +3297,33 @@
           "name": "TC-AA-052 — POST Request Password Reset",
           "event": [
             {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const aa = eval(pm.collectionVariables.get('aa_helpers'));   // hàm dùng chung, xem biến aa_helpers",
+                  "aa.newUserGuest('/accounts/password/reset/');"
+                ]
+              }
+            },
+            {
               "listen": "test",
               "script": {
-                "exec": [
-                  "pm.test('Reset request redirects', () => pm.response.to.have.status(302));\r",
-                  "pm.test('Redirects to reset confirmation', () => pm.expect(pm.response.headers.get('Location') || '').to.include('/accounts/password/reset/done/'));"
-                ],
                 "type": "text/javascript",
-                "packages": {},
-                "requests": {}
+                "exec": [
+                  "const base = pm.variables.replaceIn('{{base_url}}');",
+                  "const loc = pm.response.headers.get('Location') || '';",
+                  "const hasSession = (cb) => pm.sendRequest({ url: base + '/accounts/password/change/', method: 'GET' }, (e, r) => cb(!e && r.text().indexOf('old_password') !== -1));",
+                  "pm.test('HTTP 302', () => pm.response.to.have.status(302));",
+                  "pm.test('Location là /accounts/password/reset/done/', () => pm.expect(loc).to.eql('/accounts/password/reset/done/'));",
+                  "const aa = eval(pm.collectionVariables.get('aa_helpers'));\naa.mailLink(pm.collectionVariables.get('ep_email'), (hit) => pm.test('Đã gửi email đặt lại', () => pm.expect(hit).to.not.be.null));"
+                ]
               }
             }
           ],
-          "protocolProfileBehavior": {
-            "followRedirects": false
-          },
           "request": {
             "method": "POST",
             "header": [],
-            "body": {
-              "mode": "urlencoded",
-              "urlencoded": [
-                {
-                  "key": "csrfmiddlewaretoken",
-                  "value": "{{csrf_token}}",
-                  "type": "text"
-                },
-                {
-                  "key": "email",
-                  "value": "{{aa_email}}",
-                  "type": "text"
-                }
-              ]
-            },
             "url": {
               "raw": "{{base_url}}/accounts/password/reset/",
               "host": [
@@ -3119,23 +3335,53 @@
                 "reset",
                 ""
               ]
+            },
+            "description": "Lớp EP: V – email có tài khoản.",
+            "body": {
+              "mode": "urlencoded",
+              "urlencoded": [
+                {
+                  "key": "csrfmiddlewaretoken",
+                  "value": "{{csrf_token}}",
+                  "type": "text"
+                },
+                {
+                  "key": "email",
+                  "value": "{{ep_email}}",
+                  "type": "text"
+                }
+              ]
             }
           },
-          "response": []
+          "response": [],
+          "protocolProfileBehavior": {
+            "followRedirects": false
+          }
         },
         {
           "name": "TC-AA-053 — GET Development Mailbox",
           "event": [
             {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const aa = eval(pm.collectionVariables.get('aa_helpers'));   // hàm dùng chung, xem biến aa_helpers",
+                  "aa.newUserGuest('/accounts/password/reset/', function () { aa.post('/accounts/password/reset/', { csrfmiddlewaretoken: pm.collectionVariables.get('csrf_token'), email: pm.collectionVariables.get('ep_email') }, function () { aa.admin(null); }); });"
+                ]
+              }
+            },
+            {
               "listen": "test",
               "script": {
-                "exec": [
-                  "pm.test('Development mailbox returns 200', () => pm.response.to.have.status(200));\r",
-                  "pm.test('Reset email is visible', () => pm.expect(pm.response.text()).to.include(pm.collectionVariables.get('aa_email')));"
-                ],
                 "type": "text/javascript",
-                "packages": {},
-                "requests": {}
+                "exec": [
+                  "const base = pm.variables.replaceIn('{{base_url}}');",
+                  "const loc = pm.response.headers.get('Location') || '';",
+                  "const hasSession = (cb) => pm.sendRequest({ url: base + '/accounts/password/change/', method: 'GET' }, (e, r) => cb(!e && r.text().indexOf('old_password') !== -1));",
+                  "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Email đặt lại hiện trong hộp thư', () => pm.expect(pm.response.text()).to.include(pm.collectionVariables.get('ep_email')));"
+                ]
               }
             }
           ],
@@ -3152,23 +3398,35 @@
                 "mailbox",
                 ""
               ]
-            }
+            },
+            "description": "Lớp EP: V – email đặt lại có trong hộp thư (kiểm tra tiếp)."
           },
           "response": []
         },
         {
-          "name": "TC-AA-054 — GET Password Reset Complete",
+          "name": "TC-AA-054 — GET Password Reset Complete Page",
           "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const aa = eval(pm.collectionVariables.get('aa_helpers'));   // hàm dùng chung, xem biến aa_helpers",
+                  "aa.guest(null);"
+                ]
+              }
+            },
             {
               "listen": "test",
               "script": {
-                "exec": [
-                  "pm.test('Reset complete page returns 200', () => pm.response.to.have.status(200));\r",
-                  "pm.test('Success message is displayed', () => pm.expect(pm.response.text()).to.include('Mật khẩu đã được cập nhật'));"
-                ],
                 "type": "text/javascript",
-                "packages": {},
-                "requests": {}
+                "exec": [
+                  "const base = pm.variables.replaceIn('{{base_url}}');",
+                  "const loc = pm.response.headers.get('Location') || '';",
+                  "const hasSession = (cb) => pm.sendRequest({ url: base + '/accounts/password/change/', method: 'GET' }, (e, r) => cb(!e && r.text().indexOf('old_password') !== -1));",
+                  "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Hiện thông báo đã cập nhật mật khẩu', () => pm.expect(pm.response.text()).to.include('Mật khẩu đã được cập nhật'));"
+                ]
               }
             }
           ],
@@ -3187,7 +3445,8 @@
                 "complete",
                 ""
               ]
-            }
+            },
+            "description": "Lớp EP: V – trang hoàn tất đặt lại mật khẩu."
           },
           "response": []
         },
@@ -3195,44 +3454,33 @@
           "name": "TC-AA-055 — POST Login with Reset Password",
           "event": [
             {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const aa = eval(pm.collectionVariables.get('aa_helpers'));   // hàm dùng chung, xem biến aa_helpers",
+                  "aa.startReset(function () { aa.finishReset(function () { pm.collectionVariables.set('l_user', pm.collectionVariables.get('ep_user')); pm.collectionVariables.set('l_pw', pm.variables.get('new_password')); pm.collectionVariables.set('l_next', ''); aa.guest('/accounts/login/'); }); });"
+                ]
+              }
+            },
+            {
               "listen": "test",
               "script": {
-                "exec": [
-                  "pm.test('Login with reset password redirects', () => pm.response.to.have.status(302));\r",
-                  "pm.test('Redirects to home', () => pm.expect(pm.response.headers.get('Location') || '').to.match(/^\\/$/));"
-                ],
                 "type": "text/javascript",
-                "packages": {},
-                "requests": {}
+                "exec": [
+                  "const base = pm.variables.replaceIn('{{base_url}}');",
+                  "const loc = pm.response.headers.get('Location') || '';",
+                  "const hasSession = (cb) => pm.sendRequest({ url: base + '/accounts/password/change/', method: 'GET' }, (e, r) => cb(!e && r.text().indexOf('old_password') !== -1));",
+                  "pm.test('HTTP 302', () => pm.response.to.have.status(302));",
+                  "pm.test('Location là /', () => pm.expect(loc).to.eql('/'));",
+                  "hasSession((s) => pm.test('Có phiên đăng nhập', () => pm.expect(s).to.be.true));"
+                ]
               }
             }
           ],
-          "protocolProfileBehavior": {
-            "followRedirects": false
-          },
           "request": {
             "method": "POST",
             "header": [],
-            "body": {
-              "mode": "urlencoded",
-              "urlencoded": [
-                {
-                  "key": "csrfmiddlewaretoken",
-                  "value": "{{csrf_token}}",
-                  "type": "text"
-                },
-                {
-                  "key": "username",
-                  "value": "{{aa_username}}",
-                  "type": "text"
-                },
-                {
-                  "key": "password",
-                  "value": "{{reset_password}}",
-                  "type": "text"
-                }
-              ]
-            },
             "url": {
               "raw": "{{base_url}}/accounts/login/",
               "host": [
@@ -3243,23 +3491,58 @@
                 "login",
                 ""
               ]
+            },
+            "description": "Lớp EP: V – đăng nhập bằng mật khẩu vừa đặt lại.",
+            "body": {
+              "mode": "urlencoded",
+              "urlencoded": [
+                {
+                  "key": "csrfmiddlewaretoken",
+                  "value": "{{csrf_token}}",
+                  "type": "text"
+                },
+                {
+                  "key": "username",
+                  "value": "{{l_user}}",
+                  "type": "text"
+                },
+                {
+                  "key": "password",
+                  "value": "{{l_pw}}",
+                  "type": "text"
+                }
+              ]
             }
           },
-          "response": []
+          "response": [],
+          "protocolProfileBehavior": {
+            "followRedirects": false
+          }
         },
         {
           "name": "TC-AA-056 — GET Password Reset Confirmation Link",
           "event": [
             {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const aa = eval(pm.collectionVariables.get('aa_helpers'));   // hàm dùng chung, xem biến aa_helpers",
+                  "aa.startReset(function () {});"
+                ]
+              }
+            },
+            {
               "listen": "test",
               "script": {
-                "exec": [
-                  "pm.test('Reset confirmation page returns 200', () => pm.response.to.have.status(200));\r",
-                  "pm.test('New password form is available', () => pm.expect(pm.response.text()).to.include('new_password1'));"
-                ],
                 "type": "text/javascript",
-                "packages": {},
-                "requests": {}
+                "exec": [
+                  "const base = pm.variables.replaceIn('{{base_url}}');",
+                  "const loc = pm.response.headers.get('Location') || '';",
+                  "const hasSession = (cb) => pm.sendRequest({ url: base + '/accounts/password/change/', method: 'GET' }, (e, r) => cb(!e && r.text().indexOf('old_password') !== -1));",
+                  "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Có form mật khẩu mới', () => pm.expect(pm.response.text()).to.include('new_password1'));"
+                ]
               }
             }
           ],
@@ -3279,7 +3562,8 @@
                 "{{reset_token}}",
                 ""
               ]
-            }
+            },
+            "description": "Lớp EP: V – liên kết đặt lại hợp lệ."
           },
           "response": []
         },
@@ -3287,44 +3571,34 @@
           "name": "TC-AA-057 — POST Confirm New Password",
           "event": [
             {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const aa = eval(pm.collectionVariables.get('aa_helpers'));   // hàm dùng chung, xem biến aa_helpers",
+                  "aa.startReset(function () { pm.collectionVariables.set('s_pw1', pm.variables.get('new_password')); pm.collectionVariables.set('s_pw2', pm.variables.get('new_password')); });"
+                ]
+              }
+            },
+            {
               "listen": "test",
               "script": {
-                "exec": [
-                  "pm.test('Password reset redirects to completion', () => pm.response.to.have.status(302));\r",
-                  "pm.test('Location points to reset completion', () => pm.expect(pm.response.headers.get('Location') || '').to.include('/accounts/password/reset/complete/'));"
-                ],
                 "type": "text/javascript",
-                "packages": {},
-                "requests": {}
+                "exec": [
+                  "const base = pm.variables.replaceIn('{{base_url}}');",
+                  "const loc = pm.response.headers.get('Location') || '';",
+                  "const hasSession = (cb) => pm.sendRequest({ url: base + '/accounts/password/change/', method: 'GET' }, (e, r) => cb(!e && r.text().indexOf('old_password') !== -1));",
+                  "pm.test('HTTP 302', () => pm.response.to.have.status(302));",
+                  "pm.test('Location chứa /accounts/password/reset/complete/', () => pm.expect(loc).to.include('/accounts/password/reset/complete/'));",
+                  "const aa = eval(pm.collectionVariables.get('aa_helpers'));",
+                  "aa.login(pm.collectionVariables.get('ep_user'), pm.variables.get('new_password'), null, () => hasSession((s) => pm.test('Đăng nhập được bằng mật khẩu mới', () => pm.expect(s).to.be.true)));"
+                ]
               }
             }
           ],
-          "protocolProfileBehavior": {
-            "followRedirects": false
-          },
           "request": {
             "method": "POST",
             "header": [],
-            "body": {
-              "mode": "urlencoded",
-              "urlencoded": [
-                {
-                  "key": "csrfmiddlewaretoken",
-                  "value": "{{csrf_token}}",
-                  "type": "text"
-                },
-                {
-                  "key": "new_password1",
-                  "value": "{{new_password}}",
-                  "type": "text"
-                },
-                {
-                  "key": "new_password2",
-                  "value": "{{new_password}}",
-                  "type": "text"
-                }
-              ]
-            },
             "url": {
               "raw": "{{base_url}}/accounts/password/reset/{{reset_uid}}/set-password/",
               "host": [
@@ -3338,23 +3612,58 @@
                 "set-password",
                 ""
               ]
+            },
+            "description": "Lớp EP: V – mật khẩu mới hợp lệ qua liên kết.",
+            "body": {
+              "mode": "urlencoded",
+              "urlencoded": [
+                {
+                  "key": "csrfmiddlewaretoken",
+                  "value": "{{csrf_token}}",
+                  "type": "text"
+                },
+                {
+                  "key": "new_password1",
+                  "value": "{{s_pw1}}",
+                  "type": "text"
+                },
+                {
+                  "key": "new_password2",
+                  "value": "{{s_pw2}}",
+                  "type": "text"
+                }
+              ]
             }
           },
-          "response": []
+          "response": [],
+          "protocolProfileBehavior": {
+            "followRedirects": false
+          }
         },
         {
           "name": "TC-AA-058 — GET Used Password Reset Link",
           "event": [
             {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const aa = eval(pm.collectionVariables.get('aa_helpers'));   // hàm dùng chung, xem biến aa_helpers",
+                  "aa.startReset(function () { aa.finishReset(); });"
+                ]
+              }
+            },
+            {
               "listen": "test",
               "script": {
-                "exec": [
-                  "pm.test('Used reset link returns a page', () => pm.response.to.have.status(200));\r",
-                  "pm.test('Link is rejected as invalid', () => pm.expect(pm.response.text()).to.include('không hợp lệ hoặc đã hết hạn'));"
-                ],
                 "type": "text/javascript",
-                "packages": {},
-                "requests": {}
+                "exec": [
+                  "const base = pm.variables.replaceIn('{{base_url}}');",
+                  "const loc = pm.response.headers.get('Location') || '';",
+                  "const hasSession = (cb) => pm.sendRequest({ url: base + '/accounts/password/change/', method: 'GET' }, (e, r) => cb(!e && r.text().indexOf('old_password') !== -1));",
+                  "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Không còn form mật khẩu mới', () => pm.expect(pm.response.text()).to.not.include('new_password1'));"
+                ]
               }
             }
           ],
@@ -3374,35 +3683,12 @@
                 "{{reset_token}}",
                 ""
               ]
-            }
+            },
+            "description": "Lớp EP: X – liên kết đặt lại đã dùng."
           },
           "response": []
         }
       ]
-    }
-  ],
-  "event": [
-    {
-      "listen": "prerequest",
-      "script": {
-        "type": "text/javascript",
-        "packages": {},
-        "requests": {},
-        "exec": [
-          ""
-        ]
-      }
-    },
-    {
-      "listen": "test",
-      "script": {
-        "type": "text/javascript",
-        "packages": {},
-        "requests": {},
-        "exec": [
-          ""
-        ]
-      }
     }
   ],
   "variable": [
@@ -3415,14 +3701,6 @@
       "value": ""
     },
     {
-      "key": "aa_username",
-      "value": ""
-    },
-    {
-      "key": "aa_email",
-      "value": ""
-    },
-    {
       "key": "aa_password",
       "value": "AaTest#2026Aa!"
     },
@@ -3431,19 +3709,79 @@
       "value": "AaNew#2027Bb!"
     },
     {
-      "key": "test_username",
+      "key": "ep_user",
       "value": ""
     },
     {
-      "key": "test_email",
+      "key": "ep_email",
       "value": ""
     },
     {
-      "key": "case_email",
+      "key": "ep_b_user",
       "value": ""
     },
     {
-      "key": "case_username",
+      "key": "ep_b_email",
+      "value": ""
+    },
+    {
+      "key": "r_user",
+      "value": ""
+    },
+    {
+      "key": "r_email",
+      "value": ""
+    },
+    {
+      "key": "r_pw1",
+      "value": ""
+    },
+    {
+      "key": "r_pw2",
+      "value": ""
+    },
+    {
+      "key": "l_user",
+      "value": ""
+    },
+    {
+      "key": "l_pw",
+      "value": ""
+    },
+    {
+      "key": "l_next",
+      "value": ""
+    },
+    {
+      "key": "p_first",
+      "value": ""
+    },
+    {
+      "key": "p_last",
+      "value": ""
+    },
+    {
+      "key": "p_email",
+      "value": ""
+    },
+    {
+      "key": "c_old",
+      "value": ""
+    },
+    {
+      "key": "c_new1",
+      "value": ""
+    },
+    {
+      "key": "c_new2",
+      "value": ""
+    },
+    {
+      "key": "s_pw1",
+      "value": ""
+    },
+    {
+      "key": "s_pw2",
       "value": ""
     },
     {
@@ -3452,18 +3790,6 @@
     },
     {
       "key": "reset_token",
-      "value": ""
-    },
-    {
-      "key": "reset_password",
-      "value": ""
-    },
-    {
-      "key": "b_user",
-      "value": ""
-    },
-    {
-      "key": "b_email",
       "value": ""
     },
     {
@@ -3484,11 +3810,7 @@
     },
     {
       "key": "aa_helpers",
-      "value": "(function () {\n  var aa = {\n    base: function () { return pm.variables.replaceIn('{{base_url}}'); },\n    tokenOf: function (html) {\n      var m = html.match(/name=[\"']csrfmiddlewaretoken[\"'][^>]*value=[\"']([^\"']+)[\"']/);\n      return m ? m[1] : '';\n    },\n    get: function (path, cb) {\n      pm.sendRequest({ url: aa.base() + path, method: 'GET' }, function (e, r) { cb(r); });\n    },\n    post: function (path, fields, cb) {\n      var body = Object.keys(fields).map(function (k) { return { key: k, value: fields[k] }; });\n      pm.sendRequest({ url: aa.base() + path, method: 'POST', body: { mode: 'urlencoded', urlencoded: body } }, function (e, r) { cb(r); });\n    },\n    // lấy CSRF mới của trang path và lưu vào biến csrf_token\n    token: function (path, cb) {\n      aa.get(path, function (r) { pm.collectionVariables.set('csrf_token', aa.tokenOf(r.text())); if (cb) { cb(); } });\n    },\n    // đưa phiên về Guest (đăng xuất nếu đang đăng nhập), rồi lấy CSRF của trang path\n    guest: function (path, cb) {\n      aa.get('/accounts/password/change/', function (r) {\n        aa.post('/accounts/logout/', { csrfmiddlewaretoken: aa.tokenOf(r.text()) }, function () {\n          if (path) { aa.token(path, cb); } else if (cb) { cb(); }\n        });\n      });\n    },\n    // đăng nhập bằng user/pass từ trạng thái Guest, rồi lấy CSRF của trang path\n    login: function (user, pass, path, cb) {\n      aa.guest('/accounts/login/', function () {\n        aa.post('/accounts/login/', { csrfmiddlewaretoken: pm.collectionVariables.get('csrf_token'), username: user, password: pass }, function () {\n          if (path) { aa.token(path, cb); } else if (cb) { cb(); }\n        });\n      });\n    },\n    user: function (path) { aa.login(pm.variables.get('aa_username'), pm.variables.get('aa_password'), path); },\n    admin: function (path) { aa.login(pm.variables.get('admin_user'), pm.variables.get('admin_pass'), path); }\n  };\n  return aa;\n})()"
-    },
-    {
-      "key": "aa_old_password",
-      "value": ""
+      "value": "(function () {\n  var aa = {\n    base: function () { return pm.variables.replaceIn('{{base_url}}'); },\n    uniq: function (p) { return p + Date.now().toString(36) + Math.floor(Math.random() * 1e6).toString(36); },\n    tokenOf: function (html) {\n      var m = html.match(/name=[\"']csrfmiddlewaretoken[\"'][^>]*value=[\"']([^\"']+)[\"']/);\n      return m ? m[1] : '';\n    },\n    get: function (path, cb) {\n      pm.sendRequest({ url: aa.base() + path, method: 'GET' }, function (e, r) { cb(r); });\n    },\n    post: function (path, fields, cb) {\n      var body = Object.keys(fields).map(function (k) { return { key: k, value: fields[k] }; });\n      pm.sendRequest({ url: aa.base() + path, method: 'POST', body: { mode: 'urlencoded', urlencoded: body } }, function (e, r) { cb(r); });\n    },\n    // lấy CSRF mới của trang path và lưu vào biến csrf_token\n    token: function (path, cb) {\n      aa.get(path, function (r) { pm.collectionVariables.set('csrf_token', aa.tokenOf(r.text())); if (cb) { cb(); } });\n    },\n    // đưa phiên về Guest (đăng xuất nếu đang đăng nhập), rồi lấy CSRF của trang path\n    guest: function (path, cb) {\n      aa.get('/accounts/password/change/', function (r) {\n        aa.post('/accounts/logout/', { csrfmiddlewaretoken: aa.tokenOf(r.text()) }, function () {\n          if (path) { aa.token(path, cb); } else if (cb) { cb(); }\n        });\n      });\n    },\n    // đăng nhập bằng user/pass từ trạng thái Guest, rồi lấy CSRF của trang path\n    login: function (user, pass, path, cb) {\n      aa.guest('/accounts/login/', function () {\n        aa.post('/accounts/login/', { csrfmiddlewaretoken: pm.collectionVariables.get('csrf_token'), username: user, password: pass }, function () {\n          if (path) { aa.token(path, cb); } else if (cb) { cb(); }\n        });\n      });\n    },\n    admin: function (path, cb) { aa.login(pm.variables.get('admin_user'), pm.variables.get('admin_pass'), path, cb); },\n    // đăng ký một tài khoản Customer mới (lưu ep_user, ep_email), kết thúc ở trạng thái đã đăng nhập\n    newUser: function (path, cb) {\n      aa.guest('/accounts/register/', function () {\n        var u = aa.uniq('ep'), pw = pm.variables.get('aa_password');\n        pm.collectionVariables.set('ep_user', u); pm.collectionVariables.set('ep_email', u + '@example.test');\n        aa.post('/accounts/register/', { csrfmiddlewaretoken: pm.collectionVariables.get('csrf_token'), username: u, email: u + '@example.test', password1: pw, password2: pw }, function () {\n          if (path) { aa.token(path, cb); } else if (cb) { cb(); }\n        });\n      });\n    },\n    // tạo tài khoản mới rồi về Guest, lấy CSRF của trang path\n    newUserGuest: function (path, cb) { aa.newUser(null, function () { aa.guest(path, cb); }); },\n    // tạo một tài khoản khác (lưu ep_b_user, ep_b_email), dùng cho ca trùng username / email\n    other: function (cb) {\n      aa.guest('/accounts/register/', function () {\n        var u = aa.uniq('epb'), pw = pm.variables.get('aa_password');\n        pm.collectionVariables.set('ep_b_user', u); pm.collectionVariables.set('ep_b_email', u + '@example.test');\n        aa.post('/accounts/register/', { csrfmiddlewaretoken: pm.collectionVariables.get('csrf_token'), username: u, email: u + '@example.test', password1: pw, password2: pw }, function () { cb(); });\n      });\n    },\n    // đọc hộp thư phát triển (cần Admin là superuser) và tìm liên kết đặt lại gửi tới email; cb(null) nếu không có thư\n    mailLink: function (email, cb) {\n      aa.admin(null, function () {\n        aa.get('/dev/mailbox/', function (r) {\n          var hit = null;\n          r.text().split('<details').forEach(function (b) {\n            if (!hit && b.indexOf(email) !== -1) {\n              var m = b.match(/\\/accounts\\/password\\/reset\\/([^\\/\\s\"<]+)\\/([^\\/\\s\"<]+)\\//);\n              if (m) { hit = { uid: m[1], token: m[2] }; }\n            }\n          });\n          cb(hit);\n        });\n      });\n    },\n    // tạo tài khoản mới, yêu cầu đặt lại mật khẩu, mở liên kết trong thư; kết thúc ở Guest, đứng trên form mật khẩu mới\n    startReset: function (cb) {\n      aa.newUserGuest('/accounts/password/reset/', function () {\n        var email = pm.collectionVariables.get('ep_email');\n        aa.post('/accounts/password/reset/', { csrfmiddlewaretoken: pm.collectionVariables.get('csrf_token'), email: email }, function () {\n          aa.mailLink(email, function (hit) {\n            var uid = hit ? hit.uid : '', tok = hit ? hit.token : '';\n            pm.collectionVariables.set('reset_uid', uid); pm.collectionVariables.set('reset_token', tok);\n            aa.guest(null, function () {\n              aa.get('/accounts/password/reset/' + uid + '/' + tok + '/', function (r) {\n                pm.collectionVariables.set('csrf_token', aa.tokenOf(r.text())); cb();\n              });\n            });\n          });\n        });\n      });\n    },\n    // đặt mật khẩu mới trên form đặt lại (sau startReset), rồi về Guest\n    finishReset: function (cb) {\n      var pw = pm.variables.get('new_password');\n      aa.post('/accounts/password/reset/' + pm.collectionVariables.get('reset_uid') + '/set-password/', { csrfmiddlewaretoken: pm.collectionVariables.get('csrf_token'), new_password1: pw, new_password2: pw }, function () { aa.guest(null, cb); });\n    }\n  };\n  return aa;\n})()"
     }
   ]
 }

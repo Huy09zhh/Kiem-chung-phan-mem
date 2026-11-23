@@ -1,18 +1,19 @@
 $kind: http-request
 url: "{{base_url}}/accounts/login/"
 method: POST
+description: "Lớp EP: V – Admin đăng nhập đúng."
 body:
   type: urlencoded
   content:
     csrfmiddlewaretoken: "{{csrf_token}}"
-    username: "{{admin_user}}"
-    password: "{{admin_pass}}"
+    username: "{{l_user}}"
+    password: "{{l_pw}}"
 scripts:
   - type: afterResponse
-    code: "pm.test('Trả 302', () => pm.response.to.have.status(302));\npm.test('Chuyển sang dashboard', () => pm.expect(pm.response.headers.get('Location') || '').to.match(/dashboard/));"
+    code: "const base = pm.variables.replaceIn('{{base_url}}');\nconst loc = pm.response.headers.get('Location') || '';\nconst hasSession = (cb) => pm.sendRequest({ url: base + '/accounts/password/change/', method: 'GET' }, (e, r) => cb(!e && r.text().indexOf('old_password') !== -1));\npm.test('HTTP 302', () => pm.response.to.have.status(302));\npm.test('Location là /admin-panel/dashboard/', () => pm.expect(loc).to.eql('/admin-panel/dashboard/'));\nhasSession((s) => pm.test('Có phiên đăng nhập', () => pm.expect(s).to.be.true));"
     language: text/javascript
   - type: beforeRequest
-    code: "const aa = eval(pm.collectionVariables.get('aa_helpers'));   // hàm dùng chung, xem biến aa_helpers\naa.guest('/accounts/login/');   // điều kiện: Guest + CSRF mới của /accounts/login/"
+    code: "const aa = eval(pm.collectionVariables.get('aa_helpers'));   // hàm dùng chung, xem biến aa_helpers\npm.collectionVariables.set('l_user', pm.variables.get('admin_user'));\npm.collectionVariables.set('l_pw', pm.variables.get('admin_pass'));\naa.guest('/accounts/login/');"
     language: text/javascript
 settings:
   followRedirects: false

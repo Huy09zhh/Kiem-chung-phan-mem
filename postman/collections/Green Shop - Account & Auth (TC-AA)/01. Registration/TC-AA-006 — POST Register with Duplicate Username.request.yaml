@@ -1,20 +1,22 @@
 $kind: http-request
 url: "{{base_url}}/accounts/register/"
 method: POST
+description: "Lớp EP: X – username đã tồn tại."
 body:
   type: urlencoded
   content:
     csrfmiddlewaretoken: "{{csrf_token}}"
-    username: "{{aa_username}}"
-    email: "{{case_email}}"
-    password1: "{{aa_password}}"
-    password2: "{{aa_password}}"
+    username: "{{r_user}}"
+    email: "{{r_email}}"
+    password1: "{{r_pw1}}"
+    password2: "{{r_pw2}}"
 scripts:
   - type: afterResponse
-    code: "pm.test(\"Duplicate username stays on registration form\", () => {\r\n  pm.response.to.have.status(200);\r\n});\r\npm.test(\"Username field is present\", () => {\r\n  pm.expect(pm.response.text()).to.include('name=\"username\"');\r\n});"
+    code: "const base = pm.variables.replaceIn('{{base_url}}');\nconst loc = pm.response.headers.get('Location') || '';\nconst hasSession = (cb) => pm.sendRequest({ url: base + '/accounts/password/change/', method: 'GET' }, (e, r) => cb(!e && r.text().indexOf('old_password') !== -1));\npm.test('HTTP 200', () => pm.response.to.have.status(200));\npm.test('Hiện thông báo lỗi', () => pm.expect(pm.response.text()).to.match(/errorlist|auth-error/));\nhasSession((s) => pm.test('Chưa có phiên đăng nhập', () => pm.expect(s).to.be.false));"
     language: text/javascript
   - type: beforeRequest
-    code: "const aa = eval(pm.collectionVariables.get('aa_helpers'));   // hàm dùng chung, xem biến aa_helpers\naa.guest('/accounts/register/');   // điều kiện: Guest + CSRF mới của /accounts/register/\nconst id = Date.now();\r\npm.collectionVariables.set(\"case_email\", `duplicate_name_${id}@example.test`);"
+    code: "const aa = eval(pm.collectionVariables.get('aa_helpers'));   // hàm dùng chung, xem biến aa_helpers\nconst id = aa.uniq('ep');\npm.collectionVariables.set('r_user', id);\npm.collectionVariables.set('r_email', id + '@example.test');\npm.collectionVariables.set('r_pw1', pm.variables.get('aa_password'));\npm.collectionVariables.set('r_pw2', pm.variables.get('aa_password'));\naa.other(function () { pm.collectionVariables.set('r_user', pm.collectionVariables.get('ep_b_user')); aa.guest('/accounts/register/'); });"
     language: text/javascript
-settings: {}
+settings:
+  followRedirects: false
 order: 6000

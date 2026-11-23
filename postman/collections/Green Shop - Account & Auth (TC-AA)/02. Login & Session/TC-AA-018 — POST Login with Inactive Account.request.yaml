@@ -1,18 +1,19 @@
 $kind: http-request
 url: "{{base_url}}/accounts/login/"
 method: POST
+description: "Lớp EP: X – tài khoản bị khóa."
 body:
   type: urlencoded
   content:
     csrfmiddlewaretoken: "{{csrf_token}}"
-    username: "{{inactive_user}}"
-    password: "{{inactive_pass}}"
+    username: "{{l_user}}"
+    password: "{{l_pw}}"
 scripts:
   - type: afterResponse
-    code: "pm.test('Trả 200 (ở lại biểu mẫu)', () => pm.response.to.have.status(200));\npm.test('Hiện khối lỗi đăng nhập', () => pm.expect(pm.response.text()).to.match(/auth-error-box/));"
+    code: "const base = pm.variables.replaceIn('{{base_url}}');\nconst loc = pm.response.headers.get('Location') || '';\nconst hasSession = (cb) => pm.sendRequest({ url: base + '/accounts/password/change/', method: 'GET' }, (e, r) => cb(!e && r.text().indexOf('old_password') !== -1));\npm.test('HTTP 200', () => pm.response.to.have.status(200));\npm.test('Hiện thông báo lỗi', () => pm.expect(pm.response.text()).to.match(/errorlist|auth-error/));\nhasSession((s) => pm.test('Chưa có phiên đăng nhập', () => pm.expect(s).to.be.false));"
     language: text/javascript
   - type: beforeRequest
-    code: "const aa = eval(pm.collectionVariables.get('aa_helpers'));   // hàm dùng chung, xem biến aa_helpers\naa.guest('/accounts/login/');   // điều kiện: Guest + CSRF mới của /accounts/login/"
+    code: "const aa = eval(pm.collectionVariables.get('aa_helpers'));   // hàm dùng chung, xem biến aa_helpers\npm.collectionVariables.set('l_user', pm.variables.get('inactive_user'));\npm.collectionVariables.set('l_pw', pm.variables.get('inactive_pass'));\naa.guest('/accounts/login/');"
     language: text/javascript
 settings:
   followRedirects: false

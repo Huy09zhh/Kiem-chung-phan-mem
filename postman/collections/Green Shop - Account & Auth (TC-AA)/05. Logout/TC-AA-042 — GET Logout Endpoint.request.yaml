@@ -1,9 +1,13 @@
 $kind: http-request
 url: "{{base_url}}/accounts/logout/"
 method: GET
+description: "Lớp EP: X – đăng xuất bằng GET."
 scripts:
   - type: afterResponse
-    code: "pm.test('Logout rejects GET', () => pm.response.to.have.status(405));"
+    code: "const base = pm.variables.replaceIn('{{base_url}}');\nconst loc = pm.response.headers.get('Location') || '';\nconst hasSession = (cb) => pm.sendRequest({ url: base + '/accounts/password/change/', method: 'GET' }, (e, r) => cb(!e && r.text().indexOf('old_password') !== -1));\npm.test('HTTP 405', () => pm.response.to.have.status(405));\nhasSession((s) => pm.test('Phiên giữ nguyên', () => pm.expect(s).to.be.true));"
+    language: text/javascript
+  - type: beforeRequest
+    code: "const aa = eval(pm.collectionVariables.get('aa_helpers'));   // hàm dùng chung, xem biến aa_helpers\naa.newUser(null);"
     language: text/javascript
 settings:
   followRedirects: false

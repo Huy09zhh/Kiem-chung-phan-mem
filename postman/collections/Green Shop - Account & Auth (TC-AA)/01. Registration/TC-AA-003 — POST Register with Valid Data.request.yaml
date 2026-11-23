@@ -1,0 +1,22 @@
+$kind: http-request
+url: "{{base_url}}/accounts/register/"
+method: POST
+description: "Lớp EP: V – mọi lớp hợp lệ của đăng ký (V1–V6)."
+body:
+  type: urlencoded
+  content:
+    csrfmiddlewaretoken: "{{csrf_token}}"
+    username: "{{r_user}}"
+    email: "{{r_email}}"
+    password1: "{{r_pw1}}"
+    password2: "{{r_pw2}}"
+scripts:
+  - type: afterResponse
+    code: "const base = pm.variables.replaceIn('{{base_url}}');\nconst loc = pm.response.headers.get('Location') || '';\nconst hasSession = (cb) => pm.sendRequest({ url: base + '/accounts/password/change/', method: 'GET' }, (e, r) => cb(!e && r.text().indexOf('old_password') !== -1));\npm.test('HTTP 302', () => pm.response.to.have.status(302));\npm.test('Location là /', () => pm.expect(loc).to.eql('/'));\nhasSession((s) => pm.test('Có phiên đăng nhập (đã tự đăng nhập)', () => pm.expect(s).to.be.true));\npm.sendRequest({ url: base + '/accounts/profile/', method: 'GET' }, (e, r) => pm.test('Hồ sơ hiện đúng username', () => pm.expect(r.text()).to.include(pm.collectionVariables.get('r_user'))));"
+    language: text/javascript
+  - type: beforeRequest
+    code: "const aa = eval(pm.collectionVariables.get('aa_helpers'));   // hàm dùng chung, xem biến aa_helpers\nconst id = aa.uniq('ep');\npm.collectionVariables.set('r_user', id);\npm.collectionVariables.set('r_email', id + '@example.test');\npm.collectionVariables.set('r_pw1', pm.variables.get('aa_password'));\npm.collectionVariables.set('r_pw2', pm.variables.get('aa_password'));\naa.guest('/accounts/register/');"
+    language: text/javascript
+settings:
+  followRedirects: false
+order: 3000

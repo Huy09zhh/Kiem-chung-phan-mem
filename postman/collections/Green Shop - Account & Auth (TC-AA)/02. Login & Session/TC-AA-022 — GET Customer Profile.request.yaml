@@ -1,12 +1,14 @@
 $kind: http-request
 url: "{{base_url}}/accounts/profile/"
 method: GET
+description: "Lớp EP: V – Customer đã đăng nhập xem hồ sơ."
 scripts:
   - type: afterResponse
-    code: "pm.test(\"Customer profile returns 200\", () => { pm.response.to.have.status(200); });\r\npm.test(\"Profile shows customer username\", () => { pm.expect(pm.response.text()).to.include(pm.collectionVariables.get(\"aa_username\")); });\r\nconst match = pm.response.text().match(/name=[\"']csrfmiddlewaretoken[\"'][^>]*value=[\"']([^\"']+)[\"']/);\r\nif (match) pm.collectionVariables.set(\"csrf_token\", match[1]);"
+    code: "const base = pm.variables.replaceIn('{{base_url}}');\nconst loc = pm.response.headers.get('Location') || '';\nconst hasSession = (cb) => pm.sendRequest({ url: base + '/accounts/password/change/', method: 'GET' }, (e, r) => cb(!e && r.text().indexOf('old_password') !== -1));\npm.test('HTTP 200', () => pm.response.to.have.status(200));\npm.test('Hồ sơ hiện đúng username', () => pm.expect(pm.response.text()).to.include(pm.collectionVariables.get('ep_user')));"
     language: text/javascript
   - type: beforeRequest
-    code: "const aa = eval(pm.collectionVariables.get('aa_helpers'));   // hàm dùng chung, xem biến aa_helpers\naa.user();   // điều kiện: đăng nhập tài khoản A"
+    code: "const aa = eval(pm.collectionVariables.get('aa_helpers'));   // hàm dùng chung, xem biến aa_helpers\naa.newUser(null, function () { aa.login(pm.collectionVariables.get('ep_user'), pm.variables.get('aa_password'), null); });"
     language: text/javascript
-settings: {}
+settings:
+  followRedirects: false
 order: 9000

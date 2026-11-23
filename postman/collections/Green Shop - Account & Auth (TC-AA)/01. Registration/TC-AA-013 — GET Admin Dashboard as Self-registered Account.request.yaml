@@ -1,9 +1,13 @@
 $kind: http-request
 url: "{{base_url}}/admin-panel/dashboard/"
 method: GET
+description: "Lớp EP: X – tài khoản tự đăng ký kèm quyền vào trang quản trị bị chặn."
 scripts:
   - type: afterResponse
-    code: "pm.test('Trả 302', () => pm.response.to.have.status(302));\npm.test('Bị chặn, về trang chủ', () => pm.expect(pm.response.headers.get('Location') || '').to.match(/\\/$/));"
+    code: "const base = pm.variables.replaceIn('{{base_url}}');\nconst loc = pm.response.headers.get('Location') || '';\nconst hasSession = (cb) => pm.sendRequest({ url: base + '/accounts/password/change/', method: 'GET' }, (e, r) => cb(!e && r.text().indexOf('old_password') !== -1));\npm.test('HTTP 302', () => pm.response.to.have.status(302));\npm.test('Location là /', () => pm.expect(loc).to.eql('/'));"
+    language: text/javascript
+  - type: beforeRequest
+    code: "const aa = eval(pm.collectionVariables.get('aa_helpers'));   // hàm dùng chung, xem biến aa_helpers\naa.guest('/accounts/register/', function () { var id = aa.uniq('ep'), pw = pm.variables.get('aa_password'); aa.post('/accounts/register/', { csrfmiddlewaretoken: pm.collectionVariables.get('csrf_token'), username: id, email: id + '@example.test', password1: pw, password2: pw, is_staff: 'on', is_superuser: 'on' }, function () {}); });"
     language: text/javascript
 settings:
   followRedirects: false

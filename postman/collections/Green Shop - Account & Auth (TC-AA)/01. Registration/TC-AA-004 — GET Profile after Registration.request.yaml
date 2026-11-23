@@ -1,0 +1,14 @@
+$kind: http-request
+url: "{{base_url}}/accounts/profile/"
+method: GET
+description: "Lớp EP: V – tài khoản vừa đăng ký xem được hồ sơ (kiểm tra tiếp sau TC-AA-003)."
+scripts:
+  - type: afterResponse
+    code: "const base = pm.variables.replaceIn('{{base_url}}');\nconst loc = pm.response.headers.get('Location') || '';\nconst hasSession = (cb) => pm.sendRequest({ url: base + '/accounts/password/change/', method: 'GET' }, (e, r) => cb(!e && r.text().indexOf('old_password') !== -1));\npm.test('HTTP 200', () => pm.response.to.have.status(200));\npm.test('Hồ sơ hiện đúng username', () => pm.expect(pm.response.text()).to.include(pm.collectionVariables.get('ep_user')));"
+    language: text/javascript
+  - type: beforeRequest
+    code: "const aa = eval(pm.collectionVariables.get('aa_helpers'));   // hàm dùng chung, xem biến aa_helpers\naa.newUser(null);"
+    language: text/javascript
+settings:
+  followRedirects: false
+order: 4000

@@ -1,12 +1,13 @@
 $kind: http-request
-url: "{{base_url}}/accounts/admin-dashboard/"
+url: "{{base_url}}/admin-panel/dashboard/"
 method: GET
+description: "Lớp EP: V – Admin vào trang quản trị."
 scripts:
   - type: afterResponse
-    code: "pm.test('Admin dashboard returns 200 for admin', () => pm.response.to.have.status(200));"
+    code: "const base = pm.variables.replaceIn('{{base_url}}');\nconst loc = pm.response.headers.get('Location') || '';\nconst hasSession = (cb) => pm.sendRequest({ url: base + '/accounts/password/change/', method: 'GET' }, (e, r) => cb(!e && r.text().indexOf('old_password') !== -1));\npm.test('HTTP 200', () => pm.response.to.have.status(200));\npm.sendRequest({ url: base + '/accounts/admin-dashboard/', method: 'GET' }, (e, r) => pm.test('/accounts/admin-dashboard/ trả 200', () => pm.expect(r.code).to.eql(200)));"
     language: text/javascript
   - type: beforeRequest
-    code: "const aa = eval(pm.collectionVariables.get('aa_helpers'));   // hàm dùng chung, xem biến aa_helpers\naa.admin();   // điều kiện: đăng nhập Admin"
+    code: "const aa = eval(pm.collectionVariables.get('aa_helpers'));   // hàm dùng chung, xem biến aa_helpers\naa.admin(null);"
     language: text/javascript
 settings:
   followRedirects: false
