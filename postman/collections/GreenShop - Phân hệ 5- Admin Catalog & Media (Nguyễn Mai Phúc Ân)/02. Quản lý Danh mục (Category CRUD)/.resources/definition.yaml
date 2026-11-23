@@ -1,0 +1,4 @@
+$kind: collection
+name: "02. Quản lý Danh mục (Category CRUD)"
+description: "Kiểm thử các thao tác xem, tạo mới, sửa tên và xóa danh mục sản phẩm của Admin."
+order: 3000

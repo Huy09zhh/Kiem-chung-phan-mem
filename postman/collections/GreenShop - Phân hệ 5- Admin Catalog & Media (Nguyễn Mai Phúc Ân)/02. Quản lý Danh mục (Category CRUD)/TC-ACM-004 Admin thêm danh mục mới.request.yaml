@@ -1,0 +1,16 @@
+$kind: http-request
+name: "TC-ACM-004 Admin thêm danh mục mới"
+url: "{{base_url}}/admin-panel/categories/create/"
+method: POST
+body:
+  type: urlencoded
+  content:
+    name: "Rau Hữu Cơ Đà Lạt Postman"
+scripts:
+  - type: afterResponse
+    language: text/javascript
+    code: |-
+      pm.test('Tạo danh mục chuyển hướng thành công (Status 302)', function () {
+          pm.expect(pm.response.code).to.eql(302);
+      });
+order: 2000

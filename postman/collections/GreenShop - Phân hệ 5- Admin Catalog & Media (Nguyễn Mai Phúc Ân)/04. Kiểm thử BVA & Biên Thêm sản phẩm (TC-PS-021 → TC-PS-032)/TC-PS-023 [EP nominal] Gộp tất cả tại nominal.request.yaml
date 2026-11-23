@@ -1,0 +1,19 @@
+$kind: http-request
+name: "TC-PS-023 [EP nominal] Gộp tất cả tại nominal (Tên 20 ký tự, Giá 50.000, Giá cũ 70.000)"
+url: "{{base_url}}/admin-panel/products/create/"
+method: POST
+body:
+  type: urlencoded
+  content:
+    name: "Cây Kim Tiền Để Bàn"
+    price: "50000"
+    old_price: "70000"
+    category: "{{category_id}}"
+scripts:
+  - type: afterResponse
+    language: text/javascript
+    code: |-
+      pm.test('Status code 302 chuyển hướng thành công', function () {
+          pm.expect(pm.response.code).to.eql(302);
+      });
+order: 3000

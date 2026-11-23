@@ -1,0 +1,19 @@
+$kind: http-request
+name: "TC-PS-022 [BVA min+] Gộp tất cả tại min+ (Tên 3 ký tự, Giá 1.001, Giá cũ 50.002)"
+url: "{{base_url}}/admin-panel/products/create/"
+method: POST
+body:
+  type: urlencoded
+  content:
+    name: "ABC"
+    price: "1001"
+    old_price: "50002"
+    category: "{{category_id}}"
+scripts:
+  - type: afterResponse
+    language: text/javascript
+    code: |-
+      pm.test('Status code 302 chuyển hướng thành công', function () {
+          pm.expect(pm.response.code).to.eql(302);
+      });
+order: 2000

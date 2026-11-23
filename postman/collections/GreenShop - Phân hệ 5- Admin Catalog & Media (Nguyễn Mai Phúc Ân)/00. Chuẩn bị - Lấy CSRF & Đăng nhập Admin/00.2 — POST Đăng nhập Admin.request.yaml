@@ -1,0 +1,21 @@
+$kind: http-request
+name: "00.2 — POST Đăng nhập Admin"
+url: "{{base_url}}/accounts/login/"
+method: POST
+body:
+  type: urlencoded
+  content:
+    username: "{{admin_username}}"
+    password: "{{admin_password}}"
+scripts:
+  - type: afterResponse
+    language: text/javascript
+    code: |-
+      pm.test('Đăng nhập thành công (HTTP 302 hoặc 200)', function () {
+          pm.expect(pm.response.code).to.be.oneOf([200, 302]);
+      });
+      pm.test('Session ID được cấp phát cho Admin', function () {
+          var sid = pm.cookies.get('sessionid') || pm.response.cookies.get('sessionid');
+          pm.expect(sid).to.not.be.undefined;
+      });
+order: 2000

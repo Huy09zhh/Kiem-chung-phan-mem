@@ -1,0 +1,19 @@
+$kind: http-request
+name: "TC-PS-025 [BVA max] Gộp Giá bán max- & Giá cũ max (Giá bán 99.999.999, Giá cũ 100.000.000)"
+url: "{{base_url}}/admin-panel/products/create/"
+method: POST
+body:
+  type: urlencoded
+  content:
+    name: "Cây Đại Tứ Lan"
+    price: "99999999"
+    old_price: "100000000"
+    category: "{{category_id}}"
+scripts:
+  - type: afterResponse
+    language: text/javascript
+    code: |-
+      pm.test('Status code 302 chuyển hướng thành công', function () {
+          pm.expect(pm.response.code).to.eql(302);
+      });
+order: 5000

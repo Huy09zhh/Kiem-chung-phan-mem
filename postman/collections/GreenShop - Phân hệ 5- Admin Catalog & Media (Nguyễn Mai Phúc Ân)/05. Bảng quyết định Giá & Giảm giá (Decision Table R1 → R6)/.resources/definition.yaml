@@ -1,0 +1,4 @@
+$kind: collection
+name: "05. Bảng quyết định Giá & Giảm giá (Decision Table R1 → R6)"
+description: "Các ca kiểm thử sinh từ Bảng quyết định cho hàm ProductForm.clean() và thuộc tính has_discount."
+order: 6000

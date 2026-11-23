@@ -1,0 +1,22 @@
+$kind: http-request
+name: "TC-DT-06 [Rule R6] Bỏ trống giá bán bắt buộc bị chặn"
+url: "{{base_url}}/admin-panel/products/create/"
+method: POST
+body:
+  type: urlencoded
+  content:
+    name: "Sản phẩm thiếu giá"
+    price: ""
+    old_price: "50000"
+    category: "{{category_id}}"
+scripts:
+  - type: afterResponse
+    language: text/javascript
+    code: |-
+      pm.test('Bị chặn ở form (Status 200)', function () {
+          pm.response.to.have.status(200);
+      });
+      pm.test('Hiển thị thông báo lỗi: Bắt buộc', function () {
+          pm.expect(pm.response.text()).to.include('Bắt buộc');
+      });
+order: 6000

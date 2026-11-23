@@ -1,0 +1,15 @@
+$kind: http-request
+name: "TC-ACM-003 Admin xem danh sách danh mục"
+url: "{{base_url}}/admin-panel/categories/"
+method: GET
+scripts:
+  - type: afterResponse
+    language: text/javascript
+    code: |-
+      pm.test('Xem danh mục thành công (Status 200 OK)', function () {
+          pm.response.to.have.status(200);
+      });
+      pm.test('Trang chứa tiêu đề Danh mục', function () {
+          pm.expect(pm.response.text()).to.include('Danh mục');
+      });
+order: 1000

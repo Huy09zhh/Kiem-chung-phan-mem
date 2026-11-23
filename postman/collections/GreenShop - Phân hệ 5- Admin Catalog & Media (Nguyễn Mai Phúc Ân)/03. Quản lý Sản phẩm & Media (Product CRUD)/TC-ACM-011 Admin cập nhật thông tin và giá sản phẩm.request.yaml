@@ -1,0 +1,19 @@
+$kind: http-request
+name: "TC-ACM-011 Admin cập nhật thông tin và giá sản phẩm"
+url: "{{base_url}}/admin-panel/products/{{product_id}}/edit/"
+method: POST
+body:
+  type: urlencoded
+  content:
+    name: "Cà Rốt Hữu Cơ Đà Lạt (Loại 1)"
+    price: "50000"
+    old_price: "70000"
+    category: "{{category_id}}"
+scripts:
+  - type: afterResponse
+    language: text/javascript
+    code: |-
+      pm.test('Cập nhật sản phẩm thành công (Status 302)', function () {
+          pm.expect(pm.response.code).to.eql(302);
+      });
+order: 5000

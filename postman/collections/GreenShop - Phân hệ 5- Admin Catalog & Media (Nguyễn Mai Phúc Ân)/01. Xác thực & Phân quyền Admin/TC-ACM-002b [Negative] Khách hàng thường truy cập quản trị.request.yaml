@@ -1,0 +1,12 @@
+$kind: http-request
+name: "TC-ACM-002b [Negative] Khách hàng thường (is_staff=False) truy cập quản trị"
+url: "{{base_url}}/admin-panel/categories/"
+method: GET
+scripts:
+  - type: afterResponse
+    language: text/javascript
+    code: |-
+      pm.test('Khách thường bị từ chối truy cập (Status 302)', function () {
+          pm.expect(pm.response.code).to.eql(302);
+      });
+order: 3000

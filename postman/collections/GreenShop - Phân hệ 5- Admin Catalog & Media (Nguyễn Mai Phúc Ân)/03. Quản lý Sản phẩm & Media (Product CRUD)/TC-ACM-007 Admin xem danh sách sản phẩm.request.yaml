@@ -1,0 +1,15 @@
+$kind: http-request
+name: "TC-ACM-007 Admin xem danh sách sản phẩm"
+url: "{{base_url}}/admin-panel/products/"
+method: GET
+scripts:
+  - type: afterResponse
+    language: text/javascript
+    code: |-
+      pm.test('Tải danh sách sản phẩm thành công (Status 200 OK)', function () {
+          pm.response.to.have.status(200);
+      });
+      pm.test('Thời gian phản hồi < 500ms', function () {
+          pm.expect(pm.response.responseTime).to.be.below(500);
+      });
+order: 1000

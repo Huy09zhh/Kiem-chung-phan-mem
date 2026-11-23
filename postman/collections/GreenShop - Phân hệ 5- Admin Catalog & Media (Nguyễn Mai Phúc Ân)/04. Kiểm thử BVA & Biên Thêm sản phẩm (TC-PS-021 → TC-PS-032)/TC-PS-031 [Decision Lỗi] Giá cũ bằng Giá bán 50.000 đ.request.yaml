@@ -1,0 +1,22 @@
+$kind: http-request
+name: "TC-PS-031 [Decision Lỗi] Giá cũ bằng Giá bán 50.000 đ"
+url: "{{base_url}}/admin-panel/products/create/"
+method: POST
+body:
+  type: urlencoded
+  content:
+    name: "Cây Lưỡi Hổ Viền Vàng"
+    price: "50000"
+    old_price: "50000"
+    category: "{{category_id}}"
+scripts:
+  - type: afterResponse
+    language: text/javascript
+    code: |-
+      pm.test('Status code 200 (Form báo lỗi)', function () {
+          pm.response.to.have.status(200);
+      });
+      pm.test('Trang báo lỗi: Giá cũ phải lớn hơn giá bán', function () {
+          pm.expect(pm.response.text()).to.include('Giá cũ phải lớn hơn giá bán');
+      });
+order: 11000

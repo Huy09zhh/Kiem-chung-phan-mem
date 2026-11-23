@@ -1,0 +1,22 @@
+$kind: http-request
+name: "TC-DT-05 [Rule R5] Giá cũ âm bị chặn"
+url: "{{base_url}}/admin-panel/products/create/"
+method: POST
+body:
+  type: urlencoded
+  content:
+    name: "Sản phẩm giá cũ âm"
+    price: "100000"
+    old_price: "-5000"
+    category: "{{category_id}}"
+scripts:
+  - type: afterResponse
+    language: text/javascript
+    code: |-
+      pm.test('Bị chặn ở form (Status 200)', function () {
+          pm.response.to.have.status(200);
+      });
+      pm.test('Hiển thị thông báo lỗi: Giá cũ phải lớn hơn hoặc bằng 0', function () {
+          pm.expect(pm.response.text()).to.include('Giá cũ phải lớn hơn hoặc bằng 0');
+      });
+order: 5000

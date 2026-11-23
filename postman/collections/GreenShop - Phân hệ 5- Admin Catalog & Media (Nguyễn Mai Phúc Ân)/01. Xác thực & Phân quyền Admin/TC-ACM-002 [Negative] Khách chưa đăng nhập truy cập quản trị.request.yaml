@@ -1,0 +1,12 @@
+$kind: http-request
+name: "TC-ACM-002 [Negative] Khách chưa đăng nhập truy cập quản trị SP"
+url: "{{base_url}}/admin-panel/products/"
+method: GET
+scripts:
+  - type: afterResponse
+    language: text/javascript
+    code: |-
+      pm.test('Bị chặn và chuyển hướng đăng nhập (Status 302)', function () {
+          pm.expect(pm.response.code).to.eql(302);
+      });
+order: 2000

@@ -1,0 +1,4 @@
+$kind: collection
+name: "00. Chuẩn bị - Lấy CSRF & Đăng nhập Admin"
+description: "Khởi tạo phiên làm việc: Lấy CSRF token và đăng nhập quyền Admin."
+order: 1000

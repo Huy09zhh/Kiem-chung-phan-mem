@@ -1,0 +1,22 @@
+$kind: http-request
+name: "TC-PS-030 [BVA max+ Lỗi] Giá bán 100.000.001 đ vượt trần 100 triệu"
+url: "{{base_url}}/admin-panel/products/create/"
+method: POST
+body:
+  type: urlencoded
+  content:
+    name: "Cây Cảnh Phong Thủy VIP"
+    price: "100000001"
+    old_price: "120000000"
+    category: "{{category_id}}"
+scripts:
+  - type: afterResponse
+    language: text/javascript
+    code: |-
+      pm.test('Status code 200 (Form báo lỗi)', function () {
+          pm.response.to.have.status(200);
+      });
+      pm.test('Trang báo lỗi: Giá bán không được vượt quá 100.000.000 VNĐ', function () {
+          pm.expect(pm.response.text()).to.include('Giá bán không được vượt quá 100.000.000 VNĐ');
+      });
+order: 10000

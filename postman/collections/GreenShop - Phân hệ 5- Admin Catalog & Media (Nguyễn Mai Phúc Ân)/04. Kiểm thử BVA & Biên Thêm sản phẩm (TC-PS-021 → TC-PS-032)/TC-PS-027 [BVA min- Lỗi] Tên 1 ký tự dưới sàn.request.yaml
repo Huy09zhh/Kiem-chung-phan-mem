@@ -1,0 +1,22 @@
+$kind: http-request
+name: "TC-PS-027 [BVA min- Lỗi] Tên 1 ký tự dưới sàn 2 ký tự"
+url: "{{base_url}}/admin-panel/products/create/"
+method: POST
+body:
+  type: urlencoded
+  content:
+    name: "A"
+    price: "50000"
+    old_price: "70000"
+    category: "{{category_id}}"
+scripts:
+  - type: afterResponse
+    language: text/javascript
+    code: |-
+      pm.test('Status code 200 (Form báo lỗi)', function () {
+          pm.response.to.have.status(200);
+      });
+      pm.test('Trang báo lỗi: Tên sản phẩm phải có độ dài tối thiểu 2 ký tự', function () {
+          pm.expect(pm.response.text()).to.include('Tên sản phẩm phải có độ dài tối thiểu 2 ký tự');
+      });
+order: 7000

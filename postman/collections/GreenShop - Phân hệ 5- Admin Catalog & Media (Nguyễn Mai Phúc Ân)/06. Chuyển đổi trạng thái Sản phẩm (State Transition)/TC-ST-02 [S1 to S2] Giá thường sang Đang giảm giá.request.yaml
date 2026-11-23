@@ -1,0 +1,19 @@
+$kind: http-request
+name: "TC-ST-02 [S1 -> S2] Giá thường sang Đang giảm giá (bật sale)"
+url: "{{base_url}}/admin-panel/products/{{product_id}}/edit/"
+method: POST
+body:
+  type: urlencoded
+  content:
+    name: "SP Vòng Đời Có Sale"
+    price: "50000"
+    old_price: "70000"
+    category: "{{category_id}}"
+scripts:
+  - type: afterResponse
+    language: text/javascript
+    code: |-
+      pm.test('Cập nhật thành công sang có giảm giá (Status 302)', function () {
+          pm.expect(pm.response.code).to.eql(302);
+      });
+order: 2000

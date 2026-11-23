@@ -1,0 +1,19 @@
+$kind: http-request
+name: "TC-ST-01 [S0 -> S1] Chưa tồn tại sang Giá thường"
+url: "{{base_url}}/admin-panel/products/create/"
+method: POST
+body:
+  type: urlencoded
+  content:
+    name: "SP Vòng Đời Thường"
+    price: "50000"
+    old_price: ""
+    category: "{{category_id}}"
+scripts:
+  - type: afterResponse
+    language: text/javascript
+    code: |-
+      pm.test('Tạo thành công sản phẩm giá thường (Status 302)', function () {
+          pm.expect(pm.response.code).to.eql(302);
+      });
+order: 1000

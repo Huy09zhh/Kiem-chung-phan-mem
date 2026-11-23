@@ -1,0 +1,20 @@
+$kind: http-request
+name: "TC-ACM-009 Admin tạo mới sản phẩm hợp lệ"
+url: "{{base_url}}/admin-panel/products/create/"
+method: POST
+body:
+  type: urlencoded
+  content:
+    name: "Cà Rốt Hữu Cơ Đà Lạt"
+    price: "45000"
+    old_price: "60000"
+    category: "{{category_id}}"
+    description: "Cà rốt tươi sạch trồng tại nông trại Đà Lạt."
+scripts:
+  - type: afterResponse
+    language: text/javascript
+    code: |-
+      pm.test('Tạo sản phẩm thành công và chuyển hướng (Status 302)', function () {
+          pm.expect(pm.response.code).to.eql(302);
+      });
+order: 3000

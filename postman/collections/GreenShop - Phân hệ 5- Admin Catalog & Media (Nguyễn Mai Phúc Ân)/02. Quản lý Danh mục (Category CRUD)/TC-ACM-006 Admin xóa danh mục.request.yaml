@@ -1,0 +1,12 @@
+$kind: http-request
+name: "TC-ACM-006 Admin xóa danh mục"
+url: "{{base_url}}/admin-panel/categories/{{category_id}}/delete/"
+method: POST
+scripts:
+  - type: afterResponse
+    language: text/javascript
+    code: |-
+      pm.test('Xóa danh mục thành công (Status 302)', function () {
+          pm.expect(pm.response.code).to.eql(302);
+      });
+order: 4000
