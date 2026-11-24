@@ -1,0 +1,26 @@
+$kind: http-request
+url: '{{base_url}}/accounts/register/'
+method: POST
+description: "Robustness BVA. nom = (max+ + min-) / 2, làm tròn 0.5 lên cho độ dài nguyên.\n\nBiến đang xét: password; độ dài: 9; vị trí: MIN+. Tag: V-REG-PWD-MIN+, B-REG-PWD-MIN+.\n\nCác biến còn lại giữ nominal: username=76, password=68, email=130, first_name=last_name=75 khi có trong form.\n\nExpected: chấp nhận và lưu đúng giá trị. "
+body:
+  type: urlencoded
+  content:
+    csrfmiddlewaretoken: '{{bva_csrf}}'
+    username: '{{bva_user}}'
+    email: '{{bva_email}}'
+    password1: '{{bva_password}}'
+    password2: '{{bva_password}}'
+scripts:
+- type: beforeRequest
+  code: |-
+    const B = eval(pm.collectionVariables.get('bva_lib'));   // thư viện dùng chung, xem biến bva_lib
+    const CFG = {"id": "BVA-AA-REG-PWD-L009", "pfx": "regpwd", "tag": "L009", "kind": "reg", "field": "password", "len": 9, "ok": true, "fields": ["password1", "password2"]};
+    B.pre(CFG);
+- type: afterResponse
+  code: |-
+    const B = eval(pm.collectionVariables.get('bva_lib'));   // thư viện dùng chung, xem biến bva_lib
+    const CFG = {"id": "BVA-AA-REG-PWD-L009", "pfx": "regpwd", "tag": "L009", "kind": "reg", "field": "password", "len": 9, "ok": true, "fields": ["password1", "password2"]};
+    B.test(CFG);
+settings:
+  followRedirects: false
+order: 3000
