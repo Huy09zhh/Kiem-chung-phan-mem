@@ -1068,3 +1068,38 @@ class WhiteBoxCoverageTests(OrderTestBase):
         res = self.client.get('/orders/my/')
         self.assertEqual(res.status_code, 200)
 
+    def test_wb_27_cfg_clear_cart_empty_order_items(self):
+        """TC-WB-27 [Branch views:14-16]: _clear_order_items_from_cart khi đơn không có OrderItem -> cart.delete()."""
+        self.fill_cart((self.p_a, 1))
+        o = Order.objects.create(
+            user=self.user, full_name='Nguyễn Văn A', phone='0900000000',
+            address='1 Lê Lợi', payment_method='qr', status='awaiting_transfer',
+            total_price=Decimal('50000'),
+        )
+        res = self.client.post(f'/orders/qr/{o.id}/confirm/')
+        self.assertEqual(self.status_of(o), 'paid')
+        self.assertEqual(self.cart_count(), 0)
+
+    def test_wb_28_cfg_clear_cart_item_not_in_cart(self):
+        """TC-WB-28 [Branch views:19->17]: _clear_order_items_from_cart khi SP trong đơn không có trong giỏ."""
+        self.fill_cart((self.p_a, 1))
+        o = Order.objects.create(
+            user=self.user, full_name='Nguyễn Văn A', phone='0900000000',
+            address='1 Lê Lợi', payment_method='qr', status='awaiting_transfer',
+            total_price=Decimal('50000'),
+        )
+        OrderItem.objects.create(order=o, product_name='Sản phẩm khác', price=Decimal('50000'), quantity=1)
+        res = self.client.post(f'/orders/qr/{o.id}/confirm/')
+        self.assertEqual(self.status_of(o), 'paid')
+        self.assertEqual(self.cart_count(), 1)
+
+    def test_wb_29_cfg_clear_cart_partial_quantity(self):
+        """TC-WB-29 [Branch views:22-24]: _clear_order_items_from_cart khi giỏ có SL nhiều hơn đơn -> trừ bớt SL."""
+        self.fill_cart((self.p_a, 3))
+        o = self.mk_order(method='qr', status='awaiting_transfer', qty=1)
+        res = self.client.post(f'/orders/qr/{o.id}/confirm/')
+        self.assertEqual(self.status_of(o), 'paid')
+        self.assertEqual(self.cart_count(), 1)
+        cart_item = CartItem.objects.get(cart__user=self.user, product=self.p_a)
+        self.assertEqual(cart_item.quantity, 2)
+
