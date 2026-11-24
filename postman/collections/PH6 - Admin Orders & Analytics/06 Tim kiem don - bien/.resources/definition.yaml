@@ -1,0 +1,4 @@
+$kind: collection
+name: "06. Tìm kiếm đơn: biên trên (TC-AOA-080 → 087)"
+order: 6000
+description: "Bổ sung các giá trị biên phía trên cho chức năng Tìm kiếm đơn hàng: SĐT 19/20/21 ký tự, mã đơn nominal, max-, max, max+. Điền admin_password rồi Run collection."

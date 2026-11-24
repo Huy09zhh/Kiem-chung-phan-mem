@@ -1,4 +1,5 @@
 $kind: collection
+name: "PH3 - Shopping Cart: EP-BVA (Phong)"
 description: |-
   Kiểm thử hộp đen phân hệ FR3 - Giỏ hàng: Phân hoạch tương đương (TC-CART-EP-01 → 15) và Giá trị biên (TC-CART-BVA-01 → 15).
   Tài liệu: docs/TestCase_FR3_Cart_EP_BVA.md

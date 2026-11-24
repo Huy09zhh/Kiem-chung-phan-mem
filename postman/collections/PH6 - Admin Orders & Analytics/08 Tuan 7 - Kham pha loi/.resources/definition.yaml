@@ -1,0 +1,11 @@
+$kind: collection
+name: "08. Tuần 7: Khám phá lỗi (TC-AOA-102 → 112)"
+order: 8000
+description: |-
+  Khám phá lỗi phân hệ 6 – Admin Orders & Analytics, Tuần 7: TC-AOA-102 → 112.
+  Chuẩn bị: python manage.py runserver; điền admin_password, cust_username/cust_password (tài khoản KHÔNG phải staff).
+  reject_order_id và perm_order_id: hai đơn CHƯA ở trạng thái cuối (không phải Hoàn thành / Đã hủy), ví dụ đơn Chờ xử lý hoặc Đã thanh toán.
+  base_url (127.0.0.1) là phiên admin; anon_url (localhost) là phiên chưa đăng nhập rồi khách thường (hai phiên cookie riêng).
+  run_overflow: mặc định 'no' nên TC-AOA-103 và 104 bị bỏ qua. Hai test này tạo đơn tổng 100.000.000 làm dashboard và danh sách đơn lỗi 500 (bug đã báo). Đặt 'yes' chỉ khi cần tái hiện, rồi xóa đơn lỗi trong DB.
+  Giỏ hàng tài khoản admin nên trống trước khi chạy folder 01 (TC-AOA-102 tạo thêm 1 đơn COD thật).
+  Chạy theo thứ tự 00 → 06. Kết quả mong đợi: 102, 107–112 PASS; 105, 106 FAIL (bug ticket 2).

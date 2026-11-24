@@ -1,0 +1,9 @@
+$kind: collection
+name: "04. TC-AOA-046 → 070"
+order: 4000
+description: |-
+  Kiểm thử EP + BVA phân hệ Admin Orders & Analytics (TC-AOA-046 → 070, Tuần 5).
+  1. python manage.py runserver
+  2. Điền admin_password; phone_known phải là SĐT đầy đủ (10 ký tự) của một đơn có thật; đơn #1 và #2 phải tồn tại.
+  3. Chạy Collection Runner theo thứ tự folder 00 → 03.
+  Mỗi lần chạy tạo thêm bản ghi Liên hệ/Góp ý thử.

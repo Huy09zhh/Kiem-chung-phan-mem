@@ -1,0 +1,12 @@
+$kind: collection
+name: "05. TC-AOA-071 → 079"
+order: 5000
+description: |-
+  Khám phá lỗi cho phân hệ Admin Orders & Analytics (TC-AOA-071 đến 079).
+
+  Cách chạy:
+  1. Chạy server: python manage.py runserver
+  2. Tab Variables: điền admin_password, customer_username, customer_password.
+  3. status_order_id phải là một đơn CHƯA ở trạng thái cuối (luồng trạng thái chỉ đi tiến). TC-078 đẩy đơn này lên 'Đang giao'.
+  4. TC-073 cần một đơn có tên khách có dấu (accent_name_proper).
+  5. Folder 04 chạy cuối vì đăng nhập bằng tài khoản khách.

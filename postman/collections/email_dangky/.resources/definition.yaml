@@ -1,4 +1,5 @@
 $kind: collection
+name: "PH3 - Email đăng ký nhận tin: TC-NL (Phong)"
 description: |-
   Kiểm thử SCRUM-36 – độ dài email ở form "Đăng ký nhận tin" (footer): Phân hoạch tương đương & Giá trị biên (TC-NL-01 → 15).
   Tài liệu: docs/email_dangky_testcase.xlsx (sheet "Test case").

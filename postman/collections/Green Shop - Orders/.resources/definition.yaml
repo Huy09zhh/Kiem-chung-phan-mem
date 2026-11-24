@@ -1,4 +1,5 @@
 $kind: collection
+name: "PH4 - Orders & Payment (Đức)"
 description: "Bộ kiểm thử API phân hệ Orders & Thanh toán đa kênh (UC04 - FR4) - Green Shop. Bao gồm 4 nhóm: 01_EP_and_BVA, 02_Decision_Table, 03_State_Transition, 04_Error_Guessing."
 variables:
   base_url: http://127.0.0.1:8000

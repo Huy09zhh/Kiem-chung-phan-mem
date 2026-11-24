@@ -7,6 +7,10 @@ Hàm được kiểm thử: admin_panel.views.admin_order_update_status
 
 Chạy:  python manage.py test admin_panel.tests_order_status -v 2
 
+Test case tương ứng trong report (sheet PH6_Quân_ChuyenTT): TC-AOA-088 → 101.
+Cả 14 TC nằm trong test_all_state_pairs_follow_transition_table (64 cặp trạng thái);
+TC-AOA-099 → 101 (giá trị lạ, để trống, gửi bằng GET) còn có test riêng bên dưới.
+
 BẢNG CHUYỂN TRẠNG THÁI nằm trong biến ALLOWED bên dưới (khớp Order.ALLOWED_TRANSITIONS).
 Nếu nhóm đổi luồng, chỉ cần sửa ALLOWED; mọi test tự cập nhật.
 """
