@@ -5,10 +5,10 @@
 | :--- | :--- |
 | **Phân hệ kiểm thử** | FR4 – Đặt hàng & Thanh toán đa kênh (`orders/views.py`, `orders/models.py`, `orders/urls.py`) |
 | **Mã nguồn thực thi** | `orders/views.py` (views: `checkout`, `confirm_qr_paid`, `mock_payment_success`, `mock_payment_fail`, `cancel_qr_order`, `my_orders`) |
-| **Mã nguồn Unit Test** | [`orders/tests.py`](file:///C:/Users/TOSHIBA/Desktop/DUAN/KCPM/Kiem-chung-phan-mem/orders/tests.py) – Class `WhiteBoxCoverageTests` (26 test cases) |
+| **Mã nguồn Unit Test** | [`orders/tests.py`](file:///C:/Users/TOSHIBA/Desktop/DUAN/KCPM/Kiem-chung-phan-mem/orders/tests.py) – Class `WhiteBoxCoverageTests` (29 test cases) |
 | **Bộ Postman Collection** | Thư mục `05_White_Box_Coverage` trong [`postman/collections/Green Shop - Orders/`](file:///C:/Users/TOSHIBA/Desktop/DUAN/KCPM/Kiem-chung-phan-mem/postman/collections/Green%20Shop%20-%20Orders/) (18 requests `.request.yaml`) |
 | **Công cụ đo độ phủ** | `coverage.py` với cờ `--branch` (`coverage run --branch --source=orders manage.py test orders`) |
-| **Kết quả độ phủ đạt được** | **`orders/views.py`**: **100% Line** (122/122 câu lệnh), **100% Branch** (38/38 nhánh); **`orders/models.py`**: **100% Line** (41/41 câu lệnh); **106/106 tests PASS** |
+| **Kết quả độ phủ đạt được** | **`orders/views.py`**: **100% Line** (130/130 câu lệnh), **100% Branch** (46/46 nhánh); **`orders/models.py`**: **100% Line** (46/46 câu lệnh), **100% Branch** (2/2 nhánh); **109/109 tests PASS (100%)** |
 
 ---
 
@@ -102,8 +102,8 @@
 100:            order = Order.objects.create(...)
 111:            for item in cart_items:
 112:                OrderItem.objects.create(...)
-                    # [Node 25: Quyết định D10] Xóa giỏ hàng với COD và QR
-119:            if payment_method in ['cod', 'qr']:
+                    # [Node 25: Quyết định D10] Xóa giỏ hàng chỉ với COD (SCRUM-43 & SCRUM-56)
+119:            if payment_method == 'cod':
                     # [Node 26] Xóa cart items
 120:                cart.items.all().delete()
 121: 
@@ -122,7 +122,8 @@
 130:    return render(request, 'orders/checkout.html', context)
 ```
 
-#### B. Đồ thị luồng điều khiển (Mermaid CFG)
+#### B. Đồ thị luồng điều khiển (Mermaid CFG) & Sơ đồ ảnh trực quan
+![Đồ thị luồng điều khiển CFG - orders/views.py](CFG_Orders_WhiteBox.png)
 ```mermaid
 flowchart TD
     N1(["N1: Entry @login_required"]) -->|Unauth| N1b["302 /login/"]
@@ -150,14 +151,14 @@ flowchart TD
     N21 -->|False| N23["N23: D9 set order_status"]
     N20 --> N23
     N23 --> N24["N24: transaction.atomic: create Order & Items"]
-    N24 --> N25{"N25: D10 method in cod, qr"}
-    N25 -->|True| N26["N26: cart.items.delete()"]
-    N25 -->|False: Mock| N27{"N27: D11 method == cod"}
+    N24 --> N25{"N25: D10 method == cod"}
+    N25 -->|True: COD| N26["N26: cart.items.delete()"]
+    N25 -->|False: QR/Mock (Giữ giỏ)| N27{"N27: D11 method == cod"}
     N26 --> N27
-    N27 -->|True| R_COD["302 /orders/success/id/"]
+    N27 -->|True: COD| R_COD["302 /orders/success/id/"]
     N27 -->|False| N28{"N28: D12 method == qr"}
-    N28 -->|True| R_QR["302 /orders/qr/id/"]
-    N28 -->|False: Mock| R_MOCK["302 /orders/mock/id/"]
+    N28 -->|True: VietQR (Giữ giỏ)| R_QR["302 /orders/qr/id/"]
+    N28 -->|False: Mock (Giữ giỏ)| R_MOCK["302 /orders/mock/id/"]
 ```
 
 #### C. Tính toán độ phức tạp Cyclomatic $V(G)$
@@ -173,7 +174,7 @@ flowchart TD
   - $D_7$: `not address`
   - $D_8$: `'payment_method' not in request.POST`
   - $D_9$: `payment_method not in ['cod', 'qr', 'mock']`
-  - $D_{10}$: `payment_method in ['cod', 'qr']`
+  - $D_{10}$: `payment_method == 'cod'` (SCRUM-43 & SCRUM-56: chỉ xóa giỏ với COD; QR và Mock giữ giỏ hàng)
   - $D_{11}$: `payment_method == 'cod'` / $D_{12}$: `payment_method == 'qr'`
   $\Rightarrow P = 12$.
 - **Số cạnh ($E$)**: $E = 37$ cạnh.
@@ -265,7 +266,7 @@ $\Rightarrow$ Đạt 100% độ phủ **Branch-Condition Coverage** và chuẩn 
 | **TC-WB-09** | Bỏ qua payment_method | Branch | N19(T) $\rightarrow$ N20 $\rightarrow$ N23 $\rightarrow$ N24 $\rightarrow$ N25 $\rightarrow$ N26 $\rightarrow$ N27(T) | Không gửi `payment_method` trong form POST | Mặc định COD: order `pending`, 302 `/orders/success/id/` | Postman + Unit |
 | **TC-WB-10** | Phương thức sai tập hợp | Branch | N21(T) $\rightarrow$ N22 | `payment_method='zalopay_fake'` | HTTP 200, lỗi 'Phương thức không hợp lệ' | Postman + Unit |
 | **TC-WB-11** | Full path COD thành công | Path | N20 $\rightarrow$ N23 $\rightarrow$ N24 $\rightarrow$ N25(T) $\rightarrow$ N26 $\rightarrow$ N27(T) | `payment_method='cod'` hợp lệ | Đơn tạo `pending`, xóa giỏ, 302 `order_success` | Postman + Unit |
-| **TC-WB-12** | Full path VietQR thành công | Path | N23 $\rightarrow$ N24 $\rightarrow$ N25(T) $\rightarrow$ N26 $\rightarrow$ N28(T) | `payment_method='qr'` hợp lệ | Đơn tạo `awaiting_transfer`, giữ giỏ hàng, 302 `order_qr` | Postman + Unit |
+| **TC-WB-12** | Full path VietQR thành công | Path | N23 $\rightarrow$ N24 $\rightarrow$ N25(F) $\rightarrow$ N27(F) $\rightarrow$ N28(T) | `payment_method='qr'` hợp lệ | Đơn tạo `awaiting_transfer`, giữ giỏ hàng, 302 `order_qr` | Postman + Unit |
 | **TC-WB-13** | Full path Mock thành công | Path | N23 $\rightarrow$ N24 $\rightarrow$ N25(F) $\rightarrow$ N27(F) $\rightarrow$ N28(F) $\rightarrow$ R_MOCK | `payment_method='mock'` hợp lệ | Đơn tạo `pending`, giữ giỏ, 302 `mock_payment` | Postman + Unit |
 | **TC-WB-14** | Ngoại lệ Cart.DoesNotExist | Exception | N2 $\rightarrow$ N3 (try user.cart) | Mock `user.cart` ném `Cart.DoesNotExist` | Bắt ngoại lệ nội bộ, 302 redirect `/cart/` | Unit Mock |
 | **TC-WB-15** | Tru cập QR khi không awaiting | Branch | `order_qr` views:145-146 | Đơn `status='paid'`, `GET /orders/qr/id/` | Nhánh True dòng 146: 302 về `order_success` | Postman + Unit |
@@ -280,6 +281,9 @@ $\Rightarrow$ Đạt 100% độ phủ **Branch-Condition Coverage** và chuẩn 
 | **TC-WB-24** | Cancel QR sai trạng thái | Branch | `cancel_qr_order` views:216(F) | POST cancel trên đơn đã `paid` | Giữ nguyên trạng thái `paid`, 302 `/cart/` | Unit Test |
 | **TC-WB-25** | Phủ __str__ models | Statement | `models.py:78,93` | Gọi `str(order)` và `str(order_item)` | Chuỗi định danh khớp định dạng | Unit Test |
 | **TC-WB-26** | Phủ view my_orders | Statement | `views.py:204-209` | `GET /orders/my/` | HTTP 200, danh sách đơn hàng | Postman + Unit |
+| **TC-WB-27** | Dọn giỏ khi đơn rỗng Item | Branch | `views.py:14-16` | Xác nhận đơn QR không có OrderItem | Xóa toàn bộ giỏ, không crash server | Unit Test |
+| **TC-WB-28** | Dọn giỏ khi SP không có trong giỏ | Branch | `views.py:19->17` | Xác nhận đơn QR chứa SP không nằm trong giỏ | Bỏ qua SP lạ, giữ nguyên giỏ hiện tại | Unit Test |
+| **TC-WB-29** | Dọn giỏ khi SL giỏ > đơn | Branch | `views.py:22-24` | Giỏ có SL=3, đơn đặt SL=1, xác nhận QR | Trừ bớt SL giỏ (còn 2), không xóa mất SP | Unit Test |
 
 ---
 
@@ -324,20 +328,20 @@ Set-Location "C:\Users\TOSHIBA\Desktop\DUAN\KCPM\Kiem-chung-phan-mem"
 ### 4.1 Bảng số liệu độ phủ thực tế từ `coverage.py`
 | Tên file nguồn mục tiêu | Stmts (Câu lệnh) | Miss (Chưa chạm) | Branch (Nhánh) | BrPart (Nhánh thiếu) | **Line Coverage** | **Branch Coverage** | Dòng code chưa chạm |
 | :--- | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
-| `orders/views.py` | **122** | **0** | **38** | **0** | **100%** | **100%** | **None (Phủ toàn bộ)** |
-| `orders/models.py` | **41** | **0** | **0** | **0** | **100%** | **100%** | **None (Phủ toàn bộ)** |
+| `orders/views.py` | **130** | **0** | **46** | **0** | **100%** | **100%** | **None (Phủ toàn bộ)** |
+| `orders/models.py` | **46** | **0** | **2** | **0** | **100%** | **100%** | **None (Phủ toàn bộ)** |
 | `orders/urls.py` | **4** | **0** | **0** | **0** | **100%** | **100%** | **None (Phủ toàn bộ)** |
 | `orders/admin.py` | **19** | **0** | **0** | **0** | **100%** | **100%** | **None** |
 | `orders/apps.py` | **3** | **0** | **0** | **0** | **100%** | **100%** | **None** |
-| `orders/tests.py` | **720** | **0** | **56** | **0** | **100%** | **100%** | **None** |
+| `orders/tests.py` | **741** | **0** | **56** | **0** | **100%** | **100%** | **None** |
 
 ### 4.2 So sánh đối chiếu trước và sau khi bổ sung White-box
 | Chỉ số đo lường | Trước khi bổ sung White-box (Chỉ có Hộp đen BVA/ST) | Sau khi bổ sung bộ White-box Testing | Mức độ cải thiện |
 | :--- | :---: | :---: | :---: |
-| **Tổng số test cases** | 80 tests | **106 tests** | **+26 test cases (+32.5%)** |
-| **Line Coverage `orders/views.py`** | 98% (119/122 dòng) | **100% (122/122 dòng)** | **Đạt tuyệt đối 100%** |
-| **Branch Coverage `orders/views.py`** | 97% (37/38 nhánh) | **100% (38/38 nhánh)** | **Đạt tuyệt đối 100%** |
-| **Line Coverage `orders/models.py`** | 95% (39/41 dòng) | **100% (41/41 dòng)** | **Đạt tuyệt đối 100%** |
+| **Tổng số test cases** | 80 tests | **109 tests** | **+29 test cases (+36.3%)** |
+| **Line Coverage `orders/views.py`** | 98% (119/122 dòng) | **100% (130/130 dòng)** | **Đạt tuyệt đối 100%** |
+| **Branch Coverage `orders/views.py`** | 97% (37/38 nhánh) | **100% (46/46 nhánh)** | **Đạt tuyệt đối 100%** |
+| **Line Coverage `orders/models.py`** | 95% (39/41 dòng) | **100% (46/46 dòng)** | **Đạt tuyệt đối 100%** |
 | **Các nhánh ẩn/ngoại lệ được phủ** | 0/4 nhánh ngoại lệ | **4/4 nhánh ngoại lệ (Cart.DoesNotExist & models)** | **Phủ 100%** |
 
 ### 4.3 Giải thích chi tiết các nhánh đặc thù đã được phủ

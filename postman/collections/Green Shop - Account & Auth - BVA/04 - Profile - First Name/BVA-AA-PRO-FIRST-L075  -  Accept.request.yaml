@@ -1,0 +1,32 @@
+$kind: http-request
+url: '{{base_url}}/accounts/profile/edit/'
+method: POST
+description: |-
+  Robustness BVA. nom = (max+ + min-) / 2, làm tròn 0.5 lên cho độ dài nguyên.
+
+  Biến đang xét: first_name; độ dài: 75; vị trí: NOM. Tag: V-PRO-FIRST-NOM, B-PRO-FIRST-NOM.
+
+  Các biến còn lại giữ nominal: username=76, password=68, email=130, first_name=last_name=75 khi có trong form.
+
+  Expected: chấp nhận và lưu đúng giá trị. Độ dài -1 không áp dụng; rỗng là min=0.
+body:
+  type: urlencoded
+  content:
+    csrfmiddlewaretoken: '{{bva_csrf}}'
+    first_name: '{{bva_post_first}}'
+    last_name: '{{bva_post_last}}'
+    email: '{{bva_post_email}}'
+scripts:
+- type: beforeRequest
+  code: |-
+    const B = eval(pm.collectionVariables.get('bva_lib'));   // thư viện dùng chung, xem biến bva_lib
+    const CFG = {"id": "BVA-AA-PRO-FIRST-L075", "pfx": "profirst", "tag": "L075", "kind": "pro", "field": "first_name", "len": 75, "ok": true, "fields": ["first_name"]};
+    B.pre(CFG);
+- type: afterResponse
+  code: |-
+    const B = eval(pm.collectionVariables.get('bva_lib'));   // thư viện dùng chung, xem biến bva_lib
+    const CFG = {"id": "BVA-AA-PRO-FIRST-L075", "pfx": "profirst", "tag": "L075", "kind": "pro", "field": "first_name", "len": 75, "ok": true, "fields": ["first_name"]};
+    B.test(CFG);
+settings:
+  followRedirects: false
+order: 4000

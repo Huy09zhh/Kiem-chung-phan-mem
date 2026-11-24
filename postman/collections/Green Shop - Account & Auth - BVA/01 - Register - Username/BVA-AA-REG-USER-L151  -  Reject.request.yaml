@@ -1,0 +1,26 @@
+$kind: http-request
+url: '{{base_url}}/accounts/register/'
+method: POST
+description: "Robustness BVA. nom = (max+ + min-) / 2, làm tròn 0.5 lên cho độ dài nguyên.\n\nBiến đang xét: username; độ dài: 151; vị trí: MAX+. Tag: X-REG-USER-MAX+, B-REG-USER-MAX+.\n\nCác biến còn lại giữ nominal: username=76, password=68, email=130, first_name=last_name=75 khi có trong form.\n\nExpected: từ chối, báo lỗi đúng trường và kiểm tra trạng thái sau yêu cầu. "
+body:
+  type: urlencoded
+  content:
+    csrfmiddlewaretoken: '{{bva_csrf}}'
+    username: '{{bva_user}}'
+    email: '{{bva_email}}'
+    password1: '{{bva_password}}'
+    password2: '{{bva_password}}'
+scripts:
+- type: beforeRequest
+  code: |-
+    const B = eval(pm.collectionVariables.get('bva_lib'));   // thư viện dùng chung, xem biến bva_lib
+    const CFG = {"id": "BVA-AA-REG-USER-L151", "pfx": "regusr", "tag": "L151", "kind": "reg", "field": "username", "len": 151, "ok": false, "fields": ["username"], "rx": "at most 150|(?:quá|đa) 150|150 (?:characters|ký tự)"};
+    B.pre(CFG);
+- type: afterResponse
+  code: |-
+    const B = eval(pm.collectionVariables.get('bva_lib'));   // thư viện dùng chung, xem biến bva_lib
+    const CFG = {"id": "BVA-AA-REG-USER-L151", "pfx": "regusr", "tag": "L151", "kind": "reg", "field": "username", "len": 151, "ok": false, "fields": ["username"], "rx": "at most 150|(?:quá|đa) 150|150 (?:characters|ký tự)"};
+    B.test(CFG);
+settings:
+  followRedirects: false
+order: 7000
