@@ -54,6 +54,10 @@ jobs:
         run: |
           python manage.py seed_bva_orders
           python manage.py seed_cart_test
+          # Tài khoản order_bva_* cho tests/orders_checkout_bva_test.js
+          python manage.py seed_orders_bva
+          # Admin test_admin / admin123 cho tests/products_create_bva_test.js
+          python manage.py shell -c "from django.contrib.auth.models import User; User.objects.filter(username='test_admin').exists() or User.objects.create_superuser('test_admin', 'test_admin@example.com', 'admin123')"
 
       - name: Run Django and CodeceptJS
         env:
