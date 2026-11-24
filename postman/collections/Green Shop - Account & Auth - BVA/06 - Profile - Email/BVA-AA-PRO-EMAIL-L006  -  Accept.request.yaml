@@ -1,0 +1,25 @@
+$kind: http-request
+url: '{{base_url}}/accounts/profile/edit/'
+method: POST
+description: "Robustness BVA. nom = (max+ + min-) / 2, làm tròn 0.5 lên cho độ dài nguyên.\n\nBiến đang xét: email; độ dài: 6; vị trí: MIN. Tag: V-PRO-EMAIL-MIN, B-PRO-EMAIL-MIN.\n\nCác biến còn lại giữ nominal: username=76, password=68, email=130, first_name=last_name=75 khi có trong form.\n\nExpected: chấp nhận và lưu đúng giá trị. "
+body:
+  type: urlencoded
+  content:
+    csrfmiddlewaretoken: '{{bva_csrf}}'
+    first_name: '{{bva_post_first}}'
+    last_name: '{{bva_post_last}}'
+    email: '{{bva_post_email}}'
+scripts:
+- type: beforeRequest
+  code: |-
+    const B = eval(pm.collectionVariables.get('bva_lib'));   // thư viện dùng chung, xem biến bva_lib
+    const CFG = {"id": "BVA-AA-PRO-EMAIL-L006", "pfx": "promail", "tag": "L006", "kind": "pro", "field": "email", "len": 6, "ok": true, "fields": ["email"]};
+    B.pre(CFG);
+- type: afterResponse
+  code: |-
+    const B = eval(pm.collectionVariables.get('bva_lib'));   // thư viện dùng chung, xem biến bva_lib
+    const CFG = {"id": "BVA-AA-PRO-EMAIL-L006", "pfx": "promail", "tag": "L006", "kind": "pro", "field": "email", "len": 6, "ok": true, "fields": ["email"]};
+    B.test(CFG);
+settings:
+  followRedirects: false
+order: 2000

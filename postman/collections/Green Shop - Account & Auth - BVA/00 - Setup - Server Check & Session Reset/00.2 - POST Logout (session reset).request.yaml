@@ -6,9 +6,8 @@ body:
   content:
     csrfmiddlewaretoken: '{{bva_csrf}}'
 scripts:
-  - type: afterResponse
-    code: 'pm.test(''SETUP: logout hoặc chuyển tới login khi đã ẩn danh'',()=>pm.response.to.have.status(302));'
-    language: text/javascript
+- type: afterResponse
+  code: 'pm.test(''SETUP: logout hoặc chuyển tới login khi đã ẩn danh'',()=>pm.response.to.have.status(302));'
 settings:
   followRedirects: false
 order: 2000
