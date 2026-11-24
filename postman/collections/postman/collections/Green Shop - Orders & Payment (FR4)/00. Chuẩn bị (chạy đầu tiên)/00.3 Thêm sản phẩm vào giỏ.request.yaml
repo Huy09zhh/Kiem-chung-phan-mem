@@ -1,0 +1,17 @@
+$kind: http-request
+url: "{{base_url}}/cart/add/{{product_id}}/"
+method: GET
+headers:
+  X-CSRFToken: "{{csrf_token}}"
+scripts:
+  - type: afterResponse
+    code: |2-
+        pm.test('Thêm SP vào giỏ → 302 hoặc 200', function () {
+          pm.expect([200, 302]).to.include(pm.response.code);
+        });
+        var c = pm.cookies.get('csrftoken');
+        if (c) { pm.collectionVariables.set('csrf_token', c); }
+    language: text/javascript
+settings:
+  followRedirects: false
+order: 3000

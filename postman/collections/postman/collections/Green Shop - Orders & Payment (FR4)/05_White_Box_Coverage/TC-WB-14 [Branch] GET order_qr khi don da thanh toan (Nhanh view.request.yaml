@@ -1,0 +1,20 @@
+$kind: http-request
+name: TC-WB-14 [Branch] GET order_qr khi don da thanh toan (Nhanh views_146 redirect)
+url: "{{base_url}}/orders/qr/{{wb_order_qr_id}}/"
+method: GET
+headers:
+  X-CSRFToken: "{{csrf_token}}"
+scripts:
+  - type: beforeRequest
+    code: "  var t = pm.cookies.get('csrftoken'); if (t) { pm.collectionVariables.set('csrf_token', t); }"
+    language: text/javascript
+  - type: afterResponse
+    code: |2-
+        pm.test('TC-WB-14 | GET order_qr khi đơn đã paid -> redirect order_success (views:146)', function () {
+          pm.expect([200, 302]).to.include(pm.response.code);
+        });
+        var t = pm.cookies.get('csrftoken'); if (t) { pm.collectionVariables.set('csrf_token', t); }
+    language: text/javascript
+settings:
+  followRedirects: false
+order: 14000

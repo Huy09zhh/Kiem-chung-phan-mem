@@ -1,0 +1,4 @@
+$kind: collection
+name: 02_Decision_Table
+description: "Kiểm thử Bảng quyết định (Decision Table) cho các luật R1..R4 của Tiền điều kiện, Phân luồng kênh thanh toán và Xác nhận VietQR"
+order: 3000

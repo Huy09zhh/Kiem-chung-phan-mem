@@ -1,0 +1,3 @@
+$kind: collection
+description: "Kiểm thử Hộp trắng (White-box Coverage): Phủ toàn diện CFG, câu lệnh (Statement 100%), nhánh quyết định (Branch 100%), biểu thức ghép MC/DC và nhánh ngoại lệ"
+order: 6000

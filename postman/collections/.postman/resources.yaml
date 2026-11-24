@@ -2,9 +2,11 @@
 workspace:
   id: 12027189-22cf-4afc-8903-3283d4e0951a
 
+# Each entry here maps a local resource to one or more corresponding objects in Postman Cloud
+
 cloudResources:
   collections:
-    ../postman/collections/Green Shop - Orders & Payment (FR4): c0a7000a-ead5-4e9e-86dd-5516191b790d
+    ../postman/collections/Green Shop - Orders & Payment (FR4): 63044f53-145f-4278-b33f-95f598a8aa4c
 
 # All resources in the `postman/` folder are automatically registered in Local View.
 # Point to additional files outside the `postman/` folder to register them individually. Example:

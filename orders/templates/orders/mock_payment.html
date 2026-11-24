@@ -16,7 +16,7 @@
             <div class="summary-card" style="max-width:820px;margin:0 auto;">
                 <div class="card-head summary-head">
                     <h2>Xác nhận thanh toán</h2>
-                    <span>Đơn hàng {{ order.order_code }}</span>
+                    <span>Đơn hàng #{{ order.id }}</span>
                 </div>
 
                 <div class="card-body">
@@ -26,18 +26,18 @@
                     </div>
                     <div class="summary-line">
                         <span>Số tiền</span>
-                        <strong>{{ order.total_amount|floatformat:0 }} VND</strong>
+                        <strong>{{ order.total_price|floatformat:0 }} VND</strong>
                     </div>
                     <div class="summary-line">
                         <span>Phương thức</span>
                         <strong>Online mô phỏng</strong>
                     </div>
 
-                    <a href="{% url 'orders:mock_payment_success' order.order_code %}" class="checkout-btn">
+                    <a href="{% url 'orders:mock_payment_success' order.id %}" class="checkout-btn">
                         Mô phỏng thanh toán thành công
                     </a>
 
-                    <a href="{% url 'orders:mock_payment_fail' order.order_code %}" class="continue-btn" style="display:block;margin-top:12px;text-align:center;">
+                    <a href="{% url 'orders:mock_payment_fail' order.id %}" class="continue-btn" style="display:block;margin-top:12px;text-align:center;">
                         Mô phỏng thanh toán thất bại
                     </a>
                 </div>

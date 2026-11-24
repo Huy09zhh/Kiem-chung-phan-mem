@@ -1,10 +1,29 @@
 from django.conf import settings
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
+from django.db import transaction
 from urllib.parse import quote
 
 from .models import ORDER_TOTAL_MAX, Order, OrderItem
 from cart.models import Cart
+
+
+def _clear_order_items_from_cart(user, order):
+    try:
+        cart = user.cart
+        if not order.items.exists():
+            cart.items.all().delete()
+            return
+        for order_item in order.items.all():
+            cart_item = cart.items.filter(product__name=order_item.product_name).first()
+            if cart_item:
+                if cart_item.quantity <= order_item.quantity:
+                    cart_item.delete()
+                else:
+                    cart_item.quantity -= order_item.quantity
+                    cart_item.save(update_fields=['quantity'])
+    except Cart.DoesNotExist:
+        pass
 
 
 def get_qr_info(order):
@@ -63,42 +82,62 @@ def checkout(request):
         phone = request.POST.get('phone', '').strip()
         address = request.POST.get('address', '').strip()
         note = request.POST.get('note', '').strip()
-        payment_method = request.POST.get('payment_method', 'cod')
 
-        if payment_method not in ['cod', 'qr', 'mock']:
+        if not full_name or len(full_name) > 255:
+            context['error'] = 'Họ tên không được để trống và tối đa 255 ký tự.'
+            return render(request, 'orders/checkout.html', context)
+
+        if not phone or len(phone) > 20:
+            context['error'] = 'Số điện thoại không được để trống và tối đa 20 ký tự.'
+            return render(request, 'orders/checkout.html', context)
+
+        if not address:
+            context['error'] = 'Địa chỉ không được để trống.'
+            return render(request, 'orders/checkout.html', context)
+
+        if 'payment_method' not in request.POST:
             payment_method = 'cod'
+        else:
+            payment_method = request.POST.get('payment_method')
+            if payment_method not in ['cod', 'qr', 'mock']:
+                context['error'] = 'Phương thức thanh toán không hợp lệ.'
+                return render(request, 'orders/checkout.html', context)
 
         order_status = 'pending'
         if payment_method == 'qr':
             order_status = 'awaiting_transfer'
         elif payment_method == 'mock':
             order_status = 'pending'
-        # Hủy các đơn QR cũ chưa thanh toán của khách này (tránh đơn rác)
-        Order.objects.filter(
-            user=request.user, status='awaiting_transfer'
-        ).update(status='cancelled')
 
-        order = Order.objects.create(
-            user=request.user,
-            total_price=total_price,
-            full_name=full_name,
-            phone=phone,
-            address=address,
-            note=note,
-            payment_method=payment_method,
-            status=order_status,
-        )
+        with transaction.atomic():
+            # Hủy các đơn QR cũ chưa thanh toán của khách này (tránh đơn rác)
+            Order.objects.filter(
+                user=request.user, status='awaiting_transfer'
+            ).update(status='cancelled')
 
-        for item in cart_items:
-            OrderItem.objects.create(
-                order=order,
-                product_name=item.product.name,
-                price=item.product.price,
-                quantity=item.quantity,
+            order = Order.objects.create(
+                user=request.user,
+                total_price=total_price,
+                full_name=full_name,
+                phone=phone,
+                address=address,
+                note=note,
+                payment_method=payment_method,
+                status=order_status,
             )
 
+            for item in cart_items:
+                OrderItem.objects.create(
+                    order=order,
+                    product_name=item.product.name,
+                    price=item.product.price,
+                    quantity=item.quantity,
+                )
+
+            if payment_method == 'cod':
+                cart.items.all().delete()
+
         if payment_method == 'cod':
-            cart.items.all().delete()
             return redirect('orders:order_success', order_id=order.id)
 
         if payment_method == 'qr':
@@ -134,14 +173,10 @@ def order_qr(request, order_id):
 def confirm_qr_paid(request, order_id):
     order = get_object_or_404(Order, id=order_id, user=request.user)
 
-    if request.method == 'POST' and order.status == 'awaiting_transfer':
+    if request.method == 'POST' and order.payment_method == 'qr' and order.status == 'awaiting_transfer':
         order.status = 'paid'
         order.save(update_fields=['status'])
-
-        try:
-            request.user.cart.items.all().delete()
-        except Cart.DoesNotExist:
-            pass
+        _clear_order_items_from_cart(request.user, order)
 
     return redirect('orders:order_success', order_id=order.id)
 
@@ -157,14 +192,10 @@ def mock_payment(request, order_id):
 @login_required(login_url='login')
 def mock_payment_success(request, order_id):
     order = get_object_or_404(Order, id=order_id, user=request.user)
-    order.status = 'paid'
-    order.save(update_fields=['status'])
-
-    try:
-        cart = request.user.cart
-        cart.items.all().delete()
-    except Cart.DoesNotExist:
-        pass
+    if request.method == 'POST' and order.payment_method == 'mock' and order.can_change_to('paid'):
+        order.status = 'paid'
+        order.save(update_fields=['status'])
+        _clear_order_items_from_cart(request.user, order)
 
     return redirect('orders:order_success', order_id=order.id)
 
@@ -172,8 +203,9 @@ def mock_payment_success(request, order_id):
 @login_required(login_url='login')
 def mock_payment_fail(request, order_id):
     order = get_object_or_404(Order, id=order_id, user=request.user)
-    order.status = 'failed'
-    order.save(update_fields=['status'])
+    if request.method == 'POST' and order.payment_method == 'mock' and order.can_change_to('failed'):
+        order.status = 'failed'
+        order.save(update_fields=['status'])
 
     return redirect('orders:order_success', order_id=order.id)
 

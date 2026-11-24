@@ -1,0 +1,4 @@
+$kind: collection
+name: "01. Xác thực & Phân quyền Admin"
+description: "Kiểm thử kiểm soát truy cập và bảo vệ các URL quản trị theo quyền Admin (RBAC)."
+order: 2000

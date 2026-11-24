@@ -1,0 +1,24 @@
+$kind: http-request
+url: "{{base_url}}/orders/mock/{{wb_order_mock_id}}/fail/"
+method: POST
+headers:
+  X-CSRFToken: "{{csrf_token}}"
+  Content-Type: application/x-www-form-urlencoded
+body:
+  type: urlencoded
+  content:
+    csrfmiddlewaretoken: "{{csrf_token}}"
+scripts:
+  - type: beforeRequest
+    code: "  var t = pm.cookies.get('csrftoken'); if (t) { pm.collectionVariables.set('csrf_token', t); }"
+    language: text/javascript
+  - type: afterResponse
+    code: |2-
+        pm.test('TC-WB-17 | Callback mock fail -> chuyển pending sang failed', function () {
+          pm.expect([200, 302]).to.include(pm.response.code);
+        });
+        var t = pm.cookies.get('csrftoken'); if (t) { pm.collectionVariables.set('csrf_token', t); }
+    language: text/javascript
+settings:
+  followRedirects: false
+order: 17000

@@ -321,14 +321,14 @@ class QrFlowTests(OrderTestBase):
         self.login()
 
     def test_ord_29_qr_creates_awaiting_transfer_and_redirects_qr_page(self):
-        """TC-ORD-29: QR -> Order awaiting_transfer, giỏ rỗng, chuyển /orders/qr/<id>/."""
+        """TC-ORD-29: QR -> Order awaiting_transfer, giữ giỏ hàng, chuyển /orders/qr/<id>/."""
         self.fill_cart((self.p_a, 1))
         r = self.checkout(payment_method='qr')
         o = Order.objects.get()
         self.assertEqual(r.status_code, 302)
         self.assertEqual(r.url, f'/orders/qr/{o.id}/')
         self.assertEqual((o.status, o.payment_method), ('awaiting_transfer', 'qr'))
-        self.assertEqual(self.cart_count(), 0)
+        self.assertEqual(self.cart_count(), 1)
 
     def test_ord_30_qr_page_has_correct_qr_url_amount_and_note(self):
         """TC-ORD-30: Trang QR -> ảnh VietQR đúng STK, số tiền, nội dung THANH TOAN DH{id}."""
@@ -593,3 +593,478 @@ class TotalBoundaryAndReliabilityTests(OrderTestBase):
             self.checkout()
         self.assertEqual(Order.objects.count(), 0, 'Order mồ côi (không có OrderItem) vẫn bị lưu')
         self.assertEqual(self.cart_count(), 1)
+
+
+# =====================================================================
+# J. Kiểm thử Chuyển đổi trạng thái (State Transition Testing)
+# =====================================================================
+class StateTransitionTests(OrderTestBase):
+    """Bộ kiểm thử Chuyển đổi trạng thái (State Transition Testing) cho Order & Payment.
+    Bao phủ toàn bộ 16 chuyển đổi hợp lệ và 22 kịch bản chặn chuyển đổi bất hợp lệ
+    theo thiết kế trong docs/TestCase_FR4_Orders_StateTransition_DecisionTable.md.
+    """
+
+    def setUp(self):
+        super().setUp()
+        self.login()
+
+    # -------------------------------------------------------------
+    # J.1 Các luồng chuyển trạng thái hợp lệ (Valid Transitions: TC-ST-01 -> TC-ST-16)
+    # -------------------------------------------------------------
+    def test_st_01_pending_to_paid(self):
+        """TC-ST-01: pending -> paid (Admin xác nhận thanh toán trực tiếp)."""
+        o = self.mk_order(status='pending')
+        self.assertTrue(o.can_change_to('paid'))
+        o.status = 'paid'
+        o.save()
+        self.assertEqual(self.status_of(o), 'paid')
+
+    def test_st_02_pending_to_confirmed(self):
+        """TC-ST-02: pending -> confirmed (Admin xác nhận đơn hàng COD)."""
+        o = self.mk_order(status='pending')
+        self.assertTrue(o.can_change_to('confirmed'))
+        o.status = 'confirmed'
+        o.save()
+        self.assertEqual(self.status_of(o), 'confirmed')
+
+    def test_st_03_pending_to_cancelled(self):
+        """TC-ST-03: pending -> cancelled (Khách/Admin hủy đơn hàng)."""
+        o = self.mk_order(status='pending')
+        self.assertTrue(o.can_change_to('cancelled'))
+        o.status = 'cancelled'
+        o.save()
+        self.assertEqual(self.status_of(o), 'cancelled')
+
+    def test_st_04_pending_to_paid_via_mock(self):
+        """TC-ST-04: pending -> paid (Mock Payment callback thành công qua endpoint)."""
+        self.fill_cart((self.p_a, 1))
+        self.checkout(payment_method='mock')
+        o = Order.objects.get()
+        self.assertEqual(o.status, 'pending')
+        r = self.client.post(f'/orders/mock/{o.id}/success/')
+        self.assertEqual(r.status_code, 302)
+        self.assertEqual(self.status_of(o), 'paid')
+        self.assertEqual(self.cart_count(), 0)
+
+    def test_st_05_pending_to_failed_via_mock(self):
+        """TC-ST-05: pending -> failed (Mock Payment callback thất bại qua endpoint)."""
+        self.fill_cart((self.p_a, 1))
+        self.checkout(payment_method='mock')
+        o = Order.objects.get()
+        self.assertEqual(o.status, 'pending')
+        r = self.client.post(f'/orders/mock/{o.id}/fail/')
+        self.assertEqual(r.status_code, 302)
+        self.assertEqual(self.status_of(o), 'failed')
+        self.assertEqual(self.cart_count(), 1)
+
+    def test_st_06_awaiting_transfer_to_paid_via_qr(self):
+        """TC-ST-06: awaiting_transfer -> paid (Khách bấm xác nhận đã chuyển khoản QR)."""
+        o = self.mk_order(method='qr', status='awaiting_transfer')
+        self.assertTrue(o.can_change_to('paid'))
+        r = self.client.post(f'/orders/qr/{o.id}/confirm/')
+        self.assertEqual(r.status_code, 302)
+        self.assertEqual(self.status_of(o), 'paid')
+
+    def test_st_07_awaiting_transfer_to_failed(self):
+        """TC-ST-07: awaiting_transfer -> failed (Chuyển khoản hết hạn / Báo lỗi QR)."""
+        o = self.mk_order(method='qr', status='awaiting_transfer')
+        self.assertTrue(o.can_change_to('failed'))
+        o.status = 'failed'
+        o.save()
+        self.assertEqual(self.status_of(o), 'failed')
+
+    def test_st_08_awaiting_transfer_to_cancelled_via_qr(self):
+        """TC-ST-08: awaiting_transfer -> cancelled (Khách POST hủy đơn QR)."""
+        o = self.mk_order(method='qr', status='awaiting_transfer')
+        self.assertTrue(o.can_change_to('cancelled'))
+        r = self.client.post(f'/orders/{o.id}/cancel/')
+        self.assertEqual(r.status_code, 302)
+        self.assertEqual(self.status_of(o), 'cancelled')
+
+    def test_st_09_paid_to_confirmed(self):
+        """TC-ST-09: paid -> confirmed (Admin duyệt đơn sau khi đã thanh toán)."""
+        o = self.mk_order(status='paid')
+        self.assertTrue(o.can_change_to('confirmed'))
+        o.status = 'confirmed'
+        o.save()
+        self.assertEqual(self.status_of(o), 'confirmed')
+
+    def test_st_10_paid_to_cancelled(self):
+        """TC-ST-10: paid -> cancelled (Admin hủy đơn đã thanh toán & hoàn tiền)."""
+        o = self.mk_order(status='paid')
+        self.assertTrue(o.can_change_to('cancelled'))
+        o.status = 'cancelled'
+        o.save()
+        self.assertEqual(self.status_of(o), 'cancelled')
+
+    def test_st_11_failed_to_awaiting_transfer(self):
+        """TC-ST-11: failed -> awaiting_transfer (Khách chọn thanh toán lại qua QR)."""
+        o = self.mk_order(status='failed')
+        self.assertTrue(o.can_change_to('awaiting_transfer'))
+        o.status = 'awaiting_transfer'
+        o.save()
+        self.assertEqual(self.status_of(o), 'awaiting_transfer')
+
+    def test_st_12_failed_to_cancelled(self):
+        """TC-ST-12: failed -> cancelled (Khách hoặc Admin hủy đơn hỏng thanh toán)."""
+        o = self.mk_order(status='failed')
+        self.assertTrue(o.can_change_to('cancelled'))
+        o.status = 'cancelled'
+        o.save()
+        self.assertEqual(self.status_of(o), 'cancelled')
+
+    def test_st_13_confirmed_to_shipping(self):
+        """TC-ST-13: confirmed -> shipping (Bàn giao cho đơn vị vận chuyển)."""
+        o = self.mk_order(status='confirmed')
+        self.assertTrue(o.can_change_to('shipping'))
+        o.status = 'shipping'
+        o.save()
+        self.assertEqual(self.status_of(o), 'shipping')
+
+    def test_st_14_confirmed_to_cancelled(self):
+        """TC-ST-14: confirmed -> cancelled (Khách hủy đơn trước khi giao hàng)."""
+        o = self.mk_order(status='confirmed')
+        self.assertTrue(o.can_change_to('cancelled'))
+        o.status = 'cancelled'
+        o.save()
+        self.assertEqual(self.status_of(o), 'cancelled')
+
+    def test_st_15_shipping_to_completed(self):
+        """TC-ST-15: shipping -> completed (Giao hàng thành công - Terminal State)."""
+        o = self.mk_order(status='shipping')
+        self.assertTrue(o.can_change_to('completed'))
+        o.status = 'completed'
+        o.save()
+        self.assertEqual(self.status_of(o), 'completed')
+        self.assertTrue(o.is_final)
+
+    def test_st_16_shipping_to_cancelled(self):
+        """TC-ST-16: shipping -> cancelled (Giao hàng thất bại / Boom hàng - Terminal State)."""
+        o = self.mk_order(status='shipping')
+        self.assertTrue(o.can_change_to('cancelled'))
+        o.status = 'cancelled'
+        o.save()
+        self.assertEqual(self.status_of(o), 'cancelled')
+        self.assertTrue(o.is_final)
+
+    # -------------------------------------------------------------
+    # J.2 Các luồng chuyển bất hợp lệ (Invalid Transitions: TC-ST-INV-01 -> TC-ST-INV-22)
+    # -------------------------------------------------------------
+    def test_st_inv_01_to_03_pending_invalid(self):
+        """TC-ST-INV-01..03: pending không được chuyển sang shipping, completed, awaiting_transfer."""
+        o = self.mk_order(status='pending')
+        for bad in ('shipping', 'completed', 'awaiting_transfer'):
+            with self.subTest(target_status=bad):
+                self.assertFalse(o.can_change_to(bad))
+
+    def test_st_inv_04_to_06_awaiting_transfer_invalid(self):
+        """TC-ST-INV-04..06: awaiting_transfer không được chuyển sang confirmed, shipping, completed."""
+        o = self.mk_order(method='qr', status='awaiting_transfer')
+        for bad in ('confirmed', 'shipping', 'completed'):
+            with self.subTest(target_status=bad):
+                self.assertFalse(o.can_change_to(bad))
+
+    def test_st_inv_07_to_09_paid_invalid(self):
+        """TC-ST-INV-07..09: paid không được lùi về pending, failed hoặc nhảy cóc sang completed."""
+        o = self.mk_order(status='paid')
+        for bad in ('pending', 'failed', 'completed'):
+            with self.subTest(target_status=bad):
+                self.assertFalse(o.can_change_to(bad))
+
+    def test_st_inv_10_to_11_failed_invalid(self):
+        """TC-ST-INV-10..11: failed không được chuyển thẳng sang paid hoặc shipping."""
+        o = self.mk_order(status='failed')
+        for bad in ('paid', 'shipping'):
+            with self.subTest(target_status=bad):
+                self.assertFalse(o.can_change_to(bad))
+
+    def test_st_inv_12_to_13_confirmed_invalid(self):
+        """TC-ST-INV-12..13: confirmed không được lùi về pending hoặc nhảy cóc sang completed."""
+        o = self.mk_order(status='confirmed')
+        for bad in ('pending', 'completed'):
+            with self.subTest(target_status=bad):
+                self.assertFalse(o.can_change_to(bad))
+
+    def test_st_inv_14_to_15_shipping_invalid(self):
+        """TC-ST-INV-14..15: shipping không được lùi về confirmed hoặc pending."""
+        o = self.mk_order(status='shipping')
+        for bad in ('confirmed', 'pending'):
+            with self.subTest(target_status=bad):
+                self.assertFalse(o.can_change_to(bad))
+
+    def test_st_inv_16_to_18_completed_terminal(self):
+        """TC-ST-INV-16..18: completed là trạng thái kết thúc, không được chuyển đi đâu."""
+        o = self.mk_order(status='completed')
+        self.assertTrue(o.is_final)
+        self.assertEqual(len(o.ALLOWED_TRANSITIONS.get('completed', set())), 0)
+        for target in ('pending', 'cancelled', 'shipping', 'paid', 'confirmed'):
+            with self.subTest(target_status=target):
+                self.assertFalse(o.can_change_to(target))
+
+    def test_st_inv_19_to_22_cancelled_terminal(self):
+        """TC-ST-INV-19..22: cancelled là trạng thái kết thúc, không được chuyển đi đâu."""
+        o = self.mk_order(status='cancelled')
+        self.assertTrue(o.is_final)
+        self.assertEqual(len(o.ALLOWED_TRANSITIONS.get('cancelled', set())), 0)
+        for target in ('pending', 'confirmed', 'paid', 'completed', 'shipping'):
+            with self.subTest(target_status=target):
+                self.assertFalse(o.can_change_to(target))
+
+    # -------------------------------------------------------------
+    # J.3 Kiểm tra toàn diện Ma trận chuyển đổi 8x8 & Bảo vệ Endpoint
+    # -------------------------------------------------------------
+    def test_st_exhaustive_matrix_8x8(self):
+        """Kiểm tra toàn diện ma trận chuyển trạng thái 8x8 (64 cặp trạng thái)."""
+        all_statuses = [s[0] for s in Order.STATUS_CHOICES]
+        for src in all_statuses:
+            o = self.mk_order(status=src)
+            allowed = Order.ALLOWED_TRANSITIONS.get(src, set())
+            for dst in all_statuses:
+                with self.subTest(src=src, dst=dst):
+                    if dst in allowed:
+                        self.assertTrue(o.can_change_to(dst), f"Chuyển đổi {src} -> {dst} phải hợp lệ")
+                    else:
+                        self.assertFalse(o.can_change_to(dst), f"Chuyển đổi {src} -> {dst} phải bị chặn")
+
+    def test_st_endpoint_guard_against_illegal_status(self):
+        """Endpoint confirm/cancel QR và mock success/fail chặn đơn có trạng thái bất hợp lệ."""
+        for terminal_st in ('completed', 'cancelled'):
+            with self.subTest(status=terminal_st):
+                o = self.mk_order(method='qr', status=terminal_st)
+                self.client.post(f'/orders/qr/{o.id}/confirm/')
+                self.assertEqual(self.status_of(o), terminal_st)
+
+                self.client.post(f'/orders/{o.id}/cancel/')
+                self.assertEqual(self.status_of(o), terminal_st)
+
+        # Mock success không được tác động lên đơn đã confirmed hoặc shipping
+        for st in ('confirmed', 'shipping', 'completed', 'cancelled'):
+            with self.subTest(mock_invalid_status=st):
+                o = self.mk_order(method='mock', status=st)
+                self.client.post(f'/orders/mock/{o.id}/success/')
+                self.assertEqual(self.status_of(o), st)
+
+
+# =====================================================================
+# K. BỘ KIỂM THỬ HỘP TRẮNG (WHITE-BOX TESTING) - ĐỘ PHỦ TỐI ĐA CFG
+# =====================================================================
+class WhiteBoxCoverageTests(OrderTestBase):
+    """Kiểm thử Hộp trắng (White-box Testing):
+    - Đồ thị luồng điều khiển (CFG) & Cyclomatic Complexity V(G).
+    - Bao phủ câu lệnh (Statement Coverage 100%).
+    - Bao phủ nhánh (Branch / Decision Coverage 100%).
+    - Bao phủ điều kiện nhánh (Branch-Condition / MC/DC Coverage).
+    - Bao phủ các nhánh ngoại lệ nội bộ (Cart.DoesNotExist, mô hình DB).
+    """
+
+    def setUp(self):
+        super().setUp()
+        self.login()
+
+    # -------------------------------------------------------------
+    # K.1 CFG Hàm checkout() - Đường đi & Nhánh quyết định
+    # -------------------------------------------------------------
+    def test_wb_01_cfg_checkout_get_statement_path(self):
+        """TC-WB-01 [Statement]: GET checkout với giỏ hàng hợp lệ (Đường GET chính)."""
+        self.fill_cart((self.p_a, 2))
+        res = self.client.get('/orders/checkout/')
+        self.assertEqual(res.status_code, 200)
+        self.assertContains(res, 'Bình nước tre')
+        self.assertIn('total_price', res.context)
+
+    def test_wb_02_cfg_checkout_cart_empty_branch(self):
+        """TC-WB-02 [Branch]: POST checkout khi giỏ hàng trống (Nhánh D1 True)."""
+        cart, _ = Cart.objects.get_or_create(user=self.user)
+        cart.items.all().delete()
+        res = self.client.post('/orders/checkout/', self.data())
+        self.assertRedirects(res, '/cart/')
+
+    def test_wb_03_cfg_checkout_total_exceeded_branch(self):
+        """TC-WB-03 [Branch]: POST checkout khi vượt ORDER_TOTAL_MAX (Nhánh D2 True)."""
+        p_huge = Product.objects.create(name='Hàng siêu đắt', price=TOTAL_MAX_PLUS)
+        self.fill_cart((p_huge, 1))
+        res = self.client.post('/orders/checkout/', self.data())
+        self.assertEqual(res.status_code, 200)
+        self.assertTrue(res.context['total_exceeded'])
+
+    def test_wb_04_cfg_checkout_name_empty_condition(self):
+        """TC-WB-04 [Condition]: full_name rỗng (Nhánh D4a: not full_name = True)."""
+        self.fill_cart((self.p_a, 1))
+        res = self.client.post('/orders/checkout/', self.data(full_name='   '))
+        self.assertEqual(res.status_code, 200)
+        self.assertIn('Họ tên không được để trống', res.context['error'])
+
+    def test_wb_05_cfg_checkout_name_length_exceeded_condition(self):
+        """TC-WB-05 [Condition]: len(full_name) > 255 (Nhánh D4b: len > 255 = True)."""
+        self.fill_cart((self.p_a, 1))
+        res = self.client.post('/orders/checkout/', self.data(full_name='A' * 256))
+        self.assertEqual(res.status_code, 200)
+        self.assertIn('Họ tên không được để trống', res.context['error'])
+
+    def test_wb_06_cfg_checkout_phone_empty_condition(self):
+        """TC-WB-06 [Condition]: phone rỗng (Nhánh D5a: not phone = True)."""
+        self.fill_cart((self.p_a, 1))
+        res = self.client.post('/orders/checkout/', self.data(phone=''))
+        self.assertEqual(res.status_code, 200)
+        self.assertIn('Số điện thoại không được để trống', res.context['error'])
+
+    def test_wb_07_cfg_checkout_phone_length_exceeded_condition(self):
+        """TC-WB-07 [Condition]: len(phone) > 20 (Nhánh D5b: len > 20 = True)."""
+        self.fill_cart((self.p_a, 1))
+        res = self.client.post('/orders/checkout/', self.data(phone='0' * 21))
+        self.assertEqual(res.status_code, 200)
+        self.assertIn('Số điện thoại không được để trống', res.context['error'])
+
+    def test_wb_08_cfg_checkout_address_empty_branch(self):
+        """TC-WB-08 [Branch]: address rỗng (Nhánh D6: not address = True)."""
+        self.fill_cart((self.p_a, 1))
+        res = self.client.post('/orders/checkout/', self.data(address='  \t  '))
+        self.assertEqual(res.status_code, 200)
+        self.assertIn('Địa chỉ không được để trống', res.context['error'])
+
+    def test_wb_09_cfg_checkout_payment_method_omitted_branch(self):
+        """TC-WB-09 [Branch]: Bỏ qua payment_method trong POST -> mặc định 'cod'."""
+        self.fill_cart((self.p_a, 1))
+        data = self.data()
+        del data['payment_method']
+        res = self.client.post('/orders/checkout/', data)
+        order = Order.objects.filter(user=self.user).latest('id')
+        self.assertEqual(order.payment_method, 'cod')
+        self.assertRedirects(res, f'/orders/success/{order.id}/')
+
+    def test_wb_10_cfg_checkout_payment_method_invalid_branch(self):
+        """TC-WB-10 [Branch]: payment_method không thuộc ['cod', 'qr', 'mock']."""
+        self.fill_cart((self.p_a, 1))
+        res = self.client.post('/orders/checkout/', self.data(payment_method='zalopay_unsupported'))
+        self.assertEqual(res.status_code, 200)
+        self.assertIn('Phương thức thanh toán không hợp lệ', res.context['error'])
+
+    def test_wb_11_cfg_checkout_cod_full_path(self):
+        """TC-WB-11 [Path]: Đặt hàng COD hợp lệ -> xóa giỏ hàng, redirect success."""
+        self.fill_cart((self.p_a, 1))
+        res = self.client.post('/orders/checkout/', self.data(payment_method='cod'))
+        order = Order.objects.filter(user=self.user).latest('id')
+        self.assertEqual(order.status, 'pending')
+        self.assertEqual(self.cart_count(), 0)
+        self.assertRedirects(res, f'/orders/success/{order.id}/')
+
+    def test_wb_12_cfg_checkout_qr_full_path(self):
+        """TC-WB-12 [Path]: Đặt hàng QR hợp lệ -> status awaiting_transfer, giữ giỏ hàng, redirect qr."""
+        self.fill_cart((self.p_a, 1))
+        res = self.client.post('/orders/checkout/', self.data(payment_method='qr'))
+        order = Order.objects.filter(user=self.user).latest('id')
+        self.assertEqual(order.status, 'awaiting_transfer')
+        self.assertEqual(self.cart_count(), 1)
+        self.assertRedirects(res, f'/orders/qr/{order.id}/')
+
+    def test_wb_13_cfg_checkout_mock_full_path(self):
+        """TC-WB-13 [Path]: Đặt hàng Mock hợp lệ -> status pending, giữ giỏ hàng, redirect mock."""
+        self.fill_cart((self.p_a, 1))
+        res = self.client.post('/orders/checkout/', self.data(payment_method='mock'))
+        order = Order.objects.filter(user=self.user).latest('id')
+        self.assertEqual(order.status, 'pending')
+        self.assertEqual(self.cart_count(), 1)  # Giữ giỏ chờ thanh toán
+        self.assertRedirects(res, f'/orders/mock/{order.id}/')
+
+    # -------------------------------------------------------------
+    # K.2 CFG Các nhánh ngoại lệ & Cạnh ẩn (Exception Branches)
+    # -------------------------------------------------------------
+    def test_wb_14_cfg_checkout_cart_does_not_exist_exception(self):
+        """TC-WB-14 [Exception]: request.user.cart ném Cart.DoesNotExist -> redirect /cart/."""
+        with mock.patch.object(User, 'cart', new_callable=mock.PropertyMock) as mock_cart:
+            mock_cart.side_effect = Cart.DoesNotExist
+            res = self.client.get('/orders/checkout/')
+            self.assertRedirects(res, '/cart/')
+
+    def test_wb_15_cfg_order_qr_redirect_if_not_awaiting(self):
+        """TC-WB-15 [Branch views:146]: order_qr khi order.status != 'awaiting_transfer' -> redirect success."""
+        o = self.mk_order(method='qr', status='paid')
+        res = self.client.get(f'/orders/qr/{o.id}/')
+        self.assertRedirects(res, f'/orders/success/{o.id}/')
+
+    # -------------------------------------------------------------
+    # K.3 CFG confirm_qr_paid() & MC/DC Biểu thức ghép 3 điều kiện
+    # if request.method == 'POST' and order.payment_method == 'qr' and order.status == 'awaiting_transfer':
+    # -------------------------------------------------------------
+    def test_wb_16_cfg_confirm_qr_paid_all_true(self):
+        """TC-WB-16 [MC/DC TTT]: POST + QR + awaiting_transfer -> Chuyển paid & xóa giỏ."""
+        self.fill_cart((self.p_a, 1))
+        o = self.mk_order(method='qr', status='awaiting_transfer')
+        res = self.client.post(f'/orders/qr/{o.id}/confirm/')
+        self.assertEqual(self.status_of(o), 'paid')
+        self.assertEqual(self.cart_count(), 0)
+        self.assertRedirects(res, f'/orders/success/{o.id}/')
+
+    def test_wb_17_cfg_confirm_qr_paid_c1_false_get_method(self):
+        """TC-WB-17 [MC/DC FTT]: Method=GET + QR + awaiting_transfer -> Không đổi trạng thái."""
+        o = self.mk_order(method='qr', status='awaiting_transfer')
+        res = self.client.get(f'/orders/qr/{o.id}/confirm/')
+        self.assertEqual(self.status_of(o), 'awaiting_transfer')
+        self.assertRedirects(res, f'/orders/success/{o.id}/')
+
+    def test_wb_18_cfg_confirm_qr_paid_c2_false_payment_cod(self):
+        """TC-WB-18 [MC/DC TFT]: POST + COD + awaiting_transfer -> Không đổi trạng thái."""
+        o = self.mk_order(method='cod', status='awaiting_transfer')
+        res = self.client.post(f'/orders/qr/{o.id}/confirm/')
+        self.assertEqual(self.status_of(o), 'awaiting_transfer')
+        self.assertRedirects(res, f'/orders/success/{o.id}/')
+
+    def test_wb_19_cfg_confirm_qr_paid_c3_false_status_already_paid(self):
+        """TC-WB-19 [MC/DC TTF]: POST + QR + status='paid' -> Không đổi trạng thái."""
+        o = self.mk_order(method='qr', status='paid')
+        res = self.client.post(f'/orders/qr/{o.id}/confirm/')
+        self.assertEqual(self.status_of(o), 'paid')
+        self.assertRedirects(res, f'/orders/success/{o.id}/')
+
+    def test_wb_20_cfg_confirm_qr_paid_cart_does_not_exist(self):
+        """TC-WB-20 [Exception views:164-165]: confirm_qr_paid bắt ngoại lệ Cart.DoesNotExist."""
+        o = self.mk_order(method='qr', status='awaiting_transfer')
+        with mock.patch.object(User, 'cart', new_callable=mock.PropertyMock) as mock_cart:
+            mock_cart.side_effect = Cart.DoesNotExist
+            res = self.client.post(f'/orders/qr/{o.id}/confirm/')
+            self.assertEqual(self.status_of(o), 'paid')
+            self.assertRedirects(res, f'/orders/success/{o.id}/')
+
+    def test_wb_21_cfg_mock_payment_success_cart_does_not_exist(self):
+        """TC-WB-21 [Exception views:188-189]: mock_payment_success bắt ngoại lệ Cart.DoesNotExist."""
+        o = self.mk_order(method='mock', status='pending')
+        with mock.patch.object(User, 'cart', new_callable=mock.PropertyMock) as mock_cart:
+            mock_cart.side_effect = Cart.DoesNotExist
+            res = self.client.post(f'/orders/mock/{o.id}/success/')
+            self.assertEqual(self.status_of(o), 'paid')
+            self.assertRedirects(res, f'/orders/success/{o.id}/')
+
+    def test_wb_22_cfg_mock_payment_fail_path(self):
+        """TC-WB-22 [Path]: mock_payment_fail đổi trạng thái từ pending -> failed."""
+        o = self.mk_order(method='mock', status='pending')
+        res = self.client.post(f'/orders/mock/{o.id}/fail/')
+        self.assertEqual(self.status_of(o), 'failed')
+        self.assertRedirects(res, f'/orders/success/{o.id}/')
+
+    def test_wb_23_cfg_cancel_qr_order_path(self):
+        """TC-WB-23 [Path]: cancel_qr_order hủy đơn awaiting_transfer -> cancelled."""
+        o = self.mk_order(method='qr', status='awaiting_transfer')
+        res = self.client.post(f'/orders/{o.id}/cancel/')
+        self.assertEqual(self.status_of(o), 'cancelled')
+        self.assertRedirects(res, '/cart/')
+
+    def test_wb_24_cfg_cancel_qr_order_wrong_status(self):
+        """TC-WB-24 [Branch]: cancel_qr_order trên đơn không phải awaiting_transfer -> giữ nguyên."""
+        o = self.mk_order(method='qr', status='paid')
+        res = self.client.post(f'/orders/{o.id}/cancel/')
+        self.assertEqual(self.status_of(o), 'paid')
+        self.assertRedirects(res, '/cart/')
+
+    def test_wb_25_cfg_models_str_coverage(self):
+        """TC-WB-25 [Statement models:78,93]: Phủ __str__ của Order và OrderItem."""
+        o = self.mk_order()
+        item = o.items.first()
+        self.assertEqual(str(o), f"Order #{o.id} - {self.user.username}")
+        self.assertEqual(str(item), 'Bình nước tre')
+
+    def test_wb_26_cfg_my_orders_view(self):
+        """TC-WB-26 [Statement views:204-209]: Phủ view my_orders liệt kê đơn QR."""
+        self.mk_order(method='qr', status='awaiting_transfer')
+        res = self.client.get('/orders/my/')
+        self.assertEqual(res.status_code, 200)
+

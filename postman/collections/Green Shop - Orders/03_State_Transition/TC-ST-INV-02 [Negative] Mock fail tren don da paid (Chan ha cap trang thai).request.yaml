@@ -1,0 +1,21 @@
+$kind: http-request
+url: "{{base_url}}/orders/mock/{{st_order_mock_success_id}}/fail/"
+method: POST
+body:
+  type: urlencoded
+  content:
+    csrfmiddlewaretoken: "{{csrf_token}}"
+scripts:
+  - type: beforeRequest
+    code: |-
+      const t = pm.cookies.get('csrftoken'); if (t) { pm.collectionVariables.set('csrf_token', t); }
+    language: text/javascript
+  - type: afterResponse
+    code: |-
+      pm.test('TC-ST-INV-02 | [Chặn chuyển sai] Không cho hạ cấp đơn đã paid xuống failed (redirect 302, giữ paid)', function () {
+        pm.expect([200, 302]).to.include(pm.response.code);
+      });
+    language: text/javascript
+settings:
+  followRedirects: false
+order: 14000

@@ -1,0 +1,4 @@
+$kind: collection
+name: 04_Error_Guessing
+description: "Kiểm thử đoán lỗi (Error Guessing) dựa trên kinh nghiệm: Idempotency, lỗi session, thiếu CSRF, dữ liệu dị dạng"
+order: 5000

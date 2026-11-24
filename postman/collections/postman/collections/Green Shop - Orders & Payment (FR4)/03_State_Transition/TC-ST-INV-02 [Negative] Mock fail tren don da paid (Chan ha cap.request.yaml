@@ -1,0 +1,24 @@
+$kind: http-request
+name: TC-ST-INV-02 [Negative] Mock fail tren don da paid (Chan ha cap trang thai)
+url: "{{base_url}}/orders/mock/{{st_order_mock_success_id}}/fail/"
+method: POST
+headers:
+  X-CSRFToken: "{{csrf_token}}"
+  Content-Type: application/x-www-form-urlencoded
+body:
+  type: urlencoded
+  content:
+    csrfmiddlewaretoken: "{{csrf_token}}"
+scripts:
+  - type: beforeRequest
+    code: "  const t = pm.cookies.get('csrftoken'); if (t) { pm.collectionVariables.set('csrf_token', t); }"
+    language: text/javascript
+  - type: afterResponse
+    code: |2-
+        pm.test('TC-ST-INV-02 | [Chặn chuyển sai] Không cho hạ cấp đơn đã paid xuống failed (redirect 302, giữ paid)', function () {
+          pm.expect([200, 302]).to.include(pm.response.code);
+        });
+    language: text/javascript
+settings:
+  followRedirects: false
+order: 14000

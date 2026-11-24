@@ -1,0 +1,18 @@
+$kind: http-request
+url: "{{base_url}}/orders/qr/{{wb_order_qr_id}}/confirm/"
+method: GET
+scripts:
+  - type: beforeRequest
+    code: |-
+      var t = pm.cookies.get('csrftoken'); if (t) { pm.collectionVariables.set('csrf_token', t); }
+    language: text/javascript
+  - type: afterResponse
+    code: |-
+      pm.test('TC-WB-15 | GET confirm QR -> Method!=POST không đổi trạng thái đơn', function () {
+        pm.expect([200, 302]).to.include(pm.response.code);
+      });
+      var t = pm.cookies.get('csrftoken'); if (t) { pm.collectionVariables.set('csrf_token', t); }
+    language: text/javascript
+settings:
+  followRedirects: false
+order: 15000

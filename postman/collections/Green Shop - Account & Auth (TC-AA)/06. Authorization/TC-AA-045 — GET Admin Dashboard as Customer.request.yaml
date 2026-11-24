@@ -1,12 +1,13 @@
 $kind: http-request
 url: "{{base_url}}/admin-panel/dashboard/"
 method: GET
+description: "Lớp EP: X – Customer vào trang quản trị."
 scripts:
   - type: afterResponse
-    code: "pm.test('Customer cannot access admin dashboard', () => pm.expect([302, 403]).to.include(pm.response.code));\r\nif (pm.response.code === 302) pm.test('Redirect target is provided', () => pm.expect(pm.response.headers.get('Location') || '').to.not.equal(''));"
+    code: "const base = pm.variables.replaceIn('{{base_url}}');\nconst loc = pm.response.headers.get('Location') || '';\nconst hasSession = (cb) => pm.sendRequest({ url: base + '/accounts/password/change/', method: 'GET' }, (e, r) => cb(!e && r.text().indexOf('old_password') !== -1));\npm.test('HTTP 302', () => pm.response.to.have.status(302));\npm.test('Location là /', () => pm.expect(loc).to.eql('/'));"
     language: text/javascript
   - type: beforeRequest
-    code: "const aa = eval(pm.collectionVariables.get('aa_helpers'));   // hàm dùng chung, xem biến aa_helpers\naa.user();   // điều kiện: đăng nhập tài khoản A"
+    code: "const aa = eval(pm.collectionVariables.get('aa_helpers'));   // hàm dùng chung, xem biến aa_helpers\naa.newUser(null);"
     language: text/javascript
 settings:
   followRedirects: false

@@ -1,0 +1,29 @@
+$kind: http-request
+url: "{{base_url}}/orders/checkout/"
+method: GET
+scripts:
+  - type: beforeRequest
+    code: |-
+      var sid = pm.cookies.get('sessionid');
+      var csrf = pm.cookies.get('csrftoken');
+      var cookieHdr = '';
+      if (sid) { cookieHdr += 'sessionid=' + sid + '; '; }
+      if (csrf) { 
+        cookieHdr += 'csrftoken=' + csrf; 
+        pm.collectionVariables.set('csrf_token', csrf);
+      }
+      pm.sendRequest({
+        url: pm.collectionVariables.get('base_url') + '/cart/add/' + pm.collectionVariables.get('product_id') + '/',
+        method: 'GET',
+        header: { 'Cookie': cookieHdr }
+      }, function (err, res) {});
+    language: text/javascript
+  - type: afterResponse
+    code: |-
+      pm.test('TC-DT-01 | [Rule R1] Đăng nhập Y, Giỏ hàng Y, Tiền hợp lệ Y -> 200 hiển thị form', function () {
+        pm.expect(pm.response.code).to.eql(200);
+      });
+    language: text/javascript
+settings:
+  followRedirects: true
+order: 1000

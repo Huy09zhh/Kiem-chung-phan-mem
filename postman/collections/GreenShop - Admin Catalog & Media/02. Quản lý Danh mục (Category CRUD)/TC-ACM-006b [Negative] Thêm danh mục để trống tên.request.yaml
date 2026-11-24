@@ -1,0 +1,18 @@
+$kind: http-request
+name: "TC-ACM-006b [Negative] Thêm danh mục để trống tên"
+url: "{{base_url}}/admin-panel/categories/create/"
+method: POST
+body:
+  type: urlencoded
+  content:
+    name: "   "
+scripts:
+  - type: afterResponse
+    language: text/javascript
+    code: |-
+      pm.test('Xử lý an toàn, chuyển hướng về danh sách (Status 302)', function () {
+          pm.expect(pm.response.code).to.eql(302);
+      });
+settings:
+  followRedirects: false
+order: 5000

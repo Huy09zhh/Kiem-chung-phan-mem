@@ -1,0 +1,46 @@
+$kind: collection
+name: "PH5 - Admin Catalog & Media (Ân)"
+description: |-
+  Bộ Postman Collection hoàn chỉnh phục vụ kiểm thử tự động toàn bộ API và Endpoint của Phân hệ 5 (Admin Catalog & Media).
+  Thành viên phụ trách: Nguyễn Mai Phúc Ân.
+  Bao gồm 7 nhóm: 00. Chuẩn bị, 01. Phân quyền, 02. Danh mục, 03. Sản phẩm, 04. BVA 12 Test Case, 05. Bảng quyết định, 06. Chuyển trạng thái.
+variables:
+  base_url: "http://127.0.0.1:8000"
+  admin_username: "admin"
+  admin_password: "Admin@12345"
+  customer_username: "user1"
+  customer_password: "User@12345"
+  csrf_token: ""
+  csrf_cookie: ""
+  category_id: "1"
+  product_id: "1"
+  test_cat_id: ""
+  test_prod_id: ""
+scripts:
+  - type: http:beforeRequest
+    language: text/javascript
+    code: |-
+      const m = pm.request.method;
+      const base = pm.variables.replaceIn('{{base_url}}');
+      pm.request.headers.upsert({ key: 'Referer', value: base + '/' });
+      if (m !== 'GET' && m !== 'HEAD') {
+          let token = pm.collectionVariables.get('csrf_cookie') || pm.cookies.get('csrftoken') || pm.collectionVariables.get('csrf_token');
+          if (token) {
+              pm.request.headers.upsert({ key: 'X-CSRFToken', value: token });
+          }
+      }
+  - type: http:afterResponse
+    language: text/javascript
+    code: |-
+      let tk = null;
+      try { tk = pm.cookies.get('csrftoken'); } catch (e) {}
+      if (!tk) {
+          try {
+              const rc = pm.response.cookies.get('csrftoken');
+              tk = rc && typeof rc === 'object' ? rc.value : rc;
+          } catch (e) {}
+      }
+      if (tk) {
+          pm.collectionVariables.set('csrf_cookie', tk);
+          pm.collectionVariables.set('csrf_token', tk);
+      }

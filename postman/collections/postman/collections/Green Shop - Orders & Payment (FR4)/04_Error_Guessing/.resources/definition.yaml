@@ -1,0 +1,3 @@
+$kind: collection
+description: "Đoán lỗi dựa trên kinh nghiệm: Idempotency trùng lặp, thiếu CSRF, sai kiểu dữ liệu, giỏ rỗng"
+order: 5000

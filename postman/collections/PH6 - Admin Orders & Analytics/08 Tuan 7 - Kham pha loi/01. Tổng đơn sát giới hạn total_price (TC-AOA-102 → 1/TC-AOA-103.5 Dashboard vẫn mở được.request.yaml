@@ -1,0 +1,16 @@
+$kind: http-request
+url: "{{base_url}}/admin-panel/dashboard/"
+method: GET
+scripts:
+  - type: beforeRequest
+    code: |-
+      if (pm.collectionVariables.get('run_overflow') !== 'yes') {
+          try { pm.execution.skipRequest(); } catch (e) {}
+      }
+    language: text/javascript
+  - type: afterResponse
+    code: pm.test('SCRUM-50 | Dashboard mở được sau khi có đơn tổng 100.000.000 (không 500)', function () { if (pm.response.code !== 200) { throw new Error('HTTP ' + pm.response.code); } });
+    language: text/javascript
+settings:
+  followRedirects: true
+order: 17000

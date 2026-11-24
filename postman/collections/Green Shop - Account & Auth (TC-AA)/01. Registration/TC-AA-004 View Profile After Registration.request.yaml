@@ -1,9 +1,0 @@
-$kind: http-request
-url: "{{base_url}}/accounts/profile/"
-method: GET
-scripts:
-  - type: afterResponse
-    code: "pm.test(\"Profile is accessible after registration\", () => {\r\n  pm.response.to.have.status(200);\r\n});\r\npm.test(\"Registered username appears\", () => {\r\n  pm.expect(pm.response.text()).to.include(pm.collectionVariables.get(\"aa_username\"));\r\n});"
-    language: text/javascript
-settings: {}
-order: 4000

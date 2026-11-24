@@ -1,0 +1,24 @@
+$kind: http-request
+name: "TC-PS-032 [BVA max+ Lỗi] Giá cũ 100.000.001 đ vượt trần 100 triệu"
+url: "{{base_url}}/admin-panel/products/create/"
+method: POST
+body:
+  type: urlencoded
+  content:
+    name: "Cây Trầu Bà Đế Vương"
+    price: "50000"
+    old_price: "100000001"
+    category: "{{category_id}}"
+scripts:
+  - type: afterResponse
+    language: text/javascript
+    code: |-
+      pm.test('Status code 200 (Form báo lỗi)', function () {
+          pm.response.to.have.status(200);
+      });
+      pm.test('Trang báo lỗi: Giá cũ không được vượt quá 100.000.000 VNĐ', function () {
+          pm.expect(pm.response.text()).to.include('Giá cũ không được vượt quá 100.000.000 VNĐ');
+      });
+settings:
+  followRedirects: false
+order: 12000

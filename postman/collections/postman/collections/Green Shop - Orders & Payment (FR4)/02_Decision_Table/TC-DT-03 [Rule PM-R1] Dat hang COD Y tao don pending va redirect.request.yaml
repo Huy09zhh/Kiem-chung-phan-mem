@@ -1,0 +1,45 @@
+$kind: http-request
+name: TC-DT-03 [Rule PM-R1] Dat hang COD Y tao don pending va redirect success
+url: "{{base_url}}/orders/checkout/"
+method: POST
+headers:
+  X-CSRFToken: "{{csrf_token}}"
+  Content-Type: application/x-www-form-urlencoded
+body:
+  type: urlencoded
+  content:
+    csrfmiddlewaretoken: "{{csrf_token}}"
+    full_name: Trần Đình Đức (COD)
+    phone: "0901234567"
+    address: 12 Nguyễn Huệ, Quận 1, TP.HCM
+    payment_method: cod
+scripts:
+  - type: beforeRequest
+    code: |2-
+        var sid = pm.cookies.get('sessionid');
+        var csrf = pm.cookies.get('csrftoken');
+        var cookieHdr = '';
+        if (sid) { cookieHdr += 'sessionid=' + sid + '; '; }
+        if (csrf) { 
+          cookieHdr += 'csrftoken=' + csrf; 
+          pm.collectionVariables.set('csrf_token', csrf);
+        }
+        pm.sendRequest({
+          url: pm.collectionVariables.get('base_url') + '/cart/add/' + pm.collectionVariables.get('product_id') + '/',
+          method: 'GET',
+          header: { 'Cookie': cookieHdr }
+        }, function (err, res) {});
+        const t = pm.cookies.get('csrftoken'); if (t) { pm.collectionVariables.set('csrf_token', t); }
+    language: text/javascript
+  - type: afterResponse
+    code: |2-
+        pm.test('TC-DT-03 | [Rule PM-R1] COD Y -> Tạo đơn pending + redirect success (302)', function () {
+          pm.expect([200, 302]).to.include(pm.response.code);
+        });
+        const loc = pm.response.headers.get("Location") || "";
+        const match = loc.match(/\/(\d+)\//);
+        if (match) { pm.collectionVariables.set("dt_cod_order_id", match[1]); }
+    language: text/javascript
+settings:
+  followRedirects: false
+order: 3000

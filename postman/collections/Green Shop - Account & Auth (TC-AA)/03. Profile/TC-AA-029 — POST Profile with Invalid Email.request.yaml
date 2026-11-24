@@ -1,20 +1,20 @@
 $kind: http-request
 url: "{{base_url}}/accounts/profile/edit/"
 method: POST
+description: "Lớp EP: X – email hồ sơ sai định dạng."
 body:
   type: urlencoded
   content:
     csrfmiddlewaretoken: "{{csrf_token}}"
-    username: "{{aa_username}}"
-    first_name: "Test"
-    last_name: "Account"
-    email: "not-an-email"
+    first_name: "{{p_first}}"
+    last_name: "{{p_last}}"
+    email: "{{p_email}}"
 scripts:
   - type: afterResponse
-    code: "pm.test('Invalid email stays on form', () => pm.response.to.have.status(200));\r\npm.test('Email validation error appears', () => pm.expect(pm.response.text()).to.include('Enter a valid email address.'));"
+    code: "const base = pm.variables.replaceIn('{{base_url}}');\nconst loc = pm.response.headers.get('Location') || '';\nconst hasSession = (cb) => pm.sendRequest({ url: base + '/accounts/password/change/', method: 'GET' }, (e, r) => cb(!e && r.text().indexOf('old_password') !== -1));\npm.test('HTTP 200', () => pm.response.to.have.status(200));\npm.test('Hiện thông báo lỗi', () => pm.expect(pm.response.text()).to.match(/errorlist|auth-error/));\nhasSession((s) => pm.test('Vẫn đăng nhập', () => pm.expect(s).to.be.true));"
     language: text/javascript
   - type: beforeRequest
-    code: "const aa = eval(pm.collectionVariables.get('aa_helpers'));   // hàm dùng chung, xem biến aa_helpers\naa.user('/accounts/profile/edit/');   // điều kiện: đăng nhập tài khoản A + CSRF mới của /accounts/profile/edit/"
+    code: "const aa = eval(pm.collectionVariables.get('aa_helpers'));   // hàm dùng chung, xem biến aa_helpers\naa.newUser('/accounts/profile/edit/', function () { pm.collectionVariables.set('p_first', 'An'); pm.collectionVariables.set('p_last', 'Nguyen'); pm.collectionVariables.set('p_email', pm.collectionVariables.get('ep_email')); pm.collectionVariables.set('p_email', 'email-sai-dinh-dang'); });"
     language: text/javascript
 settings:
   followRedirects: false

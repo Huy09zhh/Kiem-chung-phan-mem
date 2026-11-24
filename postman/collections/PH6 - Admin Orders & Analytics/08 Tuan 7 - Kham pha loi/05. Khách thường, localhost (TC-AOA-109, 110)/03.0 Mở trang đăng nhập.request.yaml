@@ -1,0 +1,6 @@
+$kind: http-request
+url: "{{anon_url}}/accounts/login/"
+method: GET
+settings:
+  followRedirects: true
+order: 1000

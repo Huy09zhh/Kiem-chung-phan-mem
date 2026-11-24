@@ -1,0 +1,22 @@
+$kind: http-request
+name: "TC-ACM-001 [Auth] Admin Đăng nhập lấy Session"
+url: "{{base_url}}/accounts/login/"
+method: POST
+body:
+  type: urlencoded
+  content:
+    username: "{{admin_username}}"
+    password: "{{admin_password}}"
+scripts:
+  - type: afterResponse
+    language: text/javascript
+    code: |-
+      pm.test('Status code hợp lệ (200 hoặc 302)', function () {
+          pm.expect(pm.response.code).to.be.oneOf([200, 302]);
+      });
+      pm.test('Thời gian phản hồi < 500ms', function () {
+          pm.expect(pm.response.responseTime).to.be.below(500);
+      });
+settings:
+  followRedirects: false
+order: 1000

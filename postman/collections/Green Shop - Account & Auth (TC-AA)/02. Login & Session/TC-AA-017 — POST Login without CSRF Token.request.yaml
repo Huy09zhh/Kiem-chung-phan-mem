@@ -1,17 +1,18 @@
 $kind: http-request
 url: "{{base_url}}/accounts/login/"
 method: POST
+description: "Lớp EP: X – thiếu CSRF token."
 body:
   type: urlencoded
   content:
-    username: "{{aa_username}}"
-    password: "{{aa_password}}"
+    username: "{{l_user}}"
+    password: "{{l_pw}}"
 scripts:
   - type: afterResponse
-    code: "pm.test(\"Login without CSRF is forbidden\", () => { pm.response.to.have.status(403); });\r\npm.test(\"CSRF rejection is reported\", () => { pm.expect(pm.response.text()).to.match(/CSRF/i); });"
+    code: "const base = pm.variables.replaceIn('{{base_url}}');\nconst loc = pm.response.headers.get('Location') || '';\nconst hasSession = (cb) => pm.sendRequest({ url: base + '/accounts/password/change/', method: 'GET' }, (e, r) => cb(!e && r.text().indexOf('old_password') !== -1));\npm.test('HTTP 403', () => pm.response.to.have.status(403));\nhasSession((s) => pm.test('Chưa có phiên đăng nhập', () => pm.expect(s).to.be.false));"
     language: text/javascript
   - type: beforeRequest
-    code: "const aa = eval(pm.collectionVariables.get('aa_helpers'));   // hàm dùng chung, xem biến aa_helpers\naa.guest('/accounts/login/');   // điều kiện: Guest + CSRF mới của /accounts/login/"
+    code: "const aa = eval(pm.collectionVariables.get('aa_helpers'));   // hàm dùng chung, xem biến aa_helpers\naa.newUserGuest('/accounts/login/', function () { pm.collectionVariables.set('l_user', pm.collectionVariables.get('ep_user')); pm.collectionVariables.set('l_pw', pm.variables.get('aa_password')); pm.collectionVariables.set('l_next', ''); });"
     language: text/javascript
 settings:
   followRedirects: false

@@ -1,0 +1,18 @@
+$kind: http-request
+name: "TC-ACM-005 Admin sửa tên danh mục"
+url: "{{base_url}}/admin-panel/categories/{{category_id}}/edit/"
+method: POST
+body:
+  type: urlencoded
+  content:
+    name: "Rau Hữu Cơ Tiêu Chuẩn VietGAP"
+scripts:
+  - type: afterResponse
+    language: text/javascript
+    code: |-
+      pm.test('Cập nhật danh mục thành công (Status 302)', function () {
+          pm.expect(pm.response.code).to.eql(302);
+      });
+settings:
+  followRedirects: false
+order: 3000

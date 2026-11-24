@@ -1,0 +1,14 @@
+$kind: http-request
+name: "TC-ST-05 [Negative S3] Thao tác trên sản phẩm đã xóa trả 404"
+url: "{{base_url}}/admin-panel/products/999999/edit/"
+method: GET
+scripts:
+  - type: afterResponse
+    language: text/javascript
+    code: |-
+      pm.test('Bắt đúng mã lỗi không tìm thấy (Status 404 Not Found)', function () {
+          pm.response.to.have.status(404);
+      });
+settings:
+  followRedirects: false
+order: 5000

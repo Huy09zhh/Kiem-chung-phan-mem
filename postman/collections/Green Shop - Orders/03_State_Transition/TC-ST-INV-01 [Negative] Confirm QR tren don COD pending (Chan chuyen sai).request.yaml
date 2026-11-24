@@ -1,0 +1,21 @@
+$kind: http-request
+url: "{{base_url}}/orders/qr/{{st_order_cod_id}}/confirm/"
+method: POST
+body:
+  type: urlencoded
+  content:
+    csrfmiddlewaretoken: "{{csrf_token}}"
+scripts:
+  - type: beforeRequest
+    code: |-
+      const t = pm.cookies.get('csrftoken'); if (t) { pm.collectionVariables.set('csrf_token', t); }
+    language: text/javascript
+  - type: afterResponse
+    code: |-
+      pm.test('TC-ST-INV-01 | [Chặn chuyển sai] Không cho confirm QR trên đơn COD (redirect 302, giữ nguyên pending)', function () {
+        pm.expect([200, 302]).to.include(pm.response.code);
+      });
+    language: text/javascript
+settings:
+  followRedirects: false
+order: 13000

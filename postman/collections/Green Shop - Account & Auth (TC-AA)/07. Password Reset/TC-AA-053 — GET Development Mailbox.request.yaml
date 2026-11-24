@@ -1,11 +1,14 @@
 $kind: http-request
 url: "{{base_url}}/dev/mailbox/"
 method: GET
+description: "Lớp EP: V – email đặt lại có trong hộp thư (kiểm tra tiếp)."
 scripts:
   - type: afterResponse
-    code: "pm.test('Development mailbox returns 200', () => pm.response.to.have.status(200));\r
-
-      pm.test('Reset email is visible', () => pm.expect(pm.response.text()).to.include(pm.collectionVariables.get('aa_email')));"
+    code: "const base = pm.variables.replaceIn('{{base_url}}');\nconst loc = pm.response.headers.get('Location') || '';\nconst hasSession = (cb) => pm.sendRequest({ url: base + '/accounts/password/change/', method: 'GET' }, (e, r) => cb(!e && r.text().indexOf('old_password') !== -1));\npm.test('HTTP 200', () => pm.response.to.have.status(200));\npm.test('Email đặt lại hiện trong hộp thư', () => pm.expect(pm.response.text()).to.include(pm.collectionVariables.get('ep_email')));"
     language: text/javascript
-settings: {}
+  - type: beforeRequest
+    code: "const aa = eval(pm.collectionVariables.get('aa_helpers'));   // hàm dùng chung, xem biến aa_helpers\naa.newUserGuest('/accounts/password/reset/', function () { aa.post('/accounts/password/reset/', { csrfmiddlewaretoken: pm.collectionVariables.get('csrf_token'), email: pm.collectionVariables.get('ep_email') }, function () { aa.admin(null); }); });"
+    language: text/javascript
+settings:
+  followRedirects: true
 order: 3000

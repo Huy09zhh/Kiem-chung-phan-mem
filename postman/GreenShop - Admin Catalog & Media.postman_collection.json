@@ -1,0 +1,1921 @@
+{
+  "info": {
+    "name": "GreenShop - Phân hệ 5: Admin Catalog & Media (Nguyễn Mai Phúc Ân)",
+    "description": "Bộ Postman Collection hoàn chỉnh phục vụ kiểm thử tự động toàn bộ API và Endpoint của Phân hệ 5 (Admin Catalog & Media). Thành viên phụ trách: Nguyễn Mai Phúc Ân.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "http://127.0.0.1:8000",
+      "type": "string"
+    },
+    {
+      "key": "admin_username",
+      "value": "admin",
+      "type": "string"
+    },
+    {
+      "key": "admin_password",
+      "value": "Admin@12345",
+      "type": "string"
+    },
+    {
+      "key": "customer_username",
+      "value": "user1",
+      "type": "string"
+    },
+    {
+      "key": "customer_password",
+      "value": "User@12345",
+      "type": "string"
+    },
+    {
+      "key": "csrf_token",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "csrf_cookie",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "category_id",
+      "value": "1",
+      "type": "string"
+    },
+    {
+      "key": "product_id",
+      "value": "1",
+      "type": "string"
+    }
+  ],
+  "event": [
+    {
+      "listen": "prerequest",
+      "script": {
+        "type": "text/javascript",
+        "exec": [
+          "const m = pm.request.method;",
+          "const base = pm.variables.replaceIn('{{base_url}}');",
+          "pm.request.headers.upsert({ key: 'Referer', value: base + '/' });",
+          "if (m !== 'GET' && m !== 'HEAD') {",
+          "    let token = pm.collectionVariables.get('csrf_cookie') || pm.cookies.get('csrftoken') || pm.collectionVariables.get('csrf_token');",
+          "    if (token) {",
+          "        pm.request.headers.upsert({ key: 'X-CSRFToken', value: token });",
+          "    }",
+          "}"
+        ]
+      }
+    },
+    {
+      "listen": "test",
+      "script": {
+        "type": "text/javascript",
+        "exec": [
+          "let tk = null;",
+          "try { tk = pm.cookies.get('csrftoken'); } catch (e) {}",
+          "if (!tk) {",
+          "    try {",
+          "        const rc = pm.response.cookies.get('csrftoken');",
+          "        tk = rc && typeof rc === 'object' ? rc.value : rc;",
+          "    } catch (e) {}",
+          "}",
+          "if (tk) {",
+          "    pm.collectionVariables.set('csrf_cookie', tk);",
+          "    pm.collectionVariables.set('csrf_token', tk);",
+          "}"
+        ]
+      }
+    }
+  ],
+  "item": [
+    {
+      "name": "00. Chuẩn bị - Lấy CSRF & Đăng nhập Admin",
+      "item": [
+        {
+          "name": "00.1 — GET Trang đăng nhập (Lấy CSRF token)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/accounts/login/",
+              "host": [
+                "{{base_url}}"
+              ]
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Mở trang đăng nhập thành công (HTTP 200)', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test('CSRF cookie được thiết lập', function () {",
+                  "    var token = pm.cookies.get('csrftoken') || pm.response.cookies.get('csrftoken');",
+                  "    pm.expect(token).to.not.be.undefined;",
+                  "    pm.collectionVariables.set('csrf_token', token);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "00.2 — POST Đăng nhập Admin",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/accounts/login/",
+              "host": [
+                "{{base_url}}"
+              ]
+            },
+            "body": {
+              "mode": "urlencoded",
+              "urlencoded": [
+                {
+                  "key": "username",
+                  "value": "{{admin_username}}",
+                  "type": "text"
+                },
+                {
+                  "key": "password",
+                  "value": "{{admin_password}}",
+                  "type": "text"
+                }
+              ]
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Đăng nhập thành công (HTTP 302 hoặc 200)', function () {",
+                  "    pm.expect(pm.response.code).to.be.oneOf([200, 302]);",
+                  "});",
+                  "pm.test('Session ID được cấp phát cho Admin', function () {",
+                  "    var sid = pm.cookies.get('sessionid') || pm.response.cookies.get('sessionid');",
+                  "    pm.expect(sid).to.not.be.undefined;",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "01. Xác thực & Phân quyền Admin",
+      "item": [
+        {
+          "name": "TC-ACM-001 [Auth] Admin Đăng nhập lấy Session",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/accounts/login/",
+              "host": [
+                "{{base_url}}"
+              ]
+            },
+            "body": {
+              "mode": "urlencoded",
+              "urlencoded": [
+                {
+                  "key": "username",
+                  "value": "{{admin_username}}",
+                  "type": "text"
+                },
+                {
+                  "key": "password",
+                  "value": "{{admin_password}}",
+                  "type": "text"
+                }
+              ]
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code hợp lệ (200 hoặc 302)', function () {",
+                  "    pm.expect(pm.response.code).to.be.oneOf([200, 302]);",
+                  "});",
+                  "pm.test('Thời gian phản hồi < 500ms', function () {",
+                  "    pm.expect(pm.response.responseTime).to.be.below(500);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "TC-ACM-002 [Negative] Khách chưa đăng nhập truy cập quản trị SP",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/admin-panel/products/",
+              "host": [
+                "{{base_url}}"
+              ]
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Bị chặn và chuyển hướng (Status 302)', function () {",
+                  "    pm.expect(pm.response.code).to.eql(302);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "TC-ACM-002 [Negative] Khách chưa đăng nhập truy cập quản trị SP",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/admin-panel/products/",
+              "host": [
+                "{{base_url}}"
+              ]
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Bị chặn và chuyển hướng đăng nhập (Status 302)', function () {",
+                  "    pm.expect(pm.response.code).to.eql(302);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "TC-ACM-002b [Negative] Khách hàng thường (is_staff=False) truy cập quản trị",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/admin-panel/categories/",
+              "host": [
+                "{{base_url}}"
+              ]
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Khách thường bị từ chối truy cập (Status 302)', function () {",
+                  "    pm.expect(pm.response.code).to.eql(302);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "02. Quản lý Danh mục (Category CRUD)",
+      "item": [
+        {
+          "name": "TC-ACM-003 Admin xem danh sách danh mục",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/admin-panel/categories/",
+              "host": [
+                "{{base_url}}"
+              ]
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Xem danh mục thành công (Status 200 OK)', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test('Trang chứa tiêu đề Danh mục', function () {",
+                  "    pm.expect(pm.response.text()).to.include('Danh mục');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "TC-ACM-004 Admin thêm danh mục mới",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/admin-panel/categories/create/",
+              "host": [
+                "{{base_url}}"
+              ]
+            },
+            "body": {
+              "mode": "urlencoded",
+              "urlencoded": [
+                {
+                  "key": "name",
+                  "value": "Rau Hữu Cơ Đà Lạt Postman",
+                  "type": "text"
+                }
+              ]
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Tạo danh mục chuyển hướng thành công (Status 302)', function () {",
+                  "    pm.expect(pm.response.code).to.eql(302);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "TC-ACM-005 Admin sửa tên danh mục",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/admin-panel/categories/{{category_id}}/edit/",
+              "host": [
+                "{{base_url}}"
+              ]
+            },
+            "body": {
+              "mode": "urlencoded",
+              "urlencoded": [
+                {
+                  "key": "name",
+                  "value": "Rau Hữu Cơ Tiêu Chuẩn VietGAP",
+                  "type": "text"
+                }
+              ]
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Cập nhật danh mục thành công (Status 302)', function () {",
+                  "    pm.expect(pm.response.code).to.eql(302);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "TC-ACM-006 Admin xóa danh mục",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/admin-panel/categories/{{category_id}}/delete/",
+              "host": [
+                "{{base_url}}"
+              ]
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Xóa danh mục thành công (Status 302)', function () {",
+                  "    pm.expect(pm.response.code).to.eql(302);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "TC-ACM-006b [Negative] Thêm danh mục để trống tên",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/admin-panel/categories/create/",
+              "host": [
+                "{{base_url}}"
+              ]
+            },
+            "body": {
+              "mode": "urlencoded",
+              "urlencoded": [
+                {
+                  "key": "name",
+                  "value": "   ",
+                  "type": "text"
+                }
+              ]
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Xử lý an toàn, chuyển hướng về danh sách (Status 302)', function () {",
+                  "    pm.expect(pm.response.code).to.eql(302);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "03. Quản lý Sản phẩm & Media (Product CRUD)",
+      "item": [
+        {
+          "name": "TC-ACM-007 Admin xem danh sách sản phẩm",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/admin-panel/products/",
+              "host": [
+                "{{base_url}}"
+              ]
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Tải danh sách sản phẩm thành công (Status 200 OK)', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test('Thời gian phản hồi < 500ms', function () {",
+                  "    pm.expect(pm.response.responseTime).to.be.below(500);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "TC-ACM-008 Admin mở form thêm mới sản phẩm",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/admin-panel/products/create/",
+              "host": [
+                "{{base_url}}"
+              ]
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Mở form thêm sản phẩm thành công (Status 200 OK - Không lỗi TemplateDoesNotExist)', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "TC-ACM-009 Admin tạo mới sản phẩm hợp lệ",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/admin-panel/products/create/",
+              "host": [
+                "{{base_url}}"
+              ]
+            },
+            "body": {
+              "mode": "urlencoded",
+              "urlencoded": [
+                {
+                  "key": "name",
+                  "value": "Cà Rốt Hữu Cơ Đà Lạt",
+                  "type": "text"
+                },
+                {
+                  "key": "price",
+                  "value": "45000",
+                  "type": "text"
+                },
+                {
+                  "key": "old_price",
+                  "value": "60000",
+                  "type": "text"
+                },
+                {
+                  "key": "category",
+                  "value": "{{category_id}}",
+                  "type": "text"
+                },
+                {
+                  "key": "description",
+                  "value": "Cà rốt tươi sạch trồng tại nông trại Đà Lạt.",
+                  "type": "text"
+                }
+              ]
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Tạo sản phẩm thành công và chuyển hướng (Status 302)', function () {",
+                  "    pm.expect(pm.response.code).to.eql(302);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "TC-ACM-010 [Negative] Admin thêm sản phẩm bỏ trống giá bán",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/admin-panel/products/create/",
+              "host": [
+                "{{base_url}}"
+              ]
+            },
+            "body": {
+              "mode": "urlencoded",
+              "urlencoded": [
+                {
+                  "key": "name",
+                  "value": "Sản phẩm không có giá",
+                  "type": "text"
+                },
+                {
+                  "key": "price",
+                  "value": "",
+                  "type": "text"
+                },
+                {
+                  "key": "category",
+                  "value": "{{category_id}}",
+                  "type": "text"
+                }
+              ]
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Form báo lỗi không hợp lệ (Status 200)', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test('Báo lỗi trường giá bắt buộc nhập', function () {",
+                  "    pm.expect(pm.response.text()).to.include('Bắt buộc');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "TC-ACM-011 Admin cập nhật thông tin và giá sản phẩm",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/admin-panel/products/{{product_id}}/edit/",
+              "host": [
+                "{{base_url}}"
+              ]
+            },
+            "body": {
+              "mode": "urlencoded",
+              "urlencoded": [
+                {
+                  "key": "name",
+                  "value": "Cà Rốt Hữu Cơ Đà Lạt (Loại 1)",
+                  "type": "text"
+                },
+                {
+                  "key": "price",
+                  "value": "50000",
+                  "type": "text"
+                },
+                {
+                  "key": "old_price",
+                  "value": "70000",
+                  "type": "text"
+                },
+                {
+                  "key": "category",
+                  "value": "{{category_id}}",
+                  "type": "text"
+                }
+              ]
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Cập nhật sản phẩm thành công (Status 302)', function () {",
+                  "    pm.expect(pm.response.code).to.eql(302);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "TC-ACM-012 Admin xóa sản phẩm",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/admin-panel/products/{{product_id}}/delete/",
+              "host": [
+                "{{base_url}}"
+              ]
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Xóa sản phẩm thành công (Status 302)', function () {",
+                  "    pm.expect(pm.response.code).to.eql(302);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "04. Kiểm thử BVA & Biên Thêm sản phẩm (TC-PS-021 → TC-PS-032)",
+      "item": [
+        {
+          "name": "TC-PS-021 [BVA min] Gộp tất cả tại min (Tên 2 ký tự, Giá 1.000, Giá cũ 50.001)",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/admin-panel/products/create/",
+              "host": [
+                "{{base_url}}"
+              ]
+            },
+            "body": {
+              "mode": "urlencoded",
+              "urlencoded": [
+                {
+                  "key": "name",
+                  "value": "AB",
+                  "type": "text"
+                },
+                {
+                  "key": "price",
+                  "value": "1000",
+                  "type": "text"
+                },
+                {
+                  "key": "old_price",
+                  "value": "50001",
+                  "type": "text"
+                },
+                {
+                  "key": "category",
+                  "value": "{{category_id}}",
+                  "type": "text"
+                }
+              ]
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code 302 chuyển hướng thành công', function () {",
+                  "    pm.expect(pm.response.code).to.eql(302);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "TC-PS-022 [BVA min+] Gộp tất cả tại min+ (Tên 3 ký tự, Giá 1.001, Giá cũ 50.002)",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/admin-panel/products/create/",
+              "host": [
+                "{{base_url}}"
+              ]
+            },
+            "body": {
+              "mode": "urlencoded",
+              "urlencoded": [
+                {
+                  "key": "name",
+                  "value": "ABC",
+                  "type": "text"
+                },
+                {
+                  "key": "price",
+                  "value": "1001",
+                  "type": "text"
+                },
+                {
+                  "key": "old_price",
+                  "value": "50002",
+                  "type": "text"
+                },
+                {
+                  "key": "category",
+                  "value": "{{category_id}}",
+                  "type": "text"
+                }
+              ]
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code 302 chuyển hướng thành công', function () {",
+                  "    pm.expect(pm.response.code).to.eql(302);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "TC-PS-023 [EP nominal] Gộp tất cả tại nominal (Tên 20 ký tự, Giá 50.000, Giá cũ 70.000)",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/admin-panel/products/create/",
+              "host": [
+                "{{base_url}}"
+              ]
+            },
+            "body": {
+              "mode": "urlencoded",
+              "urlencoded": [
+                {
+                  "key": "name",
+                  "value": "Cây Kim Tiền Để Bàn",
+                  "type": "text"
+                },
+                {
+                  "key": "price",
+                  "value": "50000",
+                  "type": "text"
+                },
+                {
+                  "key": "old_price",
+                  "value": "70000",
+                  "type": "text"
+                },
+                {
+                  "key": "category",
+                  "value": "{{category_id}}",
+                  "type": "text"
+                }
+              ]
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code 302 chuyển hướng thành công', function () {",
+                  "    pm.expect(pm.response.code).to.eql(302);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "TC-PS-024 [BVA max-] Gộp max- (Tên 254 ký tự, Giá cũ 99.999.999)",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/admin-panel/products/create/",
+              "host": [
+                "{{base_url}}"
+              ]
+            },
+            "body": {
+              "mode": "urlencoded",
+              "urlencoded": [
+                {
+                  "key": "name",
+                  "value": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
+                  "type": "text"
+                },
+                {
+                  "key": "price",
+                  "value": "50000",
+                  "type": "text"
+                },
+                {
+                  "key": "old_price",
+                  "value": "99999999",
+                  "type": "text"
+                },
+                {
+                  "key": "category",
+                  "value": "{{category_id}}",
+                  "type": "text"
+                }
+              ]
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code 302 chuyển hướng thành công', function () {",
+                  "    pm.expect(pm.response.code).to.eql(302);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "TC-PS-025 [BVA max] Gộp Giá bán max- & Giá cũ max (Giá bán 99.999.999, Giá cũ 100.000.000)",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/admin-panel/products/create/",
+              "host": [
+                "{{base_url}}"
+              ]
+            },
+            "body": {
+              "mode": "urlencoded",
+              "urlencoded": [
+                {
+                  "key": "name",
+                  "value": "Cây Đại Tứ Lan",
+                  "type": "text"
+                },
+                {
+                  "key": "price",
+                  "value": "99999999",
+                  "type": "text"
+                },
+                {
+                  "key": "old_price",
+                  "value": "100000000",
+                  "type": "text"
+                },
+                {
+                  "key": "category",
+                  "value": "{{category_id}}",
+                  "type": "text"
+                }
+              ]
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code 302 chuyển hướng thành công', function () {",
+                  "    pm.expect(pm.response.code).to.eql(302);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "TC-PS-026 [BVA max] Tên max 255, Giá bán max 100.000.000, Giá cũ trống",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/admin-panel/products/create/",
+              "host": [
+                "{{base_url}}"
+              ]
+            },
+            "body": {
+              "mode": "urlencoded",
+              "urlencoded": [
+                {
+                  "key": "name",
+                  "value": "BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB",
+                  "type": "text"
+                },
+                {
+                  "key": "price",
+                  "value": "100000000",
+                  "type": "text"
+                },
+                {
+                  "key": "old_price",
+                  "value": "",
+                  "type": "text"
+                },
+                {
+                  "key": "category",
+                  "value": "{{category_id}}",
+                  "type": "text"
+                }
+              ]
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code 302 chuyển hướng thành công', function () {",
+                  "    pm.expect(pm.response.code).to.eql(302);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "TC-PS-027 [BVA min- Lỗi] Tên 1 ký tự dưới sàn 2 ký tự",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/admin-panel/products/create/",
+              "host": [
+                "{{base_url}}"
+              ]
+            },
+            "body": {
+              "mode": "urlencoded",
+              "urlencoded": [
+                {
+                  "key": "name",
+                  "value": "A",
+                  "type": "text"
+                },
+                {
+                  "key": "price",
+                  "value": "50000",
+                  "type": "text"
+                },
+                {
+                  "key": "old_price",
+                  "value": "70000",
+                  "type": "text"
+                },
+                {
+                  "key": "category",
+                  "value": "{{category_id}}",
+                  "type": "text"
+                }
+              ]
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code 200 (Form báo lỗi)', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test('Trang báo lỗi: Tên sản phẩm phải có độ dài tối thiểu 2 ký tự', function () {",
+                  "    pm.expect(pm.response.text()).to.include('Tên sản phẩm phải có độ dài tối thiểu 2 ký tự');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "TC-PS-028 [BVA max+ Lỗi] Tên 256 ký tự vượt trần 255",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/admin-panel/products/create/",
+              "host": [
+                "{{base_url}}"
+              ]
+            },
+            "body": {
+              "mode": "urlencoded",
+              "urlencoded": [
+                {
+                  "key": "name",
+                  "value": "CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC",
+                  "type": "text"
+                },
+                {
+                  "key": "price",
+                  "value": "50000",
+                  "type": "text"
+                },
+                {
+                  "key": "old_price",
+                  "value": "70000",
+                  "type": "text"
+                },
+                {
+                  "key": "category",
+                  "value": "{{category_id}}",
+                  "type": "text"
+                }
+              ]
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code 200 (Form báo lỗi)', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test('Trang báo lỗi: Không lưu được sản phẩm', function () {",
+                  "    pm.expect(pm.response.text()).to.include('Không lưu được sản phẩm');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "TC-PS-029 [BVA min- Lỗi] Giá bán 999 đ dưới sàn 1.000 đ",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/admin-panel/products/create/",
+              "host": [
+                "{{base_url}}"
+              ]
+            },
+            "body": {
+              "mode": "urlencoded",
+              "urlencoded": [
+                {
+                  "key": "name",
+                  "value": "Rau Mầm Hướng Dương",
+                  "type": "text"
+                },
+                {
+                  "key": "price",
+                  "value": "999",
+                  "type": "text"
+                },
+                {
+                  "key": "old_price",
+                  "value": "70000",
+                  "type": "text"
+                },
+                {
+                  "key": "category",
+                  "value": "{{category_id}}",
+                  "type": "text"
+                }
+              ]
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code 200 (Form báo lỗi)', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test('Trang báo lỗi: Giá bán tối thiểu là 1.000 VNĐ', function () {",
+                  "    pm.expect(pm.response.text()).to.include('Giá bán tối thiểu là 1.000 VNĐ');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "TC-PS-030 [BVA max+ Lỗi] Giá bán 100.000.001 đ vượt trần 100 triệu",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/admin-panel/products/create/",
+              "host": [
+                "{{base_url}}"
+              ]
+            },
+            "body": {
+              "mode": "urlencoded",
+              "urlencoded": [
+                {
+                  "key": "name",
+                  "value": "Cây Cảnh Phong Thủy VIP",
+                  "type": "text"
+                },
+                {
+                  "key": "price",
+                  "value": "100000001",
+                  "type": "text"
+                },
+                {
+                  "key": "old_price",
+                  "value": "120000000",
+                  "type": "text"
+                },
+                {
+                  "key": "category",
+                  "value": "{{category_id}}",
+                  "type": "text"
+                }
+              ]
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code 200 (Form báo lỗi)', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test('Trang báo lỗi: Giá bán không được vượt quá 100.000.000 VNĐ', function () {",
+                  "    pm.expect(pm.response.text()).to.include('Giá bán không được vượt quá 100.000.000 VNĐ');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "TC-PS-031 [Decision Lỗi] Giá cũ bằng Giá bán 50.000 đ",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/admin-panel/products/create/",
+              "host": [
+                "{{base_url}}"
+              ]
+            },
+            "body": {
+              "mode": "urlencoded",
+              "urlencoded": [
+                {
+                  "key": "name",
+                  "value": "Cây Lưỡi Hổ Viền Vàng",
+                  "type": "text"
+                },
+                {
+                  "key": "price",
+                  "value": "50000",
+                  "type": "text"
+                },
+                {
+                  "key": "old_price",
+                  "value": "50000",
+                  "type": "text"
+                },
+                {
+                  "key": "category",
+                  "value": "{{category_id}}",
+                  "type": "text"
+                }
+              ]
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code 200 (Form báo lỗi)', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test('Trang báo lỗi: Giá cũ phải lớn hơn giá bán', function () {",
+                  "    pm.expect(pm.response.text()).to.include('Giá cũ phải lớn hơn giá bán');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "TC-PS-032 [BVA max+ Lỗi] Giá cũ 100.000.001 đ vượt trần 100 triệu",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/admin-panel/products/create/",
+              "host": [
+                "{{base_url}}"
+              ]
+            },
+            "body": {
+              "mode": "urlencoded",
+              "urlencoded": [
+                {
+                  "key": "name",
+                  "value": "Cây Trầu Bà Đế Vương",
+                  "type": "text"
+                },
+                {
+                  "key": "price",
+                  "value": "50000",
+                  "type": "text"
+                },
+                {
+                  "key": "old_price",
+                  "value": "100000001",
+                  "type": "text"
+                },
+                {
+                  "key": "category",
+                  "value": "{{category_id}}",
+                  "type": "text"
+                }
+              ]
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code 200 (Form báo lỗi)', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test('Trang báo lỗi: Giá cũ không được vượt quá 100.000.000 VNĐ', function () {",
+                  "    pm.expect(pm.response.text()).to.include('Giá cũ không được vượt quá 100.000.000 VNĐ');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "05. Bảng quyết định Giá & Giảm giá (Decision Table R1 → R6)",
+      "item": [
+        {
+          "name": "TC-DT-01 [Rule R1] Hợp lệ có giảm giá (old_price > price, sale 20%)",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/admin-panel/products/create/",
+              "host": [
+                "{{base_url}}"
+              ]
+            },
+            "body": {
+              "mode": "urlencoded",
+              "urlencoded": [
+                {
+                  "key": "name",
+                  "value": "Cà rốt Đà Lạt",
+                  "type": "text"
+                },
+                {
+                  "key": "price",
+                  "value": "80000",
+                  "type": "text"
+                },
+                {
+                  "key": "old_price",
+                  "value": "100000",
+                  "type": "text"
+                },
+                {
+                  "key": "category",
+                  "value": "{{category_id}}",
+                  "type": "text"
+                }
+              ]
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Chuyển hướng thành công (Status 302)', function () {",
+                  "    pm.expect(pm.response.code).to.eql(302);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "TC-DT-02 [Rule R2] Hợp lệ không có giá cũ (sale 0%)",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/admin-panel/products/create/",
+              "host": [
+                "{{base_url}}"
+              ]
+            },
+            "body": {
+              "mode": "urlencoded",
+              "urlencoded": [
+                {
+                  "key": "name",
+                  "value": "Cải bó xôi",
+                  "type": "text"
+                },
+                {
+                  "key": "price",
+                  "value": "100000",
+                  "type": "text"
+                },
+                {
+                  "key": "old_price",
+                  "value": "",
+                  "type": "text"
+                },
+                {
+                  "key": "category",
+                  "value": "{{category_id}}",
+                  "type": "text"
+                }
+              ]
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Chuyển hướng thành công (Status 302)', function () {",
+                  "    pm.expect(pm.response.code).to.eql(302);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "TC-DT-03 [Rule R3] Giá cũ <= Giá bán bị chặn",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/admin-panel/products/create/",
+              "host": [
+                "{{base_url}}"
+              ]
+            },
+            "body": {
+              "mode": "urlencoded",
+              "urlencoded": [
+                {
+                  "key": "name",
+                  "value": "Sản phẩm lỗi giá",
+                  "type": "text"
+                },
+                {
+                  "key": "price",
+                  "value": "100000",
+                  "type": "text"
+                },
+                {
+                  "key": "old_price",
+                  "value": "90000",
+                  "type": "text"
+                },
+                {
+                  "key": "category",
+                  "value": "{{category_id}}",
+                  "type": "text"
+                }
+              ]
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Bị chặn ở form (Status 200)', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test('Hiển thị thông báo lỗi: Giá cũ phải lớn hơn giá bán', function () {",
+                  "    pm.expect(pm.response.text()).to.include('Giá cũ phải lớn hơn giá bán');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "TC-DT-04 [Rule R4] Giá bán âm / dưới sàn 1.000đ bị chặn",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/admin-panel/products/create/",
+              "host": [
+                "{{base_url}}"
+              ]
+            },
+            "body": {
+              "mode": "urlencoded",
+              "urlencoded": [
+                {
+                  "key": "name",
+                  "value": "Sản phẩm âm giá",
+                  "type": "text"
+                },
+                {
+                  "key": "price",
+                  "value": "-1000",
+                  "type": "text"
+                },
+                {
+                  "key": "old_price",
+                  "value": "50000",
+                  "type": "text"
+                },
+                {
+                  "key": "category",
+                  "value": "{{category_id}}",
+                  "type": "text"
+                }
+              ]
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Bị chặn ở form (Status 200)', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test('Hiển thị thông báo lỗi: Giá bán tối thiểu là 1.000 VNĐ', function () {",
+                  "    pm.expect(pm.response.text()).to.include('Giá bán tối thiểu là 1.000 VNĐ');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "TC-DT-05 [Rule R5] Giá cũ âm bị chặn",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/admin-panel/products/create/",
+              "host": [
+                "{{base_url}}"
+              ]
+            },
+            "body": {
+              "mode": "urlencoded",
+              "urlencoded": [
+                {
+                  "key": "name",
+                  "value": "Sản phẩm giá cũ âm",
+                  "type": "text"
+                },
+                {
+                  "key": "price",
+                  "value": "100000",
+                  "type": "text"
+                },
+                {
+                  "key": "old_price",
+                  "value": "-5000",
+                  "type": "text"
+                },
+                {
+                  "key": "category",
+                  "value": "{{category_id}}",
+                  "type": "text"
+                }
+              ]
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Bị chặn ở form (Status 200)', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test('Hiển thị thông báo lỗi: Giá cũ phải lớn hơn hoặc bằng 0', function () {",
+                  "    pm.expect(pm.response.text()).to.include('Giá cũ phải lớn hơn hoặc bằng 0');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "TC-DT-06 [Rule R6] Bỏ trống giá bán bắt buộc bị chặn",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/admin-panel/products/create/",
+              "host": [
+                "{{base_url}}"
+              ]
+            },
+            "body": {
+              "mode": "urlencoded",
+              "urlencoded": [
+                {
+                  "key": "name",
+                  "value": "Sản phẩm thiếu giá",
+                  "type": "text"
+                },
+                {
+                  "key": "price",
+                  "value": "",
+                  "type": "text"
+                },
+                {
+                  "key": "old_price",
+                  "value": "50000",
+                  "type": "text"
+                },
+                {
+                  "key": "category",
+                  "value": "{{category_id}}",
+                  "type": "text"
+                }
+              ]
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Bị chặn ở form (Status 200)', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test('Hiển thị thông báo lỗi: Bắt buộc', function () {",
+                  "    pm.expect(pm.response.text()).to.include('Bắt buộc');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "06. Chuyển đổi trạng thái Sản phẩm (State Transition)",
+      "item": [
+        {
+          "name": "TC-ST-01 [S0 -> S1] Chưa tồn tại sang Giá thường",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/admin-panel/products/create/",
+              "host": [
+                "{{base_url}}"
+              ]
+            },
+            "body": {
+              "mode": "urlencoded",
+              "urlencoded": [
+                {
+                  "key": "name",
+                  "value": "SP Vòng Đời Thường",
+                  "type": "text"
+                },
+                {
+                  "key": "price",
+                  "value": "50000",
+                  "type": "text"
+                },
+                {
+                  "key": "old_price",
+                  "value": "",
+                  "type": "text"
+                },
+                {
+                  "key": "category",
+                  "value": "{{category_id}}",
+                  "type": "text"
+                }
+              ]
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Tạo thành công sản phẩm giá thường (Status 302)', function () {",
+                  "    pm.expect(pm.response.code).to.eql(302);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "TC-ST-02 [S1 -> S2] Giá thường sang Đang giảm giá (bật sale)",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/admin-panel/products/{{product_id}}/edit/",
+              "host": [
+                "{{base_url}}"
+              ]
+            },
+            "body": {
+              "mode": "urlencoded",
+              "urlencoded": [
+                {
+                  "key": "name",
+                  "value": "SP Vòng Đời Có Sale",
+                  "type": "text"
+                },
+                {
+                  "key": "price",
+                  "value": "50000",
+                  "type": "text"
+                },
+                {
+                  "key": "old_price",
+                  "value": "70000",
+                  "type": "text"
+                },
+                {
+                  "key": "category",
+                  "value": "{{category_id}}",
+                  "type": "text"
+                }
+              ]
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Cập nhật thành công sang có giảm giá (Status 302)', function () {",
+                  "    pm.expect(pm.response.code).to.eql(302);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "TC-ST-03 [S2 -> S1] Đang giảm giá sang Giá thường (tắt sale)",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/admin-panel/products/{{product_id}}/edit/",
+              "host": [
+                "{{base_url}}"
+              ]
+            },
+            "body": {
+              "mode": "urlencoded",
+              "urlencoded": [
+                {
+                  "key": "name",
+                  "value": "SP Vòng Đời Tắt Sale",
+                  "type": "text"
+                },
+                {
+                  "key": "price",
+                  "value": "50000",
+                  "type": "text"
+                },
+                {
+                  "key": "old_price",
+                  "value": "",
+                  "type": "text"
+                },
+                {
+                  "key": "category",
+                  "value": "{{category_id}}",
+                  "type": "text"
+                }
+              ]
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Cập nhật thành công gỡ giá cũ (Status 302)', function () {",
+                  "    pm.expect(pm.response.code).to.eql(302);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "TC-ST-04 [S1/S2 -> S3] Tồn tại sang Đã xóa",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/admin-panel/products/{{product_id}}/delete/",
+              "host": [
+                "{{base_url}}"
+              ]
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Xóa sản phẩm thành công (Status 302)', function () {",
+                  "    pm.expect(pm.response.code).to.eql(302);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "TC-ST-05 [Negative S3] Thao tác trên sản phẩm đã xóa trả 404",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/admin-panel/products/999999/edit/",
+              "host": [
+                "{{base_url}}"
+              ]
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Bắt đúng mã lỗi không tìm thấy (Status 404 Not Found)', function () {",
+                  "    pm.response.to.have.status(404);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

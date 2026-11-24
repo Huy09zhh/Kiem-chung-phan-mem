@@ -1,0 +1,23 @@
+$kind: http-request
+name: "TC-ACM-010 [Negative] Admin thêm sản phẩm bỏ trống giá bán"
+url: "{{base_url}}/admin-panel/products/create/"
+method: POST
+body:
+  type: urlencoded
+  content:
+    name: "Sản phẩm không có giá"
+    price: ""
+    category: "{{category_id}}"
+scripts:
+  - type: afterResponse
+    language: text/javascript
+    code: |-
+      pm.test('Form báo lỗi không hợp lệ (Status 200)', function () {
+          pm.response.to.have.status(200);
+      });
+      pm.test('Báo lỗi trường giá bắt buộc nhập', function () {
+          pm.expect(pm.response.text()).to.include('Bắt buộc');
+      });
+settings:
+  followRedirects: false
+order: 4000

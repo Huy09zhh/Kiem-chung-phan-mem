@@ -1,19 +1,21 @@
 $kind: http-request
 url: "{{base_url}}/accounts/register/"
 method: POST
+description: "Lớp EP: X – thiếu CSRF token."
 body:
   type: urlencoded
   content:
-    username: "{{case_username}}"
-    email: "{{case_email}}"
-    password1: "{{aa_password}}"
-    password2: "{{aa_password}}"
+    username: "{{r_user}}"
+    email: "{{r_email}}"
+    password1: "{{r_pw1}}"
+    password2: "{{r_pw2}}"
 scripts:
   - type: afterResponse
-    code: "pm.test(\"Registration without CSRF is forbidden\", () => { pm.response.to.have.status(403); });\r\npm.test(\"CSRF rejection is reported\", () => { pm.expect(pm.response.text()).to.match(/CSRF/i); });"
+    code: "const base = pm.variables.replaceIn('{{base_url}}');\nconst loc = pm.response.headers.get('Location') || '';\nconst hasSession = (cb) => pm.sendRequest({ url: base + '/accounts/password/change/', method: 'GET' }, (e, r) => cb(!e && r.text().indexOf('old_password') !== -1));\npm.test('HTTP 403', () => pm.response.to.have.status(403));\nhasSession((s) => pm.test('Chưa có phiên đăng nhập', () => pm.expect(s).to.be.false));"
     language: text/javascript
   - type: beforeRequest
-    code: "const aa = eval(pm.collectionVariables.get('aa_helpers'));   // hàm dùng chung, xem biến aa_helpers\naa.guest();   // điều kiện: Guest\nconst id = Date.now();\r\npm.collectionVariables.set('case_username', 'aa_csrf_' + id);\r\npm.collectionVariables.set('case_email', 'aa_csrf_' + id + '@example.test');"
+    code: "const aa = eval(pm.collectionVariables.get('aa_helpers'));   // hàm dùng chung, xem biến aa_helpers\nconst id = aa.uniq('ep');\npm.collectionVariables.set('r_user', id);\npm.collectionVariables.set('r_email', id + '@example.test');\npm.collectionVariables.set('r_pw1', pm.variables.get('aa_password'));\npm.collectionVariables.set('r_pw2', pm.variables.get('aa_password'));\naa.guest('/accounts/register/');"
     language: text/javascript
-settings: {}
+settings:
+  followRedirects: false
 order: 11000

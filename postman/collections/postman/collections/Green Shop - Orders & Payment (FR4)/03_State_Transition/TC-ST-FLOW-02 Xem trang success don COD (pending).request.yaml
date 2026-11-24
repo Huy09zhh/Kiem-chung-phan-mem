@@ -1,0 +1,20 @@
+$kind: http-request
+url: "{{base_url}}/orders/success/{{st_order_cod_id}}/"
+method: GET
+headers:
+  X-CSRFToken: "{{csrf_token}}"
+scripts:
+  - type: afterResponse
+    code: |2-
+        pm.test('TC-ST-FLOW-02 | Trang xác nhận trả về 200', function () {
+          pm.expect(pm.response.code).to.eql(200);
+        });
+        pm.test('TC-ST-FLOW-02 | Hiển thị trạng thái Chờ xử lý và Thanh toán khi nhận hàng', function () {
+          const text = pm.response.text();
+          pm.expect(text).to.include('Chờ xử lý');
+          pm.expect(text).to.include('Thanh toán khi nhận hàng');
+        });
+    language: text/javascript
+settings:
+  followRedirects: false
+order: 2000

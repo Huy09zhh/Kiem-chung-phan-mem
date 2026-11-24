@@ -1,0 +1,30 @@
+name: Green Shop - Test chung
+values:
+  - key: base_url
+    value: http://127.0.0.1:8000
+  - key: baseUrl
+    value: http://127.0.0.1:8000
+  - key: admin_username
+    value: admin
+  - key: admin_password
+    value: Admin@12345
+  - key: customer_username
+    value: user1
+  - key: customer_password
+    value: User@12345
+  - key: cust_username
+    value: user2
+  - key: cust_password
+    value: User@12345
+  - key: username
+    value: user1
+  - key: password
+    value: User@12345
+  - key: bva_mailbox_admin_user
+    value: admin
+  - key: bva_mailbox_admin_password
+    value: Admin@12345
+  - key: aa_password
+    value: AaTest#2026Aa!
+  - key: new_password
+    value: AaNew#2027Bb!

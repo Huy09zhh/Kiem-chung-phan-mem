@@ -1,0 +1,19 @@
+$kind: http-request
+url: "{{base_url}}/orders/qr/{{st_order_qr_id}}/confirm/"
+method: POST
+headers:
+  Content-Type: application/x-www-form-urlencoded
+body:
+  type: urlencoded
+  content:
+    full_name: Test No CSRF
+scripts:
+  - type: afterResponse
+    code: |2-
+        pm.test('TC-EG-07 | Thiếu CSRF token trả về mã HTTP 403 Forbidden', function () {
+          pm.expect(pm.response.code).to.eql(403);
+        });
+    language: text/javascript
+settings:
+  followRedirects: false
+order: 7000

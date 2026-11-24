@@ -1,20 +1,20 @@
 $kind: http-request
 url: "{{base_url}}/accounts/profile/edit/"
 method: POST
+description: "Lớp EP: V – dữ liệu hồ sơ hợp lệ."
 body:
   type: urlencoded
   content:
     csrfmiddlewaretoken: "{{csrf_token}}"
-    username: "{{aa_username}}"
-    first_name: "Test"
-    last_name: "Account"
-    email: "{{aa_email}}"
+    first_name: "{{p_first}}"
+    last_name: "{{p_last}}"
+    email: "{{p_email}}"
 scripts:
   - type: afterResponse
-    code: "pm.test('Valid profile update redirects', () => pm.response.to.have.status(302));\r\npm.test('Redirects to profile', () => pm.expect(pm.response.headers.get('Location') || '').to.include('/accounts/profile/'));"
+    code: "const base = pm.variables.replaceIn('{{base_url}}');\nconst loc = pm.response.headers.get('Location') || '';\nconst hasSession = (cb) => pm.sendRequest({ url: base + '/accounts/password/change/', method: 'GET' }, (e, r) => cb(!e && r.text().indexOf('old_password') !== -1));\npm.test('HTTP 302', () => pm.response.to.have.status(302));\npm.test('Location là /accounts/profile/', () => pm.expect(loc).to.eql('/accounts/profile/'));"
     language: text/javascript
   - type: beforeRequest
-    code: "const aa = eval(pm.collectionVariables.get('aa_helpers'));   // hàm dùng chung, xem biến aa_helpers\naa.user('/accounts/profile/edit/');   // điều kiện: đăng nhập tài khoản A + CSRF mới của /accounts/profile/edit/"
+    code: "const aa = eval(pm.collectionVariables.get('aa_helpers'));   // hàm dùng chung, xem biến aa_helpers\naa.newUser('/accounts/profile/edit/', function () { pm.collectionVariables.set('p_first', 'An'); pm.collectionVariables.set('p_last', 'Nguyen'); pm.collectionVariables.set('p_email', pm.collectionVariables.get('ep_email')); pm.collectionVariables.set('p_email', 'new_' + pm.collectionVariables.get('ep_email')); });"
     language: text/javascript
 settings:
   followRedirects: false

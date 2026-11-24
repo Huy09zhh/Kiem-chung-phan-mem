@@ -1,19 +1,20 @@
 $kind: http-request
 url: "{{base_url}}/accounts/login/?next=/cart/"
 method: POST
+description: "Lớp EP: V – next là đường dẫn nội bộ."
 body:
   type: urlencoded
   content:
     csrfmiddlewaretoken: "{{csrf_token}}"
-    username: "{{aa_username}}"
-    password: "{{aa_password}}"
-    next: "/cart/"
+    username: "{{l_user}}"
+    password: "{{l_pw}}"
+    next: "{{l_next}}"
 scripts:
   - type: afterResponse
-    code: "pm.test('Trả 302', () => pm.response.to.have.status(302));\npm.test('Quay về /cart/', () => pm.expect(pm.response.headers.get('Location') || '').to.match(/\\/cart\\//));"
+    code: "const base = pm.variables.replaceIn('{{base_url}}');\nconst loc = pm.response.headers.get('Location') || '';\nconst hasSession = (cb) => pm.sendRequest({ url: base + '/accounts/password/change/', method: 'GET' }, (e, r) => cb(!e && r.text().indexOf('old_password') !== -1));\npm.test('HTTP 302', () => pm.response.to.have.status(302));\npm.test('Location là /cart/', () => pm.expect(loc).to.eql('/cart/'));"
     language: text/javascript
   - type: beforeRequest
-    code: "const aa = eval(pm.collectionVariables.get('aa_helpers'));   // hàm dùng chung, xem biến aa_helpers\naa.guest('/accounts/login/');   // điều kiện: Guest + CSRF mới của /accounts/login/"
+    code: "const aa = eval(pm.collectionVariables.get('aa_helpers'));   // hàm dùng chung, xem biến aa_helpers\naa.newUserGuest('/accounts/login/?next=/cart/', function () { pm.collectionVariables.set('l_user', pm.collectionVariables.get('ep_user')); pm.collectionVariables.set('l_pw', pm.variables.get('aa_password')); pm.collectionVariables.set('l_next', ''); pm.collectionVariables.set('l_next', '/cart/'); });"
     language: text/javascript
 settings:
   followRedirects: false

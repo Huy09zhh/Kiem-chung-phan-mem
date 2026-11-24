@@ -9,6 +9,7 @@ from django.core.validators import validate_email
 from django.shortcuts import render, redirect
 from django.urls import reverse
 from django.utils.http import url_has_allowed_host_and_scheme
+from urllib.parse import parse_qsl, urlencode, urlsplit, urlunsplit
 from django.views.decorators.http import require_POST
 
 from products.models import Category
@@ -83,11 +84,16 @@ def _safe_next(request):
         next_url, allowed_hosts={request.get_host()}, require_https=request.is_secure()
     ):
         next_url = '/'
-    return next_url.split('?')[0].split('#')[0]
+    return next_url
 
 
 def _back(next_url, result):
-    return redirect(f'{next_url}?newsletter={result}#newsletter')
+    # SCRUM-37: giữ nguyên tham số đang có trên trang (từ khóa, danh mục, sắp xếp...),
+    # chỉ thay tham số newsletter để hiện thông báo kết quả.
+    parts = urlsplit(next_url)
+    query = [(k, v) for k, v in parse_qsl(parts.query, keep_blank_values=True) if k != 'newsletter']
+    query.append(('newsletter', result))
+    return redirect(urlunsplit(('', '', parts.path or '/', urlencode(query), 'newsletter')))
 
 
 @require_POST

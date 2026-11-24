@@ -1,0 +1,15 @@
+$kind: http-request
+url: "{{base_url}}/orders/success/abc/"
+method: GET
+headers:
+  X-CSRFToken: "{{csrf_token}}"
+scripts:
+  - type: afterResponse
+    code: |2-
+        pm.test('TC-EG-06 | Mã đơn không phải số (abc) trả về HTTP 404', function () {
+          pm.expect(pm.response.code).to.eql(404);
+        });
+    language: text/javascript
+settings:
+  followRedirects: false
+order: 6000

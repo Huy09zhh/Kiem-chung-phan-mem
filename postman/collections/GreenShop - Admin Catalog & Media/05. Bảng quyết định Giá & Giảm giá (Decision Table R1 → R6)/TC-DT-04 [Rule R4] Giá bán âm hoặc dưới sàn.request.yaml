@@ -1,0 +1,24 @@
+$kind: http-request
+name: "TC-DT-04 [Rule R4] Giá bán âm / dưới sàn 1.000đ bị chặn"
+url: "{{base_url}}/admin-panel/products/create/"
+method: POST
+body:
+  type: urlencoded
+  content:
+    name: "Sản phẩm âm giá"
+    price: "-1000"
+    old_price: "50000"
+    category: "{{category_id}}"
+scripts:
+  - type: afterResponse
+    language: text/javascript
+    code: |-
+      pm.test('Bị chặn ở form (Status 200)', function () {
+          pm.response.to.have.status(200);
+      });
+      pm.test('Hiển thị thông báo lỗi: Giá bán tối thiểu là 1.000 VNĐ', function () {
+          pm.expect(pm.response.text()).to.include('Giá bán tối thiểu là 1.000 VNĐ');
+      });
+settings:
+  followRedirects: false
+order: 4000

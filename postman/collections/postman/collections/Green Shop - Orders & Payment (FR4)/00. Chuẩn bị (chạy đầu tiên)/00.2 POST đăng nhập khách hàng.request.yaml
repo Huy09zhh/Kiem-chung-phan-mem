@@ -1,0 +1,29 @@
+$kind: http-request
+url: "{{base_url}}/accounts/login/"
+method: POST
+headers:
+  X-CSRFToken: "{{csrf_token}}"
+  Content-Type: application/x-www-form-urlencoded
+body:
+  type: urlencoded
+  content:
+    csrfmiddlewaretoken: "{{csrf_token}}"
+    username: "{{username}}"
+    password: "{{password}}"
+scripts:
+  - type: beforeRequest
+    code: |2-
+        var c = pm.cookies.get('csrftoken');
+        if (c) { pm.collectionVariables.set('csrf_token', c); }
+    language: text/javascript
+  - type: afterResponse
+    code: |2-
+        pm.test('Đăng nhập thành công (302 hoặc 200)', function () {
+          pm.expect([200, 302]).to.include(pm.response.code);
+        });
+        var c = pm.cookies.get('csrftoken');
+        if (c) { pm.collectionVariables.set('csrf_token', c); }
+    language: text/javascript
+settings:
+  followRedirects: false
+order: 2000

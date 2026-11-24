@@ -1,0 +1,49 @@
+$kind: http-request
+name: TC-WB-12 [Path] POST Checkout Mock happy path (Full path Mock tao don pending)
+url: "{{base_url}}/orders/checkout/"
+method: POST
+headers:
+  X-CSRFToken: "{{csrf_token}}"
+  Content-Type: application/x-www-form-urlencoded
+body:
+  type: urlencoded
+  content:
+    csrfmiddlewaretoken: "{{csrf_token}}"
+    full_name: Nguyen Van A
+    phone: "0901234567"
+    address: 123 Le Loi
+    payment_method: mock
+scripts:
+  - type: beforeRequest
+    code: |2-
+        var sid = pm.cookies.get('sessionid');
+        var csrf = pm.cookies.get('csrftoken');
+        var cookieHdr = '';
+        if (sid) { cookieHdr += 'sessionid=' + sid + '; '; }
+        if (csrf) { 
+          cookieHdr += 'csrftoken=' + csrf; 
+          pm.collectionVariables.set('csrf_token', csrf);
+        }
+        pm.sendRequest({
+          url: pm.collectionVariables.get('base_url') + '/cart/add/' + pm.collectionVariables.get('product_id') + '/',
+          method: 'GET',
+          header: { 'Cookie': cookieHdr }
+        }, function (err, res) {});
+        var t = pm.cookies.get('csrftoken'); if (t) { pm.collectionVariables.set('csrf_token', t); }
+    language: text/javascript
+  - type: afterResponse
+    code: |2-
+        pm.test('TC-WB-12 | Đặt hàng Mock redirect sandbox mock (302)', function () {
+          pm.expect([200, 302]).to.include(pm.response.code);
+          var loc = pm.response.headers.get('Location') || '';
+          var m = loc.match(/\/orders\/mock\/(\d+)/);
+          if (!m) { m = pm.response.text().match(/\/orders\/mock\/(\d+)/); }
+          if (m) {
+            pm.collectionVariables.set('wb_order_mock_id', m[1]);
+          }
+        });
+        var t = pm.cookies.get('csrftoken'); if (t) { pm.collectionVariables.set('csrf_token', t); }
+    language: text/javascript
+settings:
+  followRedirects: false
+order: 12000

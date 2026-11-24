@@ -1,0 +1,11 @@
+$kind: collection
+name: "03. TC-AOA-031 → 045"
+order: 3000
+description: |-
+  Bộ kiểm thử Tuần 4 (TC-AOA-031 đến 045): hồi quy SCRUM-18/19/20/22/23/28/29, phân quyền và chuyển hướng an toàn.
+
+  Cách chạy:
+  1. Chạy server: python manage.py runserver
+  2. Tab Variables: điền admin_password và customer_password; kiểm tra order_id, final_order_id (đơn Hoàn thành), cancelled_order_id (đơn Đã hủy).
+  3. Chạy cả collection bằng Runner. Folder 05 và 06 đăng nhập bằng tài khoản khách nên để cuối.
+  4. TC-045 tạo tài khoản mới kt<số> mỗi lần chạy; xóa trong admin sau khi chạy.

@@ -1,0 +1,3 @@
+$kind: collection
+description: Kiểm thử chuyển đổi trạng thái đơn hàng & thanh toán (Valid lifecycle + Negative blocked transitions)
+order: 4000

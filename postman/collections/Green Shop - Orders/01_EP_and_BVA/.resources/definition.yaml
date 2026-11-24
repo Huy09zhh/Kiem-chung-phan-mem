@@ -1,0 +1,4 @@
+$kind: collection
+name: 01_EP_and_BVA
+description: "Kiểm thử Phân hoạch tương đương (EP) & Phân tích giá trị biên (BVA) Standard (4n+1) và Robustness (6n+1) cho API Checkout"
+order: 2000

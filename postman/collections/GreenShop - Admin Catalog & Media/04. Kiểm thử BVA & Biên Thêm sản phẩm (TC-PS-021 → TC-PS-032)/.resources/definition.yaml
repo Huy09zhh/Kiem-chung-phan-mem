@@ -1,0 +1,4 @@
+$kind: collection
+name: "04. Kiểm thử BVA & Biên Thêm sản phẩm (TC-PS-021 → TC-PS-032)"
+description: "Bộ 12 ca kiểm thử phân tích giá trị biên (BVA) chuẩn xác cho Form Thêm sản phẩm theo đúng báo cáo Excel."
+order: 5000

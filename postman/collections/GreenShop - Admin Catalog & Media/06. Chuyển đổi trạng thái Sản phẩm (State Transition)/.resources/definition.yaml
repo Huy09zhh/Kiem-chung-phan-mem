@@ -1,0 +1,4 @@
+$kind: collection
+name: "06. Chuyển đổi trạng thái Sản phẩm (State Transition)"
+description: "Kiểm thử các bước chuyển đổi trạng thái vòng đời của sản phẩm trong phân hệ quản trị hàng hóa."
+order: 7000

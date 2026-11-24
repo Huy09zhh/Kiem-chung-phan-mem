@@ -1,0 +1,113 @@
+$kind: collection
+name: PH6 - Admin Orders & Analytics (Quân)
+description: |-
+  Phân hệ 6: Admin Orders & Analytics (Nguyễn Lê Minh Quân).
+  Gộp từ 8 collection cũ, mỗi collection cũ là một folder (01 → 08), giữ nguyên request và test.
+
+  Cách chạy:
+  1. python manage.py runserver
+  2. Tab Variables: điền admin_password (và customer_password nếu folder cần tài khoản khách).
+  3. Chạy Runner theo TỪNG folder, không chạy cả collection một lượt: mỗi folder có bước 00 đăng nhập riêng và dùng đơn hàng riêng.
+  4. Hướng dẫn chi tiết của từng folder nằm trong phần mô tả folder đó.
+variables:
+  base_url: http://127.0.0.1:8000
+  admin_username: adminquan
+  admin_password: ""
+  csrf_token: ""
+  order_id: "1"
+  customer_username: nhan
+  customer_password: ""
+  search_order_id: "2"
+  detail_order_id: "2"
+  phone_known: "0912345678"
+  status_order_id: "8"
+  paid_order_id: "9"
+  expected_customers: ""
+  run_tag: ""
+  orig_status: ""
+  target_status: ""
+  phone_short: ""
+  phone_long: ""
+  rev_before: ""
+  paid_before: ""
+  cancelled_before: ""
+  order_total: ""
+  prod_rows: ""
+  prod_featured: ""
+  prod_flash: ""
+  all_order_count: ""
+  top6_ids: ""
+  n_pending: ""
+  n_paid: ""
+  n_cancelled: ""
+  first_recent_id: ""
+  contact_id: ""
+  feedback_id: ""
+  csrf_html: ""
+  csrf_token_val: ""
+  csrf_cookie: ""
+  final_order_id: "1"
+  cancelled_order_id: "3"
+  reg_password: Kt@Green2026x
+  final_status: ""
+  rev_before_035: ""
+  product_cat: ""
+  policy_links: ""
+  settings_form: ""
+  reg_user: ""
+  bva_kw: ""
+  bva_name: ""
+  bva_email: ""
+  bva_phone: ""
+  bva_message: ""
+  bva_sat: ""
+  accent_name_proper: Nguyễn
+  accent_name_lower: nguyễn
+  accent_proper: ""
+  max_order_id: ""
+  order_ids_json: ""
+  kw_nominal: ""
+  kw_max_minus1: ""
+  kw_max: ""
+  kw_max_plus1: ""
+  flow_order_id: "8"
+  cancel_order_id: "10"
+  qr_order_id: "11"
+  anon_url: http://localhost:8000
+  cust_username: ""
+  cust_password: ""
+  reject_order_id: "19"
+  perm_order_id: "18"
+  run_overflow: no
+  pid_102: ""
+  reject_before: ""
+  reject_bad: ""
+  perm_before: ""
+  perm_target: ""
+scripts:
+  - type: http:beforeRequest
+    code: |-
+      // Tự thêm CSRF cho các request ghi dữ liệu (Django bắt buộc).
+      const m = pm.request.method;
+      pm.request.headers.upsert({ key: 'Referer', value: pm.variables.replaceIn('{{base_url}}') + '/' });
+      if (m !== 'GET' && m !== 'HEAD') {
+          const token = pm.collectionVariables.get('csrf_cookie') || pm.cookies.get('csrftoken') || pm.collectionVariables.get('csrf_html');
+          if (token) {
+              pm.request.headers.upsert({ key: 'X-CSRFToken', value: token });
+              pm.collectionVariables.set('csrf_token_val', token);
+          }
+      }
+    language: text/javascript
+  - type: http:afterResponse
+    code: |-
+      // Sau mỗi response: nhớ lại cookie csrftoken mới nhất (Django đổi token sau khi đăng nhập).
+      let tk = null;
+      try { tk = pm.cookies.get('csrftoken'); } catch (e) {}
+      if (!tk) {
+          try {
+              const rc = pm.response.cookies.get('csrftoken');
+              tk = rc && typeof rc === 'object' ? rc.value : rc;
+          } catch (e) {}
+      }
+      if (tk) { pm.collectionVariables.set('csrf_cookie', tk); }
+    language: text/javascript

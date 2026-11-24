@@ -10,4 +10,6 @@ body:
     \  \"price\": 50000\r
 
     }"
+settings:
+  followRedirects: true
 order: 5000

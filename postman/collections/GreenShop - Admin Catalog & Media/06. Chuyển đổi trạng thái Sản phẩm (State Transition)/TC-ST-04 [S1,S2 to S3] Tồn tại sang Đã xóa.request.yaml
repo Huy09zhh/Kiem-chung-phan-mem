@@ -1,0 +1,14 @@
+$kind: http-request
+name: "TC-ST-04 [S1/S2 -> S3] Tồn tại sang Đã xóa"
+url: "{{base_url}}/admin-panel/products/{{product_id}}/delete/"
+method: POST
+scripts:
+  - type: afterResponse
+    language: text/javascript
+    code: |-
+      pm.test('Xóa sản phẩm thành công (Status 302)', function () {
+          pm.expect(pm.response.code).to.eql(302);
+      });
+settings:
+  followRedirects: false
+order: 4000

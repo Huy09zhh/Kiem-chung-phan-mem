@@ -27,13 +27,13 @@ Before(({ I }) => {
 });
 
 const cases = [
-  ['TC01', 'Mã đơn min- (0)', () => 0],
-  ['TC02', 'Mã đơn min (1)', () => 1],
-  ['TC03', 'Mã đơn min+ (2)', () => 2],
-  ['TC04', 'Mã đơn nominal (4)', () => 4],
-  ['TC05', 'Mã đơn max- (mã lớn nhất - 1)', (max) => max - 1],
-  ['TC06', 'Mã đơn max (mã lớn nhất)', (max) => max],
-  ['TC07', 'Mã đơn max+ (mã lớn nhất + 1)', (max) => max + 1],
+  ['TC-AOA-BVA-15', 'Mã đơn min- (0)', () => 0],
+  ['TC-AOA-BVA-16', 'Mã đơn min (1)', () => 1],
+  ['TC-AOA-BVA-17', 'Mã đơn min+ (2)', () => 2],
+  ['TC-AOA-BVA-18', 'Mã đơn nominal (4)', () => 4],
+  ['TC-AOA-BVA-19', 'Mã đơn max- (mã lớn nhất - 1)', (max) => max - 1],
+  ['TC-AOA-BVA-20', 'Mã đơn max (mã lớn nhất)', (max) => max],
+  ['TC-AOA-BVA-21', 'Mã đơn max+ (mã lớn nhất + 1)', (max) => max + 1],
 ];
 
 for (const [id, name, pick] of cases) {

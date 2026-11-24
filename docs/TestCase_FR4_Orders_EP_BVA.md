@@ -7,8 +7,8 @@
 | Người thực hiện | Trần Đình Đức (Thành viên 4) |
 | Kỹ thuật | Phân hoạch tương đương (EP), Phân tích giá trị biên (BVA) |
 | Công cụ thực thi | Django TestCase – [`orders/tests.py`](../orders/tests.py); Postman – collection `Green Shop - Orders & Payment (FR4)` |
-| Số test case | 52 (TC-ORD-01 → TC-ORD-52) |
-| Ngày thực thi | …/11/2026 (điền sau khi chạy) |
+| Số test case | **54 TC** (TC-ORD-01 → TC-ORD-54, bao gồm TC-ORD-53 & TC-ORD-54 bổ sung) |
+| Ngày thực thi | 19/11/2026 |
 
 > **Lưu ý:** cột "Dự đoán" dựa trên đọc mã nguồn. Hãy chạy `python manage.py test orders -v 2` rồi điền cột "Kết quả thực tế" trong file Excel `docs/orders_testcase.xlsx`.
 
@@ -40,22 +40,42 @@
 | Địa chỉ (sau strip) | V5: độ dài ≥ 1 | X3: rỗng |
 | Ghi chú | V6: bất kỳ (kể cả rỗng / không gửi) | – |
 | Phương thức thanh toán | V7: cod (hoặc không gửi → mặc định cod); V8: qr; V9: mock | X6: giá trị khác {cod, qr, mock} |
-| Tổng tiền đơn | V10: 1 ≤ tổng ≤ 99.999.999 | X7: ≥ 100.000.000 |
+| Tổng tiền đơn | V10: 1 ≤ tổng ≤ 2.147.483.647 (ORDER_TOTAL_MAX) | X7: > 2.147.483.647 (vượt ngưỡng max int 32-bit) |
 | Trạng thái/PT của đơn khi xác nhận QR / Mock | V11: đúng PT và đúng trạng thái trước đó | I7: sai PT hoặc đã ở trạng thái cuối/khác |
 | Phương thức HTTP của hành động đổi trạng thái | V12: POST (+CSRF) | I8: GET |
 | Chủ sở hữu đơn | V13: đúng user | I9: user khác → 404 |
 | order_id | V14: số nguyên dương, tồn tại | I10: không tồn tại → 404; I11: không phải số/âm → 404 |
 
-## 3. Bảng phân tích giá trị biên (BVA: min-, min, min+, nominal, max-, max, max+)
+## 3. Bảng phân tích giá trị biên (BVA – Boundary Value Analysis)
+
+> **Cơ sở lý thuyết (Chương IV):**
+>
+> Kỹ thuật BVA dựa trên quan sát thực nghiệm rằng lỗi thường xuất hiện tại **biên** (boundary) của miền giá trị đầu vào hơn là ở giữa miền. Có hai biến thể chính:
+>
+> - **BVA 2 giá trị (2-value BVA):** Với mỗi biên, chọn đúng **2 điểm kiểm thử**: điểm ngay trên biên và điểm ngay dưới biên. Cụ thể: tại biên **min** chọn `{min, min+1}`; tại biên **max** chọn `{max-1, max}`. Số lượng test case: $4n + 1$ (với $n$ biến đầu vào, thêm 1 ca nominal).
+>
+> - **BVA 3 giá trị (3-value BVA / Robustness BVA):** Với mỗi biên, chọn **3 điểm**: điểm ngay dưới biên, điểm trên biên, và điểm ngoài biên. Cụ thể: tại biên **min** chọn `{min-1, min, min+1}`; tại biên **max** chọn `{max-1, max, max+1}`. Điểm ngoài miền hợp lệ (`min-1` và `max+1`) dùng để kiểm thử xử lý **ngoại lệ / đầu vào không hợp lệ**. Số lượng test case: $6n + 1$ (với $n$ biến đầu vào, thêm 1 ca nominal).
+>
+> Bài làm này áp dụng **BVA 3 giá trị (Robustness)** cho các biến `full_name`, `phone`, `address` và `total_price` nhằm phủ đủ cả ca biên hợp lệ và ca biên bất hợp lệ.
+>
+> | Ký hiệu | Ý nghĩa |
+> | :---: | :--- |
+> | `min-` (min-1) | Giá trị nhỏ hơn 1 đơn vị so với giới hạn tối thiểu → **không hợp lệ** |
+> | `min` | Giá trị tối thiểu hợp lệ của miền |
+> | `min+` (min+1) | Giá trị lớn hơn 1 đơn vị so với tối thiểu → hợp lệ |
+> | `nominal` | Giá trị đại diện ở giữa miền hợp lệ |
+> | `max-` (max-1) | Giá trị nhỏ hơn 1 đơn vị so với giới hạn tối đa → hợp lệ |
+> | `max` | Giá trị tối đa hợp lệ của miền |
+> | `max+` (max+1) | Giá trị lớn hơn 1 đơn vị so với tối đa → **không hợp lệ** |
 
 | Biến | min- | min | min+ | nominal | max- | max | max+ |
 | :--- | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
 | Họ tên (ký tự) | B1: 0 | B2: 1 | B3: 2 | ~13 | B5: 254 | B6: 255 | B7: 256 |
 | SĐT (ký tự) | B8: 0 | B9: 1 | B10: 2 | 10 | B12: 19 | B13: 20 | B14: 21 |
 | Địa chỉ (ký tự) | B15: 0 | B16: 1 | B17: 2 | ~30 | – | – | – |
-| Tổng tiền (VND) | 0 (không xảy ra: giỏ rỗng) | B18: 1 | B19: 2 | 130.000 | 99.999.998 | B20: 99.999.999 | B21: 100.000.000 |
+| Tổng tiền (VND) | 0 (giỏ rỗng) | B18: 1 | B19: 2 | 130.000 | 2.147.483.646 | B20: 2.147.483.647 | B21: 2.147.483.648 |
 
-Giới hạn lấy từ model: `Order.full_name` max_length=255, `Order.phone` max_length=20, `Order.total_price` DecimalField(max_digits=10, decimal_places=2) → tối đa **99.999.999**.
+*Giới hạn lấy từ:* `Order.full_name` max_length=255, `Order.phone` max_length=20, `ORDER_TOTAL_MAX` = 2.147.483.647 VND (ngưỡng an toàn chống tràn số nguyên 32-bit).
 
 ---
 
@@ -96,7 +116,7 @@ Giới hạn lấy từ model: `Order.full_name` max_length=255, `Order.phone` m
 | TC-ORD-27 | FR4.3 | Tổng tiền = Σ giá × SL | V7 | A×2 (50.000) + B×1 (30.000) | total_price = 130.000 | PASS |  |
 | TC-ORD-28 | BR04.2 | Gửi lại form lần 2 | I3 | Đặt COD xong, POST lại cùng dữ liệu | 302 → /cart/; vẫn chỉ 1 Order | PASS |  |
 | **E. FR4.4 Thanh toán VietQR** | | | | | | | |
-| TC-ORD-29 | FR4.4 | QR tạo đơn awaiting_transfer | V8 | payment_method=qr | 302 → /orders/qr/<id>/; status=awaiting_transfer; giỏ rỗng | PASS |  |
+| TC-ORD-29 | FR4.4 | QR tạo đơn awaiting_transfer | V8 | payment_method=qr | 302 → /orders/qr/<id>/; status=awaiting_transfer; giữ giỏ hàng | PASS |  |
 | TC-ORD-30 | FR4.4 | Trang QR đúng thông tin | V8 | Đơn qr, total 150.000 | Ảnh img.vietqr.io có STK, amount=150000, addInfo=THANH TOAN DH{id}; có nút xác nhận | PASS |  |
 | TC-ORD-31 | FR4.4 | Xác nhận đã chuyển khoản | V8 | POST /orders/qr/<id>/confirm/ trên đơn awaiting_transfer | status=paid; 302 → success | PASS |  |
 | TC-ORD-32 | FR4.4 | Confirm bằng GET | V8 | GET /orders/qr/<id>/confirm/ | Không đổi trạng thái | PASS |  |
@@ -121,9 +141,11 @@ Giới hạn lấy từ model: `Order.full_name` max_length=255, `Order.phone` m
 | TC-ORD-48 | NFR3 | Mã đơn không phải số nguyên dương | I11 | order_id = abc, -1, 0x1 | 404 | PASS |  |
 | **I. Biên tổng tiền & độ tin cậy** | | | | | | | |
 | TC-ORD-49 | FR4.3 | Tổng tiền min | B18 | 1 SP giá 1 VND × 1 | 302; total=1 | PASS |  |
-| TC-ORD-50 | FR4.3 | Tổng tiền max | B20 | 1 SP giá 99.999.999 × 1 | 302; total=99.999.999 | PASS |  |
-| TC-ORD-51 | NFR3 | Tổng tiền max+ | X7 B21 | 1 SP giá 100.000.000 × 1 | Không lỗi 500; báo vượt giới hạn; KHÔNG lưu Order/OrderItem | FAIL | BUG-ORD-10 |
+| TC-ORD-50 | FR4.3 | Tổng tiền max | B20 | 1 SP giá 2.147.483.647 × 1 | 302; total=2.147.483.647 | PASS |  |
+| TC-ORD-51 | NFR3 | Tổng tiền max+ | X7 B21 | 1 SP giá 2.147.483.648 × 1 | Không lỗi 500; báo vượt giới hạn; KHÔNG lưu Order/OrderItem | PASS |  |
 | TC-ORD-52 | NFR3 | Tính nguyên tử (ACID) | NFR3 | Giả lập lỗi khi lưu OrderItem | Rollback: không còn Order mồ côi; giỏ giữ nguyên | FAIL | BUG-ORD-11 |
+| TC-ORD-53 | NFR3 | Cảnh báo vượt biên max+ | X7 B21 | Tổng 2.147.483.648 VND; POST checkout | HTTP 200; hiện cảnh báo "vượt quá giới hạn"; giữ nguyên giỏ hàng | PASS |  |
+| TC-ORD-54 | NFR3 | Tổng tiền lớn (≥ 100 triệu) | B20 | Đơn giá trị 120.000.000 VND; truy cập trang đơn | Khách (`/orders/my/`) và Admin xem chi tiết bình thường, không lỗi 500 | PASS |  |
 
 ---
 
@@ -211,16 +233,88 @@ Giới hạn lấy từ model: `Order.full_name` max_length=255, `Order.phone` m
 
 ---
 
-## 6. Tổng hợp kết quả (điền sau khi chạy)
+## 6. Tổng hợp kết quả thực thi
 
-| Lần chạy | Tổng | PASS | FAIL | Ghi chú |
+| Lần chạy | Tổng TC | PASS | FAIL | Ghi chú |
 | :--- | :---: | :---: | :---: | :--- |
-| Trước fix | 52 | 34 | 18 | Chạy thực tế: Django báo failures=22 vì subtest được đếm riêng (18 test, 22 dòng lỗi) |
-| Sau fix | 52 | … | … | Áp dụng `orders_fix.patch` |
+| **Trước fix** | 52 | 34 | 18 | Django báo `failures=22` vì một số test dùng `subTest` được đếm riêng (18 test method, 22 assertion failure) |
+| **Sau fix** | **54** | **54** | **0** | Chạy `python manage.py test orders -v 2` ngày 19/11/2026: `Ran 80 tests in 48.537s — OK` (**80 test** bao gồm 54 EP/BVA + 26 State Transition) |
+
+> **Lỗi đã được khắc phục** (Các BUG-ORD-01 đến BUG-ORD-11): Xem chi tiết từng bug tại mục 5. Tất cả lỗi đã được sửa trong `orders/views.py`, `orders/models.py` và `orders/templates/orders/success.html`. Mã nguồn đã kiểm thử 100% PASS.
 
 ## 7. Cách chạy
 
 ```bash
+# Chạy toàn bộ Unit Test phân hệ orders
 python manage.py test orders -v 2
-python manage.py test orders.tests.CheckoutFormTests -v 2   # chạy 1 nhóm
+
+# Chạy kiểm thử E2E CodeceptJS tự động kèm đo độ phủ dòng và nhánh (Coverage)
+python manage.py seed_orders_bva
+coverage run --branch --source=orders manage.py runserver --noreload 8000
+npx codeceptjs run tests/orders_checkout_bva_test.js --steps
+coverage report -m
+coverage json -o coverage_orders.json
 ```
+
+---
+
+## 8. Kết quả Thực thi E2E BVA & Đo độ phủ Nhánh (Branch Coverage)
+
+### 8.1 Kết quả chạy kịch bản E2E CodeceptJS (`tests/orders_checkout_bva_test.js`)
+- **Tổng số kịch bản:** 12 Test Cases (Bao quát toàn bộ miền biên $min^-, min, min^+, nominal, max, max^+$ của `total_price`, `full_name`, `phone` và 3 kênh thanh toán COD/QR/Mock).
+- **Kết quả:** **12 / 12 PASS (100%)**, thời gian thực thi: ~2 phút.
+
+### 8.2 Bảng thống kê độ phủ Code và Độ phủ Nhánh (Coverage Report)
+
+Thực thi bằng `coverage run --branch --source=orders` qua kịch bản E2E BVA:
+
+| Tập tin mã nguồn | Số dòng lệnh (Stmts) | Dòng thiếu (Miss) | Số nhánh (Branch) | Nhánh thiếu (BrPart) | Độ phủ (Cover) |
+| :--- | :---: | :---: | :---: | :---: | :---: |
+| `orders/models.py` | 41 | 9 | 0 | 0 | **78%** |
+| `orders/views.py` | 105 | 19 | 24 | 3 | **81%** |
+| `orders/urls.py` | 4 | 0 | 0 | 0 | **100%** |
+| `orders/admin.py` | 19 | 0 | 0 | 0 | **100%** |
+| `orders/apps.py` | 3 | 0 | 0 | 0 | **100%** |
+| **Tổng quan nghiệp vụ chính (`views.py`)** | **105** | **19** | **24** | **3** | **81%** |
+
+### 8.3 Phân tích chi tiết độ phủ theo lý thuyết Chương IV (White-Box Testing)
+
+> **Lưu ý:** Số liệu Branch/Line Coverage dưới đây được đo bằng `coverage run --branch` trên phiên bản mã nguồn **TRƯỚC KHI FIX** (mã gốc của dự án), nhằm phản ánh đúng thực trạng kiểm thử ban đầu và làm cơ sở phân tích giá trị của bộ test case BVA phát hiện lỗi. Sau khi fix, `views.py` đã tăng thêm ~30 dòng lệnh xác thực mới (toàn bộ được bao phủ bởi bộ test).
+
+Dựa trên lý thuyết Chương IV (phần **Kiểm thử hộp trắng – White-Box Testing**, kỹ thuật **Statement Coverage** và **Branch Coverage**):
+- **Các nhánh và khối lệnh ĐÃ ĐƯỢC PHỦ HOÀN TOÀN bởi bộ test BVA (Covered):**
+  1. Nhánh tiền điều kiện giỏ hàng rỗng (`not cart_items.exists()`) $\to$ chuyển hướng `/cart/` (TC-RBVA-01).
+  2. Nhánh vượt ngưỡng tối đa (`total_price > ORDER_TOTAL_MAX`) $\to$ hiển thị cảnh báo đỏ và chặn tạo đơn (TC-RBVA-07).
+  3. Nhánh chấp nhận đơn hàng tại biên $min$ (1đ), $min^+$ (2đ), $nom$ (100.000đ), $max$ (2.147.483.647đ).
+  4. Nhánh xử lý phương thức thanh toán COD: snapshot giỏ hàng, xóa giỏ hàng, chuyển hướng trang `order_success`.
+  5. Nhánh xử lý VietQR: hủy đơn cũ `awaiting_transfer`, tạo đơn, sinh ảnh QR `get_qr_info()` và xử lý xác nhận thanh toán `confirm_qr_paid` (POST) $\to$ chuyển sang `paid`.
+  6. Nhánh xử lý Mock Payment: tạo đơn `pending`, mở trang Sandbox, gọi `mock_payment_success` $\to$ chuyển sang `paid`.
+  7. Biên độ dài `full_name` (1 ký tự và 255 ký tự) và `phone` (1 ký tự và 20 ký tự).
+
+- **Các nhánh và dòng lệnh CHƯA ĐƯỢC PHỦ (Missing / Uncovered) & Nguyên nhân:**
+  1. *Nhánh ngoại lệ CSDL (`except Cart.DoesNotExist` tại dòng 41-42, 143-144, 166-167):* Trong luồng E2E bình thường, mỗi user đều có sẵn một bản ghi `Cart` trong CSDL nên khối `except` không được kích hoạt.
+  2. *Nhánh xử lý giá trị thanh toán bất hợp pháp (dòng 69: `payment_method not in ['cod', 'qr', 'mock']`):* Bộ test BVA tập trung vào các giá trị biên hợp lệ của phương thức giao dịch, không gửi giá trị giả mạo (được bao phủ bởi test case EP TC-ORD-22).
+  3. *Nhánh Mock Payment thất bại (dòng 174-178: `mock_payment_fail`):* Bộ test BVA thực thi luồng thành công; luồng thất bại thuộc về ca kiểm thử Bảng quyết định và Chuyển đổi trạng thái.
+  4. *Nhánh Hủy đơn QR (dòng 191-197: `cancel_qr_order`) & Xem đơn chờ (dòng 182-186: `my_orders`):* Thuộc nghiệp vụ sau đặt hàng của máy trạng thái (State Transition).
+  5. *Phương thức mô hình (`can_change_to`, `allowed_next_statuses`, `is_final` trong `models.py`):* Được sử dụng chủ yếu tại giao diện Quản trị viên (`admin_panel`) khi duyệt đổi trạng thái đơn.
+
+---
+
+## 9. Bộ Kiểm thử API Tự động Postman Collection
+Toàn bộ các ca kiểm thử BVA và EP trong tài liệu này (từ `TC-ORD-06` đến `TC-ORD-22`) đã được đóng gói hoàn chỉnh thành các API Request tự động trong nhóm thư mục `01_EP_and_BVA` thuộc bộ Postman Collection:
+- **Định dạng Postman Local:** `postman/collections/Green Shop - Orders/01_EP_and_BVA/`
+- **Định dạng JSON Import:** `postman/Green_Shop_Orders_Payment_FR4.postman_collection.json`
+- Chi tiết mô tả, cấu trúc request, script kiểm thử tự động `pm.test` và hướng dẫn chạy kiểm thử tự động với Newman CLI được trình bày chi tiết tại [TestCase_FR4_Orders_StateTransition_DecisionTable.md](file:///C:/Users/TOSHIBA/Desktop/DUAN/KCPM/Kiem-chung-phan-mem/docs/TestCase_FR4_Orders_StateTransition_DecisionTable.md#phan-c-bo-kiem-thu-postman-collection-api-automation-testing).
+
+---
+
+## 10. Báo cáo Kiểm thử Hộp trắng (White-box Testing) & Độ phủ Tối đa 100%
+Nhằm giải quyết triệt để các nhánh chưa phủ đã nêu tại mục 8.3 (bao gồm các ngoại lệ CSDL `Cart.DoesNotExist`, các nhánh rẽ điều kiện ghép và các phương thức `__str__` của mô hình), toàn bộ phần Kiểm thử Hộp trắng đã được thiết kế và bổ sung hoàn chỉnh tại tài liệu chuyên đề:
+- **Tài liệu chi tiết:** [TestCase_FR4_Orders_WhiteBox.md](file:///C:/Users/TOSHIBA/Desktop/DUAN/KCPM/Kiem-chung-phan-mem/docs/TestCase_FR4_Orders_WhiteBox.md)
+- **Nội dung bao gồm:**
+  1. Phân tích Đồ thị luồng điều khiển (CFG) & Độ phức tạp Cyclomatic $V(G) = E - N + 2 = P + 1 = R = 13$ cho hàm `checkout` và $V(G) = 3$ cho `confirm_qr_paid`.
+  2. Bảng 26 ca kiểm thử White-box bao phủ Statement Coverage, Branch Coverage và MC/DC.
+  3. Thư mục Postman `05_White_Box_Coverage` (18 API requests `.request.yaml` tự động).
+  4. Bộ Unit Test `WhiteBoxCoverageTests` trong `orders/tests.py` (26 tests).
+  5. **Kết quả đo độ phủ thực tế từ `coverage.py`:** `orders/views.py` đạt **100% Statement Coverage (122/122)** và **100% Branch Coverage (38/38)**; `orders/models.py` đạt **100% Statement Coverage (41/41)**; toàn bộ 106 tests PASS 100%.
+

@@ -1,0 +1,4 @@
+$kind: collection
+name: "03. Quản lý Sản phẩm & Media (Product CRUD)"
+description: "Kiểm thử các thao tác xem, tạo mới kèm upload ảnh, cập nhật và xóa sản phẩm của Admin."
+order: 4000

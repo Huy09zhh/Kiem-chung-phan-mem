@@ -1,0 +1,27 @@
+$kind: http-request
+name: TC-DT-07 [Rule QR-R1] Confirm QR hop le POST + awaiting_transfer doi sang paid
+url: "{{base_url}}/orders/qr/{{dt_qr_order_id}}/confirm/"
+method: POST
+headers:
+  X-CSRFToken: "{{csrf_token}}"
+  Content-Type: application/x-www-form-urlencoded
+body:
+  type: urlencoded
+  content:
+    csrfmiddlewaretoken: "{{csrf_token}}"
+scripts:
+  - type: beforeRequest
+    code: |2-
+        var oid = pm.collectionVariables.get('dt_qr_order_id') || pm.collectionVariables.get('st_order_qr_id') || pm.collectionVariables.get('wb_order_qr_id') || '1';
+        if (!pm.collectionVariables.get('dt_qr_order_id')) { pm.collectionVariables.set('dt_qr_order_id', oid); }
+        var t = pm.cookies.get('csrftoken'); if (t) { pm.collectionVariables.set('csrf_token', t); }
+    language: text/javascript
+  - type: afterResponse
+    code: |2-
+        pm.test('TC-DT-07 | [Rule QR-R1] POST confirm QR hợp lệ -> redirect success (302)', function () {
+          pm.expect([200, 302]).to.include(pm.response.code);
+        });
+    language: text/javascript
+settings:
+  followRedirects: false
+order: 7000

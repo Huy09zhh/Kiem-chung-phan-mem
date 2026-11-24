@@ -1,4 +1,4 @@
-// Test case sinh từ BẢNG QUYẾT ĐỊNH của chức năng "Tìm kiếm và lọc đơn hàng" (TC-BS1 → BS7).
+// Test case sinh từ BẢNG QUYẾT ĐỊNH của chức năng "Tìm kiếm và lọc đơn hàng" (TC-AOA-DT-01 → 07).
 // Bổ sung cho 14 TC BVA để phủ các nhánh BVA chưa chạm tới: bộ lọc trạng thái, bộ lọc thanh toán,
 // từ khóa dạng #số và từ khóa chữ.
 //
@@ -28,7 +28,7 @@ const idsOf = async (I) =>
   (await I.grabTextFromAll(ID_CELLS)).map((t) => parseInt(t.replace('#', ''), 10)).filter((n) => !Number.isNaN(n));
 
 // R1: từ khóa dạng #số -> lọc đúng mã đơn
-Scenario('TC-BS1 - Từ khóa dạng #số (#5)', async ({ I }) => {
+Scenario('TC-AOA-DT-01 - Từ khóa dạng #số (#5)', async ({ I }) => {
   const existing = await idsOf(I);
   I.amOnPage('/admin-panel/orders/?keyword=%235');
   const found = await idsOf(I);
@@ -36,21 +36,21 @@ Scenario('TC-BS1 - Từ khóa dạng #số (#5)', async ({ I }) => {
 });
 
 // R3: từ khóa chữ, dài >= 6 -> tìm theo tên
-Scenario('TC-BS2 - Từ khóa chữ, dài >= 6 ký tự (Nguyen)', ({ I }) => {
+Scenario('TC-AOA-DT-02 - Từ khóa chữ, dài >= 6 ký tự (Nguyen)', ({ I }) => {
   I.amOnPage('/admin-panel/orders/?keyword=Nguyen');
   I.see(SEED_NAME);
   I.dontSee('Server Error');
 });
 
 // R5: từ khóa chữ, ngắn < 6 -> chỉ tìm theo tên
-Scenario('TC-BS3 - Từ khóa chữ, ngắn < 6 ký tự (Ng)', ({ I }) => {
+Scenario('TC-AOA-DT-03 - Từ khóa chữ, ngắn < 6 ký tự (Ng)', ({ I }) => {
   I.amOnPage('/admin-panel/orders/?keyword=Ng');
   I.see(SEED_NAME);
   I.dontSee('Server Error');
 });
 
 // Bộ lọc trạng thái hợp lệ
-Scenario('TC-BS4 - Lọc trạng thái hợp lệ (status=paid)', async ({ I }) => {
+Scenario('TC-AOA-DT-04 - Lọc trạng thái hợp lệ (status=paid)', async ({ I }) => {
   I.amOnPage('/admin-panel/orders/?status=paid');
   I.see(SEED_NAME);
   const cells = await I.grabTextFromAll('tbody tr td:nth-child(5)');
@@ -59,14 +59,14 @@ Scenario('TC-BS4 - Lọc trạng thái hợp lệ (status=paid)', async ({ I }) 
 });
 
 // Bộ lọc trạng thái không hợp lệ
-Scenario('TC-BS5 - Lọc trạng thái không hợp lệ (status=hacked)', ({ I }) => {
+Scenario('TC-AOA-DT-05 - Lọc trạng thái không hợp lệ (status=hacked)', ({ I }) => {
   I.amOnPage('/admin-panel/orders/?status=hacked');
   I.see(EMPTY_MSG);
   I.dontSee('Server Error');
 });
 
 // Bộ lọc thanh toán hợp lệ
-Scenario('TC-BS6 - Lọc thanh toán hợp lệ (payment_method=qr)', async ({ I }) => {
+Scenario('TC-AOA-DT-06 - Lọc thanh toán hợp lệ (payment_method=qr)', async ({ I }) => {
   I.amOnPage('/admin-panel/orders/?payment_method=qr');
   I.see(SEED_NAME);
   const cells = await I.grabTextFromAll('tbody tr td:nth-child(4)');
@@ -75,7 +75,7 @@ Scenario('TC-BS6 - Lọc thanh toán hợp lệ (payment_method=qr)', async ({ I
 });
 
 // Bộ lọc thanh toán không hợp lệ
-Scenario('TC-BS7 - Lọc thanh toán không hợp lệ (payment_method=hacked)', ({ I }) => {
+Scenario('TC-AOA-DT-07 - Lọc thanh toán không hợp lệ (payment_method=hacked)', ({ I }) => {
   I.amOnPage('/admin-panel/orders/?payment_method=hacked');
   I.see(EMPTY_MSG);
   I.dontSee('Server Error');

@@ -25,25 +25,36 @@ class Order(models.Model):
         ('cancelled', 'Đã hủy'),
     )
     ALLOWED_TRANSITIONS = {
-    'pending':           {'paid', 'confirmed', 'cancelled'},
-    'awaiting_transfer': {'paid', 'failed', 'cancelled'},
-    'paid':              {'confirmed', 'cancelled'},
-    'failed':            {'awaiting_transfer', 'cancelled'},
-    'confirmed':         {'shipping', 'cancelled'},
-    'shipping':          {'completed', 'cancelled'},
-    'completed':         set(),
-    'cancelled':         set(),
-}
+        'pending':           {'paid', 'confirmed', 'cancelled'},
+        'awaiting_transfer': {'paid', 'failed', 'cancelled'},
+        'paid':              {'confirmed', 'cancelled'},
+        'failed':            {'awaiting_transfer', 'cancelled'},
+        'confirmed':         {'shipping', 'cancelled'},
+        'shipping':          {'completed', 'cancelled'},
+        'completed':         set(),
+        'cancelled':         set(),
+    }
+
+    # SCRUM-57: bước chuyển chỉ dành cho đơn thanh toán Mock: pending -> failed khi callback
+    # thanh toán Mock báo thất bại. Đơn COD/QR "Chờ xử lý" không có bước này (giữ đúng SCRUM-51).
+    MOCK_EXTRA_TRANSITIONS = {
+        'pending': {'failed'},
+    }
+
+    def _allowed_next_keys(self):
+        current_status = (self.status or '').strip()
+        allowed = set(self.ALLOWED_TRANSITIONS.get(current_status, set()))
+        if self.payment_method == 'mock':
+            allowed |= self.MOCK_EXTRA_TRANSITIONS.get(current_status, set())
+        return allowed
 
     def can_change_to(self, new_status):
-        current_status = (self.status or '').strip()
-        return new_status in self.ALLOWED_TRANSITIONS.get(current_status, set())
+        return new_status in self._allowed_next_keys()
 
     @property
     def allowed_next_statuses(self):
         """Danh sách (value, label) các trạng thái được phép chuyển tiếp từ trạng thái hiện tại."""
-        current_status = (self.status or '').strip()
-        allowed_keys = self.ALLOWED_TRANSITIONS.get(current_status, set())
+        allowed_keys = self._allowed_next_keys()
         return [(val, label) for val, label in self.STATUS_CHOICES if val in allowed_keys]
 
     FINAL_STATUSES = ('completed', 'cancelled')

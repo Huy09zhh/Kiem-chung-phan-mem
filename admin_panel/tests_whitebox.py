@@ -7,6 +7,10 @@ Phân hệ 6: Admin Orders & Analytics.
   2. Cập nhật trạng thái đơn: admin_panel.views.admin_order_update_status
      12 câu lệnh, 2 quyết định (4 nhánh), V(G) = 3
 
+Mã test case trong report (sheet PH6_Quân_HopTrang): test_wb_s1 → TC-AOA-WB-S1, test_wb_b3 → TC-AOA-WB-B3,
+test_c1_... của OrderListConditionTests → TC-AOA-WB-C1..C4, test_wb_u1/u2 → TC-AOA-WB-U1/U2,
+test_c1_... của UpdateStatusConditionTests → TC-AOA-WB-UC1..UC3.
+
 Mỗi class là một bộ test trả lời câu hỏi "tối thiểu bao nhiêu test case để bao phủ 100%":
   OrderListStatementTests     : 2 test -> bao phủ câu lệnh 100% (nhánh mới 11/16)
   OrderListBranchTests        : 4 test -> bao phủ nhánh 100% (16/16)

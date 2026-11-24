@@ -1,0 +1,21 @@
+$kind: http-request
+url: "{{base_url}}/orders/{{st_cancel_qr_id}}/cancel/"
+method: POST
+body:
+  type: urlencoded
+  content:
+    csrfmiddlewaretoken: "{{csrf_token}}"
+scripts:
+  - type: beforeRequest
+    code: |-
+      const t = pm.cookies.get('csrftoken'); if (t) { pm.collectionVariables.set('csrf_token', t); }
+    language: text/javascript
+  - type: afterResponse
+    code: |-
+      pm.test('TC-ST-FLOW-07 | [Transition hợp lệ] awaiting_transfer -> cancelled (302 redirect /cart/)', function () {
+        pm.expect([200, 302]).to.include(pm.response.code);
+      });
+    language: text/javascript
+settings:
+  followRedirects: false
+order: 7000

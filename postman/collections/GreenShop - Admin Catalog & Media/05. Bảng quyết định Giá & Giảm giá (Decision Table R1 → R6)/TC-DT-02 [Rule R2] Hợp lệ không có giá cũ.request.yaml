@@ -1,0 +1,21 @@
+$kind: http-request
+name: "TC-DT-02 [Rule R2] Hợp lệ không có giá cũ (sale 0%)"
+url: "{{base_url}}/admin-panel/products/create/"
+method: POST
+body:
+  type: urlencoded
+  content:
+    name: "Cải bó xôi"
+    price: "100000"
+    old_price: ""
+    category: "{{category_id}}"
+scripts:
+  - type: afterResponse
+    language: text/javascript
+    code: |-
+      pm.test('Chuyển hướng thành công (Status 302)', function () {
+          pm.expect(pm.response.code).to.eql(302);
+      });
+settings:
+  followRedirects: false
+order: 2000
