@@ -28,6 +28,9 @@ ALLOWED = {
     'completed': set(),           # trạng thái cuối: bị khoá
     'cancelled': set(),           # trạng thái cuối: bị khoá
 }
+# SCRUM-57: riêng đơn thanh toán Mock được thêm pending -> failed (callback thanh toán thất bại).
+# Bảng ALLOWED ở trên là của đơn COD (make_order mặc định COD).
+MOCK_EXTRA = {'pending': {'failed'}}
 # Chuyển trạng thái cho hai trạng thái thanh toán chưa hoàn tất (SCRUM-44: từng bị thiếu trong code).
 EXPECTED_PAYMENT_FLOW = {
     'awaiting_transfer': {'paid', 'failed', 'cancelled'},
@@ -46,10 +49,11 @@ class OrderStatusTransitionTests(TestCase):
     def setUp(self):
         self.client.force_login(self.admin)
 
-    def make_order(self, status):
+    def make_order(self, status, payment_method='cod'):
         return Order.objects.create(
             user=self.customer, full_name='Khach Test', phone='0912345678',
             address='1 Duong Test', total_price=100000, status=status,
+            payment_method=payment_method,
         )
 
     def post_status(self, order, value, follow=False, **extra):
@@ -255,3 +259,35 @@ class OrderStatusTransitionTests(TestCase):
                 self.assertEqual(order.status, 'pending')
                 # Admin nhận được thông báo lỗi rõ ràng
                 self.assertContains(response, 'Trạng thái chuyển đổi không hợp lệ.')
+
+    # ---- SCRUM-57: pending -> failed chỉ dành cho đơn Mock ----
+    def test_scrum57_cod_and_qr_pending_cannot_become_failed(self):
+        """Đơn COD/QR "Chờ xử lý": ô chọn không có "Thanh toán thất bại", gửi failed bị từ chối."""
+        for method in ('cod', 'qr'):
+            with self.subTest(payment_method=method):
+                order = self.make_order('pending', payment_method=method)
+                self.assertNotIn('failed', [v for v, _ in order.allowed_next_statuses])
+                response = self.post_status(order, 'failed', next='detail', follow=True)
+                order.refresh_from_db()
+                self.assertEqual(order.status, 'pending')
+                self.assertContains(response, 'Trạng thái chuyển đổi không hợp lệ.')
+
+    def test_scrum57_mock_pending_can_become_failed(self):
+        """Đơn Mock "Chờ xử lý" vẫn chuyển được sang "Thanh toán thất bại" (luồng Mock thất bại)."""
+        order = self.make_order('pending', payment_method='mock')
+        expected = ALLOWED['pending'] | MOCK_EXTRA['pending']
+        self.assertEqual({v for v, _ in order.allowed_next_statuses}, expected)
+        self.post_status(order, 'failed')
+        order.refresh_from_db()
+        self.assertEqual(order.status, 'failed')
+
+    def test_scrum57_mock_all_state_pairs(self):
+        """Đơn Mock: 64 cặp trạng thái theo ALLOWED cộng thêm MOCK_EXTRA."""
+        for start in ALL_STATES:
+            for target in ALL_STATES:
+                with self.subTest(start=start, target=target):
+                    order = self.make_order(start, payment_method='mock')
+                    self.post_status(order, target)
+                    order.refresh_from_db()
+                    allowed = ALLOWED[start] | MOCK_EXTRA.get(start, set())
+                    self.assertEqual(order.status, target if target in allowed else start)
