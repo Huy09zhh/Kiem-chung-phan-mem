@@ -1,6 +1,0 @@
-$kind: http-request
-url: http://127.0.0.1:8000/products/api/1/
-method: DELETE
-settings:
-  followRedirects: true
-order: 7000

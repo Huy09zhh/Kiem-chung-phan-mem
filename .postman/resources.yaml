@@ -5,7 +5,6 @@ workspace:
 
 cloudResources:
   collections:
-    ../postman/collections/Green Shop API: 58627368-cfe57e43-8f55-40d3-821e-203978456a76
     ../postman/collections/Green Shop - Products & Search (TC-PS): 58893816-111f01d2-569f-448a-b344-3ee290b9cb88
     ../postman/collections/Green Shop - Account & Auth (TC-AA): 58973177-58340651-07b8-41a7-a551-9b95741991c8
     ../postman/collections/Green Shop - Bổ sung test case BVA (TC-BVA-001 → 031): 51f7ded2-1da5-4b53-9c4b-1b19e1eae154
