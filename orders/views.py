@@ -8,6 +8,24 @@ from .models import ORDER_TOTAL_MAX, Order, OrderItem
 from cart.models import Cart
 
 
+def _clear_order_items_from_cart(user, order):
+    try:
+        cart = user.cart
+        if not order.items.exists():
+            cart.items.all().delete()
+            return
+        for order_item in order.items.all():
+            cart_item = cart.items.filter(product__name=order_item.product_name).first()
+            if cart_item:
+                if cart_item.quantity <= order_item.quantity:
+                    cart_item.delete()
+                else:
+                    cart_item.quantity -= order_item.quantity
+                    cart_item.save(update_fields=['quantity'])
+    except Cart.DoesNotExist:
+        pass
+
+
 def get_qr_info(order):
     bank_name = getattr(settings, 'BANK_QR_NAME', 'MB Bank')
     bank_id = getattr(settings, 'BANK_QR_BANK_ID', 'mbbank')
@@ -116,7 +134,7 @@ def checkout(request):
                     quantity=item.quantity,
                 )
 
-            if payment_method in ['cod', 'qr']:
+            if payment_method == 'cod':
                 cart.items.all().delete()
 
         if payment_method == 'cod':
@@ -158,11 +176,7 @@ def confirm_qr_paid(request, order_id):
     if request.method == 'POST' and order.payment_method == 'qr' and order.status == 'awaiting_transfer':
         order.status = 'paid'
         order.save(update_fields=['status'])
-
-        try:
-            request.user.cart.items.all().delete()
-        except Cart.DoesNotExist:
-            pass
+        _clear_order_items_from_cart(request.user, order)
 
     return redirect('orders:order_success', order_id=order.id)
 
@@ -181,12 +195,7 @@ def mock_payment_success(request, order_id):
     if request.method == 'POST' and order.payment_method == 'mock' and order.can_change_to('paid'):
         order.status = 'paid'
         order.save(update_fields=['status'])
-
-        try:
-            cart = request.user.cart
-            cart.items.all().delete()
-        except Cart.DoesNotExist:
-            pass
+        _clear_order_items_from_cart(request.user, order)
 
     return redirect('orders:order_success', order_id=order.id)
 

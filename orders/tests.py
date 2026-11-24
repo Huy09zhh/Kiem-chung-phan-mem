@@ -321,14 +321,14 @@ class QrFlowTests(OrderTestBase):
         self.login()
 
     def test_ord_29_qr_creates_awaiting_transfer_and_redirects_qr_page(self):
-        """TC-ORD-29: QR -> Order awaiting_transfer, giỏ rỗng, chuyển /orders/qr/<id>/."""
+        """TC-ORD-29: QR -> Order awaiting_transfer, giữ giỏ hàng, chuyển /orders/qr/<id>/."""
         self.fill_cart((self.p_a, 1))
         r = self.checkout(payment_method='qr')
         o = Order.objects.get()
         self.assertEqual(r.status_code, 302)
         self.assertEqual(r.url, f'/orders/qr/{o.id}/')
         self.assertEqual((o.status, o.payment_method), ('awaiting_transfer', 'qr'))
-        self.assertEqual(self.cart_count(), 0)
+        self.assertEqual(self.cart_count(), 1)
 
     def test_ord_30_qr_page_has_correct_qr_url_amount_and_note(self):
         """TC-ORD-30: Trang QR -> ảnh VietQR đúng STK, số tiền, nội dung THANH TOAN DH{id}."""
@@ -949,12 +949,12 @@ class WhiteBoxCoverageTests(OrderTestBase):
         self.assertRedirects(res, f'/orders/success/{order.id}/')
 
     def test_wb_12_cfg_checkout_qr_full_path(self):
-        """TC-WB-12 [Path]: Đặt hàng QR hợp lệ -> status awaiting_transfer, redirect qr."""
+        """TC-WB-12 [Path]: Đặt hàng QR hợp lệ -> status awaiting_transfer, giữ giỏ hàng, redirect qr."""
         self.fill_cart((self.p_a, 1))
         res = self.client.post('/orders/checkout/', self.data(payment_method='qr'))
         order = Order.objects.filter(user=self.user).latest('id')
         self.assertEqual(order.status, 'awaiting_transfer')
-        self.assertEqual(self.cart_count(), 0)
+        self.assertEqual(self.cart_count(), 1)
         self.assertRedirects(res, f'/orders/qr/{order.id}/')
 
     def test_wb_13_cfg_checkout_mock_full_path(self):

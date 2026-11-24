@@ -116,7 +116,7 @@
 | TC-ORD-27 | FR4.3 | Tổng tiền = Σ giá × SL | V7 | A×2 (50.000) + B×1 (30.000) | total_price = 130.000 | PASS |  |
 | TC-ORD-28 | BR04.2 | Gửi lại form lần 2 | I3 | Đặt COD xong, POST lại cùng dữ liệu | 302 → /cart/; vẫn chỉ 1 Order | PASS |  |
 | **E. FR4.4 Thanh toán VietQR** | | | | | | | |
-| TC-ORD-29 | FR4.4 | QR tạo đơn awaiting_transfer | V8 | payment_method=qr | 302 → /orders/qr/<id>/; status=awaiting_transfer; giỏ rỗng | PASS |  |
+| TC-ORD-29 | FR4.4 | QR tạo đơn awaiting_transfer | V8 | payment_method=qr | 302 → /orders/qr/<id>/; status=awaiting_transfer; giữ giỏ hàng | PASS |  |
 | TC-ORD-30 | FR4.4 | Trang QR đúng thông tin | V8 | Đơn qr, total 150.000 | Ảnh img.vietqr.io có STK, amount=150000, addInfo=THANH TOAN DH{id}; có nút xác nhận | PASS |  |
 | TC-ORD-31 | FR4.4 | Xác nhận đã chuyển khoản | V8 | POST /orders/qr/<id>/confirm/ trên đơn awaiting_transfer | status=paid; 302 → success | PASS |  |
 | TC-ORD-32 | FR4.4 | Confirm bằng GET | V8 | GET /orders/qr/<id>/confirm/ | Không đổi trạng thái | PASS |  |
