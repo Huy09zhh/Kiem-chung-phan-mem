@@ -13,4 +13,6 @@ scripts:
         pm.expect(text).to.include('Thanh toán khi nhận hàng');
       });
     language: text/javascript
+settings:
+  followRedirects: true
 order: 2000

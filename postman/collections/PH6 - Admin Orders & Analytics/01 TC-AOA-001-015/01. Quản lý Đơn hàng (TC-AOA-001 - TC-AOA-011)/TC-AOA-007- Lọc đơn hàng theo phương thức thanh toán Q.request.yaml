@@ -14,5 +14,6 @@ scripts:
           pm.expect(pm.response.text()).to.include('Chuyển khoản bằng QR');
       });
     language: text/javascript
-settings: {}
+settings:
+  followRedirects: true
 order: 7000

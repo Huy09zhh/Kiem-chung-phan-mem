@@ -6,5 +6,6 @@ scripts:
   - type: afterResponse
     code: "pm.test('Server trả 200', () => pm.response.to.have.status(200));\nconst m = pm.response.text().match(/name=[\"']csrfmiddlewaretoken[\"'][^>]*value=[\"']([^\"']+)[\"']/);\npm.test('Có CSRF token', () => pm.expect(m).to.not.be.null);\nif (m) pm.collectionVariables.set('csrf_token', m[1]);"
     language: text/javascript
-settings: {}
+settings:
+  followRedirects: true
 order: 1000

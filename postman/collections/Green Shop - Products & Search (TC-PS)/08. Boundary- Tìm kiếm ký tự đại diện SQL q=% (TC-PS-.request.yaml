@@ -36,5 +36,6 @@ scripts:
 
       });\r\n"
     language: text/javascript
-settings: {}
+settings:
+  followRedirects: true
 order: 8000

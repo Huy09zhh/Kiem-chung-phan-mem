@@ -17,4 +17,6 @@ scripts:
       pm.test('Tạo sản phẩm thành công và chuyển hướng (Status 302)', function () {
           pm.expect(pm.response.code).to.eql(302);
       });
+settings:
+  followRedirects: false
 order: 3000

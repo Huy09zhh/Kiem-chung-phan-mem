@@ -18,4 +18,6 @@ scripts:
           var sid = pm.cookies.get('sessionid') || pm.response.cookies.get('sessionid');
           pm.expect(sid).to.not.be.undefined;
       });
+settings:
+  followRedirects: false
 order: 2000

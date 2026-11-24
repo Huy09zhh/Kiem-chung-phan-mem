@@ -22,4 +22,6 @@ scripts:
     ok(!html.includes('hacked_status'), 'Trang có chứa hacked_status');
     });
   language: text/javascript
+settings:
+  followRedirects: true
 order: 15000

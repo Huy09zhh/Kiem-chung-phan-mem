@@ -17,5 +17,6 @@ scripts:
           pm.collectionVariables.set('csrf_token', match[1]);
       }
     language: text/javascript
-settings: {}
+settings:
+  followRedirects: true
 order: 9000

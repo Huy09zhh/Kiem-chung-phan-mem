@@ -19,4 +19,6 @@ scripts:
       pm.test('Trang báo lỗi: Giá bán tối thiểu là 1.000 VNĐ', function () {
           pm.expect(pm.response.text()).to.include('Giá bán tối thiểu là 1.000 VNĐ');
       });
+settings:
+  followRedirects: false
 order: 9000

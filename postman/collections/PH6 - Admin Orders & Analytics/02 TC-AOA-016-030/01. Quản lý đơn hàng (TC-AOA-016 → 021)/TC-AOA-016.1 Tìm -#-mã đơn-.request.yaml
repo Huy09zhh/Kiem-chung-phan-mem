@@ -26,4 +26,6 @@ scripts:
     ok(ids.length === 1 && ids[0] === id, 'Mong đợi chỉ đơn #' + id + ', thực tế: [' + ids.join(', ') + ']');
     });
   language: text/javascript
+settings:
+  followRedirects: true
 order: 1000

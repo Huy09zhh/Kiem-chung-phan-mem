@@ -23,4 +23,6 @@ scripts:
     ok(html.includes('Cảm ơn bạn đã gửi góp ý'), 'Thiếu thông báo cảm ơn');
     });
   language: text/javascript
+settings:
+  followRedirects: true
 order: 8000

@@ -20,4 +20,6 @@ scripts:
         setcv('perm_before', s); setcv('perm_target', NEXT_OK[s]);
       });
     language: text/javascript
+settings:
+  followRedirects: true
 order: 1000

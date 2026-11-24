@@ -26,4 +26,6 @@ scripts:
         setcv('pid_103', id);
       });
     language: text/javascript
+settings:
+  followRedirects: true
 order: 7000

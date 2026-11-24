@@ -19,4 +19,6 @@ scripts:
       pm.test('Hiển thị thông báo lỗi: Bắt buộc', function () {
           pm.expect(pm.response.text()).to.include('Bắt buộc');
       });
+settings:
+  followRedirects: false
 order: 6000

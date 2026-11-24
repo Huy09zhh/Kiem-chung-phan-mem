@@ -21,4 +21,6 @@ scripts:
     ok(/<input[^>]*name="is_resolved"[^>]*checked/.test(html), 'Ô is_resolved chưa được tích');
     });
   language: text/javascript
+settings:
+  followRedirects: true
 order: 11000

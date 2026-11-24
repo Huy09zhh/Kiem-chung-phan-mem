@@ -16,4 +16,6 @@ scripts:
       pm.test('Cập nhật thành công gỡ giá cũ (Status 302)', function () {
           pm.expect(pm.response.code).to.eql(302);
       });
+settings:
+  followRedirects: false
 order: 3000

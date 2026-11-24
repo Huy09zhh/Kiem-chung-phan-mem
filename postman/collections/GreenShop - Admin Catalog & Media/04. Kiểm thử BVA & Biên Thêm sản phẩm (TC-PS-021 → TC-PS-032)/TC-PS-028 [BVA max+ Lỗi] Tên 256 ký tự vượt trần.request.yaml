@@ -19,4 +19,6 @@ scripts:
       pm.test('Trang báo lỗi: Không lưu được sản phẩm', function () {
           pm.expect(pm.response.text()).to.include('Không lưu được sản phẩm');
       });
+settings:
+  followRedirects: false
 order: 8000

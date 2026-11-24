@@ -17,4 +17,6 @@ scripts:
       pm.test('Thời gian phản hồi < 500ms', function () {
           pm.expect(pm.response.responseTime).to.be.below(500);
       });
+settings:
+  followRedirects: false
 order: 1000

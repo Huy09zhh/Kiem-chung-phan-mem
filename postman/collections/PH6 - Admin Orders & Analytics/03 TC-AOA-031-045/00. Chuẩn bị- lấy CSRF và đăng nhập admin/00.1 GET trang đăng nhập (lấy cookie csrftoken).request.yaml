@@ -29,4 +29,6 @@ scripts:
     ok(pm.cookies.has('csrftoken'), 'Chưa có cookie csrftoken; kiểm tra lại server đang chạy ở base_url');
     });
   language: text/javascript
+settings:
+  followRedirects: true
 order: 1000

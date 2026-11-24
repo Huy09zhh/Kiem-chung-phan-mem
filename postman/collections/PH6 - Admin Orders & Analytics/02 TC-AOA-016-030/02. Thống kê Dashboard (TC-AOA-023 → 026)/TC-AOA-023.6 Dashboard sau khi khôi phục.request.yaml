@@ -37,4 +37,6 @@ scripts:
     ok(D.revenue === after, 'Đơn hủy đã bị khôi phục: doanh thu mong đợi ' + after + ', thực tế ' + D.revenue);
     });
   language: text/javascript
+settings:
+  followRedirects: true
 order: 6000

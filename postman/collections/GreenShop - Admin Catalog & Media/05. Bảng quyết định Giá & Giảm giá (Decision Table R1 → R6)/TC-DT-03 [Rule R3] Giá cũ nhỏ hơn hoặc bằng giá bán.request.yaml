@@ -19,4 +19,6 @@ scripts:
       pm.test('Hiển thị thông báo lỗi: Giá cũ phải lớn hơn giá bán', function () {
           pm.expect(pm.response.text()).to.include('Giá cũ phải lớn hơn giá bán');
       });
+settings:
+  followRedirects: false
 order: 3000

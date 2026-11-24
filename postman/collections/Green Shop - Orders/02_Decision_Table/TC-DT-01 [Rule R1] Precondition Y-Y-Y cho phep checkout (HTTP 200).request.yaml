@@ -24,4 +24,6 @@ scripts:
         pm.expect(pm.response.code).to.eql(200);
       });
     language: text/javascript
+settings:
+  followRedirects: true
 order: 1000

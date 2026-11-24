@@ -19,4 +19,6 @@ scripts:
       pm.test('Trang báo lỗi: Giá bán không được vượt quá 100.000.000 VNĐ', function () {
           pm.expect(pm.response.text()).to.include('Giá bán không được vượt quá 100.000.000 VNĐ');
       });
+settings:
+  followRedirects: false
 order: 10000

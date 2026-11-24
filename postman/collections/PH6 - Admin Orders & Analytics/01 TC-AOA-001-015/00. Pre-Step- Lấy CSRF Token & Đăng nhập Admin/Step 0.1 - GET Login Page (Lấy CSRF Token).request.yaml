@@ -14,5 +14,6 @@ scripts:
           console.log('CSRF Token captured:', match[1]);
       }
     language: text/javascript
-settings: {}
+settings:
+  followRedirects: true
 order: 1000

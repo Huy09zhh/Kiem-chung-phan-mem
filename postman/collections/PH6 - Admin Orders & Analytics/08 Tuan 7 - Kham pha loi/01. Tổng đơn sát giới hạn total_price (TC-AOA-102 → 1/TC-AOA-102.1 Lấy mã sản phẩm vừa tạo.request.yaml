@@ -20,4 +20,6 @@ scripts:
         setcv('pid_102', id);
       });
     language: text/javascript
+settings:
+  followRedirects: true
 order: 2000

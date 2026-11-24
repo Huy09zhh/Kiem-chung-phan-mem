@@ -23,4 +23,6 @@ scripts:
     ok(pm.cookies.has('csrftoken'), 'Chưa có cookie csrftoken');
     });
   language: text/javascript
+settings:
+  followRedirects: true
 order: 1000

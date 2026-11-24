@@ -1,5 +1,5 @@
 $kind: collection
-name: "PH6 - Admin Orders & Analytics (Quân)"
+name: PH6 - Admin Orders & Analytics (Quân)
 description: |-
   Phân hệ 6: Admin Orders & Analytics (Nguyễn Lê Minh Quân).
   Gộp từ 8 collection cũ, mỗi collection cũ là một folder (01 → 08), giữ nguyên request và test.
@@ -72,7 +72,7 @@ variables:
   kw_max_plus1: ""
   flow_order_id: "8"
   cancel_order_id: "10"
-  qr_order_id: ""
+  qr_order_id: "11"
   anon_url: http://localhost:8000
   cust_username: ""
   cust_password: ""

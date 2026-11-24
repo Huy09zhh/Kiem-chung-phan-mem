@@ -20,4 +20,6 @@ scripts:
     ok(pm.response.code === 200, 'HTTP ' + pm.response.code);
     });
   language: text/javascript
+settings:
+  followRedirects: true
 order: 1000

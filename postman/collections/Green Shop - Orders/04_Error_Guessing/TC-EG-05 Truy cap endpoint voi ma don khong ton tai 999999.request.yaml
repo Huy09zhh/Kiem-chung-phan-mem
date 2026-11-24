@@ -8,4 +8,6 @@ scripts:
         pm.expect(pm.response.code).to.eql(404);
       });
     language: text/javascript
+settings:
+  followRedirects: true
 order: 5000

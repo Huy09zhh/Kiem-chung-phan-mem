@@ -9,4 +9,6 @@ scripts:
       pm.test('Mở form thêm sản phẩm thành công (Status 200 OK - Không lỗi TemplateDoesNotExist)', function () {
           pm.response.to.have.status(200);
       });
+settings:
+  followRedirects: false
 order: 2000

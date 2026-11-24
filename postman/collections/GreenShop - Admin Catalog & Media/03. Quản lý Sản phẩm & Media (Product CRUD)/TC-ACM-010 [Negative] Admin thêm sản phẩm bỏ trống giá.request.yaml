@@ -18,4 +18,6 @@ scripts:
       pm.test('Báo lỗi trường giá bắt buộc nhập', function () {
           pm.expect(pm.response.text()).to.include('Bắt buộc');
       });
+settings:
+  followRedirects: false
 order: 4000

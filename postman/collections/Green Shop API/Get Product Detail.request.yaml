@@ -31,4 +31,6 @@ scripts:
 
       });\r\n"
     language: text/javascript
+settings:
+  followRedirects: true
 order: 3000

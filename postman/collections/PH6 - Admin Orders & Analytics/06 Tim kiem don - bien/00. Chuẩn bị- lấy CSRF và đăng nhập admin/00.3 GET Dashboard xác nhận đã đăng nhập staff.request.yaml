@@ -19,4 +19,6 @@ scripts:
       ok(pm.response.code === 200, 'Không vào được trang quản trị (HTTP ' + pm.response.code + '). Tài khoản có is_staff=True chưa?');
       });
     language: text/javascript
+settings:
+  followRedirects: true
 order: 3000

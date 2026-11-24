@@ -22,4 +22,6 @@ scripts:
     ok(html.includes('Trạng thái hiện tại:</strong> ' + LABEL[cv('target_status')]), 'Nhãn Trạng thái hiện tại không khớp');
     });
   language: text/javascript
+settings:
+  followRedirects: true
 order: 10000

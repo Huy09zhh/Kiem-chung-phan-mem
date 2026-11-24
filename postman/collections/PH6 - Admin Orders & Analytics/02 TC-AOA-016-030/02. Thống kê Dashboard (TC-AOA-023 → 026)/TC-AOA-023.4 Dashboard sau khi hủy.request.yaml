@@ -41,4 +41,6 @@ scripts:
     ok(D.paid === parseInt(cv('paid_before'), 10) - 1, 'Đã thanh toán: trước ' + cv('paid_before') + ', sau ' + D.paid);
     });
   language: text/javascript
+settings:
+  followRedirects: true
 order: 4000

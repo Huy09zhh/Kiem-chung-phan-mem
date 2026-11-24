@@ -30,4 +30,6 @@ scripts:
     ok(html.includes('Chưa có đơn hàng nào.'), 'Thiếu thông báo Chưa có đơn hàng nào.');
     });
   language: text/javascript
+settings:
+  followRedirects: true
 order: 4000

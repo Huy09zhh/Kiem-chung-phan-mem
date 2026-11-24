@@ -22,4 +22,6 @@ scripts:
     if (mm) { setcv('csrf_token_val', mm[1]); }
     });
   language: text/javascript
+settings:
+  followRedirects: true
 order: 7000

@@ -23,4 +23,6 @@ scripts:
     ok(html.includes('Gửi liên hệ thành công'), 'Thiếu thông báo thành công');
     });
   language: text/javascript
+settings:
+  followRedirects: true
 order: 3000

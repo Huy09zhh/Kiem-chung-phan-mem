@@ -16,4 +16,6 @@ scripts:
       const ALLOWED = { pending: ['paid','confirmed','cancelled'], awaiting_transfer: ['paid','failed','cancelled'], paid: ['confirmed','cancelled'], failed: ['awaiting_transfer','cancelled'], confirmed: ['shipping','cancelled'], shipping: ['completed','cancelled'] };
       pm.test('Trang đăng nhập mở được', function () { ok(pm.response.code === 200, 'HTTP ' + pm.response.code); });
     language: text/javascript
+settings:
+  followRedirects: true
 order: 2000

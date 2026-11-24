@@ -16,4 +16,6 @@ scripts:
       pm.test('Status code 302 chuyển hướng thành công', function () {
           pm.expect(pm.response.code).to.eql(302);
       });
+settings:
+  followRedirects: false
 order: 2000

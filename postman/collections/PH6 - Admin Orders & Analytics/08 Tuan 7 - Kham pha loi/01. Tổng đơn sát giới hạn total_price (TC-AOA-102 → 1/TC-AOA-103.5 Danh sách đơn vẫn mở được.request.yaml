@@ -11,4 +11,6 @@ scripts:
   - type: afterResponse
     code: pm.test('SCRUM-50 | Danh sách đơn mở được sau khi có đơn tổng 100.000.000 (không 500)', function () { if (pm.response.code !== 200) { throw new Error('HTTP ' + pm.response.code); } });
     language: text/javascript
+settings:
+  followRedirects: true
 order: 18000

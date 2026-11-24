@@ -50,4 +50,6 @@ scripts:
     ok(bars.every((b) => b[1] === D.total), 'max của thanh khác tổng số đơn');
     });
   language: text/javascript
+settings:
+  followRedirects: true
 order: 7000

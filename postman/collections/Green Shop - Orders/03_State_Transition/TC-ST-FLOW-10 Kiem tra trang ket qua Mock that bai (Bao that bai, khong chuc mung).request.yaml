@@ -13,4 +13,6 @@ scripts:
         pm.expect(text).to.not.include('Đặt hàng thành công');
       });
     language: text/javascript
+settings:
+  followRedirects: true
 order: 10000

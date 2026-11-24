@@ -20,4 +20,6 @@ scripts:
         setcv('reject_before', s); setcv('reject_bad', NEXT_BAD[s]);
       });
     language: text/javascript
+settings:
+  followRedirects: true
 order: 1000

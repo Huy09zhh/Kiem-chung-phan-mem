@@ -9,4 +9,6 @@ scripts:
       pm.test('Bắt đúng mã lỗi không tìm thấy (Status 404 Not Found)', function () {
           pm.response.to.have.status(404);
       });
+settings:
+  followRedirects: false
 order: 5000

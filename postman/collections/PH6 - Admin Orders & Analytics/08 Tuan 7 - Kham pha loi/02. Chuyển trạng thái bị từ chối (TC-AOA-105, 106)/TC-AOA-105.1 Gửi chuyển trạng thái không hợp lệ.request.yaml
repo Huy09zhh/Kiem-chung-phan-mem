@@ -26,4 +26,6 @@ scripts:
         ok(/không hợp lệ|không thể|không được phép|không cho phép|bị từ chối/i.test(html), 'Trang không có thông báo nào: yêu cầu bị bỏ qua âm thầm');
       });
     language: text/javascript
+settings:
+  followRedirects: true
 order: 2000

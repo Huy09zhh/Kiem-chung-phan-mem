@@ -23,4 +23,6 @@ scripts:
     setcv('top6_ids', JSON.stringify(ids.slice(0, 6)));
     });
   language: text/javascript
+settings:
+  followRedirects: true
 order: 9000

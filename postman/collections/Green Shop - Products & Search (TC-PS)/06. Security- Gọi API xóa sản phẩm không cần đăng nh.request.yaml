@@ -10,5 +10,6 @@ scripts:
           pm.expect(pm.response.code).to.be.oneOf([401, 403]);
       });
     language: text/javascript
-settings: {}
+settings:
+  followRedirects: true
 order: 6000

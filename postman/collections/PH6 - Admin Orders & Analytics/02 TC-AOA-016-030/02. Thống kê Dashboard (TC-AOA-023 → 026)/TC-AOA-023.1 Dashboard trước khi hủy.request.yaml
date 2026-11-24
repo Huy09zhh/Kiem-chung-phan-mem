@@ -38,4 +38,6 @@ scripts:
     setcv('rev_before', D.revenue); setcv('paid_before', D.paid); setcv('cancelled_before', D.cancelled);
     });
   language: text/javascript
+settings:
+  followRedirects: true
 order: 1000

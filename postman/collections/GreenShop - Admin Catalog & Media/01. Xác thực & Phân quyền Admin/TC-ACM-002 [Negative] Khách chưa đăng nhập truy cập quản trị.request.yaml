@@ -9,4 +9,6 @@ scripts:
       pm.test('Bị chặn và chuyển hướng đăng nhập (Status 302)', function () {
           pm.expect(pm.response.code).to.eql(302);
       });
+settings:
+  followRedirects: false
 order: 2000

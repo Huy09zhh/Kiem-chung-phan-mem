@@ -21,4 +21,6 @@ scripts:
         ok(extra.length === 0, 'Ô chọn còn hiện trạng thái không chuyển được: ' + extra.join(', '));
       });
     language: text/javascript
+settings:
+  followRedirects: true
 order: 3000

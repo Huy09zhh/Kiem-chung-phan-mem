@@ -21,4 +21,6 @@ scripts:
     ok(html.includes('Chi tiết đơn hàng #' + cv('first_recent_id')), 'Không đúng đơn #' + cv('first_recent_id'));
     });
   language: text/javascript
+settings:
+  followRedirects: true
 order: 15000

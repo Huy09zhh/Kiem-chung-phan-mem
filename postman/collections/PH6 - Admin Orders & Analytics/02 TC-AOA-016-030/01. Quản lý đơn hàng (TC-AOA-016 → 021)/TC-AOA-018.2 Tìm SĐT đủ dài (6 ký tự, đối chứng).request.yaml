@@ -24,4 +24,6 @@ scripts:
     ok(html.includes(cv('phone_known')), 'Kết quả không chứa SĐT ' + cv('phone_known'));
     });
   language: text/javascript
+settings:
+  followRedirects: true
 order: 5000

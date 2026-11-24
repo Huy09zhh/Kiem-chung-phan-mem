@@ -19,4 +19,6 @@ scripts:
       pm.test('Trang báo lỗi: Tên sản phẩm phải có độ dài tối thiểu 2 ký tự', function () {
           pm.expect(pm.response.text()).to.include('Tên sản phẩm phải có độ dài tối thiểu 2 ký tự');
       });
+settings:
+  followRedirects: false
 order: 7000

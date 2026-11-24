@@ -23,4 +23,6 @@ scripts:
     setcv('orig_status', cur);
     });
   language: text/javascript
+settings:
+  followRedirects: true
 order: 12000

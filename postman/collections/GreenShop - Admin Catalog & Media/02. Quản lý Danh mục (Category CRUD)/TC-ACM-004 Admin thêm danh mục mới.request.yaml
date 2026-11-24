@@ -13,4 +13,6 @@ scripts:
       pm.test('Tạo danh mục chuyển hướng thành công (Status 302)', function () {
           pm.expect(pm.response.code).to.eql(302);
       });
+settings:
+  followRedirects: false
 order: 2000

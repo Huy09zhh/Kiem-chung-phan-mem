@@ -31,5 +31,6 @@ scripts:
 
       });"
     language: text/javascript
-settings: {}
+settings:
+  followRedirects: true
 order: 10000

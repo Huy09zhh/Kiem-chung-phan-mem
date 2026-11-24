@@ -14,4 +14,6 @@ scripts:
           pm.expect(token).to.not.be.undefined;
           pm.collectionVariables.set('csrf_token', token);
       });
+settings:
+  followRedirects: false
 order: 1000

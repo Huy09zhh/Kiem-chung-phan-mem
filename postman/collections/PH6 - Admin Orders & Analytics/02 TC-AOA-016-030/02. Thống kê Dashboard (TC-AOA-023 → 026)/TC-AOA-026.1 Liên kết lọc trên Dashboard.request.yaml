@@ -40,4 +40,6 @@ scripts:
     setcv('first_recent_id', D.recent.length ? D.recent[0] : '');
     });
   language: text/javascript
+settings:
+  followRedirects: true
 order: 11000

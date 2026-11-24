@@ -21,4 +21,6 @@ scripts:
     ok(/<input[^>]*name="is_reviewed"[^>]*checked/.test(html), 'Ô is_reviewed chưa được tích');
     });
   language: text/javascript
+settings:
+  followRedirects: true
 order: 14000

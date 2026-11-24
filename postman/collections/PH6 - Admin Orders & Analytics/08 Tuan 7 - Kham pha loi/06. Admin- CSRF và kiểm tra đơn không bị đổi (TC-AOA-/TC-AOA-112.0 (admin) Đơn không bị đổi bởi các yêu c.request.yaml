@@ -19,4 +19,6 @@ scripts:
         ok(selectedStatus() === cv('perm_before'), 'Trạng thái đổi từ ' + cv('perm_before') + ' sang ' + selectedStatus());
       });
     language: text/javascript
+settings:
+  followRedirects: true
 order: 5000

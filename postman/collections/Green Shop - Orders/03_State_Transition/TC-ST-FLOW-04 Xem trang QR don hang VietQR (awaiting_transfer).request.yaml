@@ -11,4 +11,6 @@ scripts:
         pm.expect(pm.response.text()).to.include('THANH TOAN DH');
       });
     language: text/javascript
+settings:
+  followRedirects: true
 order: 4000

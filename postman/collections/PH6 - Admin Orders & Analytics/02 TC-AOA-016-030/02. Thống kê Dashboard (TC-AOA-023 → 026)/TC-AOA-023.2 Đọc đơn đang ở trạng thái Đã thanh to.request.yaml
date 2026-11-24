@@ -24,4 +24,6 @@ scripts:
     setcv('order_total', total);
     });
   language: text/javascript
+settings:
+  followRedirects: true
 order: 2000

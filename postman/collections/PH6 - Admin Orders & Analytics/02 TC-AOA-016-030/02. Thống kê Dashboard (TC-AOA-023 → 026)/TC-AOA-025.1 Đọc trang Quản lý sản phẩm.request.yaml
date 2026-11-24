@@ -26,4 +26,6 @@ scripts:
     setcv('prod_rows', rows); setcv('prod_featured', feat); setcv('prod_flash', flash);
     });
   language: text/javascript
+settings:
+  followRedirects: true
 order: 8000

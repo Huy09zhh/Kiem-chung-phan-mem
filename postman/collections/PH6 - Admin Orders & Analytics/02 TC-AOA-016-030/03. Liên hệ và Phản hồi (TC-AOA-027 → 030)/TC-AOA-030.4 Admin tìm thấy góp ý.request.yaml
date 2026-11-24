@@ -25,4 +25,6 @@ scripts:
     setcv('feedback_id', id);
     });
   language: text/javascript
+settings:
+  followRedirects: true
 order: 12000

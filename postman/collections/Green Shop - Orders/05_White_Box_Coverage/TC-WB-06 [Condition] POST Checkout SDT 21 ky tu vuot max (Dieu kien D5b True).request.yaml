@@ -35,4 +35,6 @@ scripts:
       });
       var t = pm.cookies.get('csrftoken'); if (t) { pm.collectionVariables.set('csrf_token', t); }
     language: text/javascript
+settings:
+  followRedirects: true
 order: 6000

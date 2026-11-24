@@ -28,4 +28,6 @@ scripts:
         ['cod','qr','mock'].forEach(m => pm.expect(h).to.include('value="' + m + '"'));
       });
     language: text/javascript
+settings:
+  followRedirects: true
 order: 1000

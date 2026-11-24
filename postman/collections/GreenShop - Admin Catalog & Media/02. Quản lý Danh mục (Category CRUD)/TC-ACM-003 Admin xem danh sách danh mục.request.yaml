@@ -12,4 +12,6 @@ scripts:
       pm.test('Trang chứa tiêu đề Danh mục', function () {
           pm.expect(pm.response.text()).to.include('Danh mục');
       });
+settings:
+  followRedirects: false
 order: 1000

@@ -27,4 +27,6 @@ scripts:
     ok(html.includes('Tổng cộng'), 'Thiếu dòng Tổng cộng');
     });
   language: text/javascript
+settings:
+  followRedirects: true
 order: 3000

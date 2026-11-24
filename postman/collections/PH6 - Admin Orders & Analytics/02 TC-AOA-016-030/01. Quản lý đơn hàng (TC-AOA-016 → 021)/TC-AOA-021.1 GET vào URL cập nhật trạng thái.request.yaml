@@ -20,4 +20,6 @@ scripts:
     ok(pm.response.code === 405, 'Mong đợi 405, thực tế ' + pm.response.code);
     });
   language: text/javascript
+settings:
+  followRedirects: true
 order: 13000

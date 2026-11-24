@@ -24,4 +24,6 @@ scripts:
     setcv('target_status', cur === 'confirmed' ? 'shipping' : 'confirmed');
     });
   language: text/javascript
+settings:
+  followRedirects: true
 order: 8000
