@@ -1,0 +1,29 @@
+$kind: http-request
+name: '26. Boundary: Giá cũ 100.000.001 đ > max (TC-PS-032)'
+url: '{{baseUrl}}/products/api/'
+method: POST
+headers:
+- key: Content-Type
+  value: application/json
+- key: Authorization
+  value: Basic dGVzdF9hZG1pbjphZG1pbjEyMw==
+body:
+  type: json
+  content: |-
+    {
+      "name": "Cây Đa Búp Đỏ Cỡ Lớn",
+      "price": "50000",
+      "description": "Giá cũ 100.000.001 đ (> 100.000.000 đ max)",
+      "old_price": "100000001"
+    }
+scripts:
+- type: afterResponse
+  code: |-
+    // Kỳ vọng: Hệ thống từ chối dữ liệu không hợp lệ (HTTP 400 Bad Request)
+    pm.test("[TC-PS-032] Từ chối dữ liệu vi phạm biên (HTTP 400)", function () {
+        pm.expect(pm.response.code).to.be.oneOf([400, 422]);
+    });
+  language: text/javascript
+settings:
+  followRedirects: true
+order: 26000

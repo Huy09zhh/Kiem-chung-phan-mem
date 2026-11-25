@@ -1,0 +1,28 @@
+$kind: http-request
+name: '29. State Transition: Đang giảm giá -> Giá thường (TC-PS-035)'
+url: '{{baseUrl}}/products/api/{{stt_product_id}}/'
+method: PATCH
+headers:
+- key: Content-Type
+  value: application/json
+- key: Authorization
+  value: Basic dGVzdF9hZG1pbjphZG1pbjEyMw==
+body:
+  type: json
+  content: |-
+    {
+      "old_price": null
+    }
+scripts:
+- type: afterResponse
+  code: |-
+    pm.test("[TC-PS-035] Tắt giảm giá về Giá thường thành công (HTTP 200)", function () {
+        pm.response.to.have.status(200);
+        var jsonData = pm.response.json();
+        pm.expect(Boolean(jsonData.has_discount)).to.eql(false);
+        pm.expect(jsonData.discount_percent).to.eql(0);
+    });
+  language: text/javascript
+settings:
+  followRedirects: true
+order: 29000

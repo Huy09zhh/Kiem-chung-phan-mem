@@ -1,0 +1,24 @@
+$kind: http-request
+name: '34. Decision Table 1 (R3): PUT chi tiết SP khi chưa đăng nhập (TC-PS-040)'
+url: '{{baseUrl}}/products/api/2/'
+method: PUT
+headers:
+- key: Content-Type
+  value: application/json
+body:
+  type: json
+  content: |-
+    {
+      "name": "Sửa không quyền",
+      "price": "10000"
+    }
+scripts:
+- type: afterResponse
+  code: |-
+    pm.test("[TC-PS-040] R3: Guest sửa SP bị chặn 401", function () {
+        pm.response.to.have.status(401);
+    });
+  language: text/javascript
+settings:
+  followRedirects: true
+order: 34000

@@ -1,0 +1,24 @@
+$kind: http-request
+name: '31. State Transition: Guest không quyền chuyển trạng thái (TC-PS-037)'
+url: '{{baseUrl}}/products/api/'
+method: POST
+headers:
+- key: Content-Type
+  value: application/json
+body:
+  type: json
+  content: |-
+    {
+      "name": "SP không quyền",
+      "price": "10000"
+    }
+scripts:
+- type: afterResponse
+  code: |-
+    pm.test("[TC-PS-037] Khách chưa đăng nhập bị chặn (401 hoặc 403)", function () {
+        pm.expect(pm.response.code).to.be.oneOf([401, 403]);
+    });
+  language: text/javascript
+settings:
+  followRedirects: true
+order: 31000

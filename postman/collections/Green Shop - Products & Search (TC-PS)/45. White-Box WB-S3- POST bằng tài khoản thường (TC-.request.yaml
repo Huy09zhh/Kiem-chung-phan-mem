@@ -1,0 +1,26 @@
+$kind: http-request
+name: '45. White-Box WB-S3: POST bằng tài khoản thường (TC-PS-051)'
+url: '{{baseUrl}}/products/api/'
+method: POST
+headers:
+- key: Content-Type
+  value: application/json
+- key: Authorization
+  value: Basic dXNlcjE6VXNlckAxMjM0NQ==
+body:
+  type: json
+  content: |-
+    {
+      "name": "Cây User Thường",
+      "price": 50000
+    }
+scripts:
+- type: afterResponse
+  code: |-
+    pm.test("[WB-S3] User thường không có quyền Staff (Status 403 Forbidden)", function () {
+        pm.response.to.have.status(403);
+    });
+  language: text/javascript
+settings:
+  followRedirects: true
+order: 45000

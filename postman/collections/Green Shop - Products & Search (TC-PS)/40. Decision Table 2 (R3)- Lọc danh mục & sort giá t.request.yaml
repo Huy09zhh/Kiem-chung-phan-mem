@@ -1,0 +1,18 @@
+$kind: http-request
+name: '40. Decision Table 2 (R3): Lọc danh mục & sort giá tăng dần (TC-PS-046)'
+url: '{{baseUrl}}/products/?category=1&sort=price_asc'
+method: GET
+headers:
+- key: Content-Type
+  value: application/json
+scripts:
+- type: afterResponse
+  code: |-
+    pm.test("[TC-PS-046] R3: Lọc danh mục và sort giá tăng 200 OK", function () {
+        pm.response.to.have.status(200);
+        pm.expect(pm.response.text()).to.include("Tất cả sản phẩm");
+    });
+  language: text/javascript
+settings:
+  followRedirects: true
+order: 40000

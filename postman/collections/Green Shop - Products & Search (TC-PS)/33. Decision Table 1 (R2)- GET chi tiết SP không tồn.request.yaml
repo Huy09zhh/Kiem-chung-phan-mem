@@ -1,0 +1,17 @@
+$kind: http-request
+name: '33. Decision Table 1 (R2): GET chi tiết SP không tồn tại (TC-PS-039)'
+url: '{{baseUrl}}/products/api/999999/'
+method: GET
+headers:
+- key: Content-Type
+  value: application/json
+scripts:
+- type: afterResponse
+  code: |-
+    pm.test("[TC-PS-039] R2: GET SP không tồn tại trả 404", function () {
+        pm.response.to.have.status(404);
+    });
+  language: text/javascript
+settings:
+  followRedirects: true
+order: 33000

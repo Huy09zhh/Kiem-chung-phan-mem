@@ -1,0 +1,25 @@
+$kind: http-request
+name: '35. Decision Table 1 (R4): PATCH chi tiết SP bằng User thường (TC-PS-041)'
+url: '{{baseUrl}}/products/api/2/'
+method: PATCH
+headers:
+- key: Content-Type
+  value: application/json
+- key: Authorization
+  value: Basic dXNlcjE6VXNlckAxMjM0NQ==
+body:
+  type: json
+  content: |-
+    {
+      "price": "10000"
+    }
+scripts:
+- type: afterResponse
+  code: |-
+    pm.test("[TC-PS-041] R4: User thường sửa SP bị chặn 403", function () {
+        pm.response.to.have.status(403);
+    });
+  language: text/javascript
+settings:
+  followRedirects: true
+order: 35000

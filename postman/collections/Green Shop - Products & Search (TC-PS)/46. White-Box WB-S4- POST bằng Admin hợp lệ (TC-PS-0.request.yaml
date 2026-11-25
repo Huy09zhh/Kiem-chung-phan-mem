@@ -1,0 +1,28 @@
+$kind: http-request
+name: '46. White-Box WB-S4: POST bằng Admin hợp lệ (TC-PS-052)'
+url: '{{baseUrl}}/products/api/'
+method: POST
+headers:
+- key: Content-Type
+  value: application/json
+- key: Authorization
+  value: Basic dGVzdF9hZG1pbjphZG1pbjEyMw==
+body:
+  type: json
+  content: |-
+    {
+      "name": "Cây Trúc Phát Tài WB",
+      "price": 60000,
+      "old_price": 90000
+    }
+scripts:
+- type: afterResponse
+  code: |-
+    pm.test("[WB-S4] Admin tạo sản phẩm thành công (Status 201 Created)", function () {
+        pm.response.to.have.status(201);
+        pm.expect(pm.response.json().name).to.eql("Cây Trúc Phát Tài WB");
+    });
+  language: text/javascript
+settings:
+  followRedirects: true
+order: 46000

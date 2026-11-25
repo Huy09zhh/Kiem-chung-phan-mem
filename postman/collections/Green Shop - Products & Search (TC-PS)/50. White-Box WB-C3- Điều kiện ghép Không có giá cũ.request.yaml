@@ -1,0 +1,26 @@
+$kind: http-request
+name: '50. White-Box WB-C3: Điều kiện ghép Không có giá cũ (TC-PS-056)'
+url: '{{baseUrl}}/products/api/'
+method: POST
+headers:
+- key: Content-Type
+  value: application/json
+- key: Authorization
+  value: Basic dGVzdF9hZG1pbjphZG1pbjEyMw==
+body:
+  type: json
+  content: |-
+    {
+      "name": "Cây Không Giảm Giá WB",
+      "price": 50000
+    }
+scripts:
+- type: afterResponse
+  code: |-
+    pm.test("[WB-C3] Không có giá cũ tạo thành công (Status 201 Created)", function () {
+        pm.response.to.have.status(201);
+    });
+  language: text/javascript
+settings:
+  followRedirects: true
+order: 50000

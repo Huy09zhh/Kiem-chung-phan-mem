@@ -1,0 +1,29 @@
+$kind: http-request
+name: '22. Boundary: Tên 256 ký tự > max (TC-PS-028)'
+url: '{{baseUrl}}/products/api/'
+method: POST
+headers:
+- key: Content-Type
+  value: application/json
+- key: Authorization
+  value: Basic dGVzdF9hZG1pbjphZG1pbjEyMw==
+body:
+  type: json
+  content: |-
+    {
+      "name": "CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC",
+      "price": "50000",
+      "description": "Tên 256 ký tự (> 255 ký tự max)",
+      "old_price": "70000"
+    }
+scripts:
+- type: afterResponse
+  code: |-
+    // Kỳ vọng: Hệ thống từ chối dữ liệu không hợp lệ (HTTP 400 Bad Request)
+    pm.test("[TC-PS-028] Từ chối dữ liệu vi phạm biên (HTTP 400)", function () {
+        pm.expect(pm.response.code).to.be.oneOf([400, 422]);
+    });
+  language: text/javascript
+settings:
+  followRedirects: true
+order: 22000

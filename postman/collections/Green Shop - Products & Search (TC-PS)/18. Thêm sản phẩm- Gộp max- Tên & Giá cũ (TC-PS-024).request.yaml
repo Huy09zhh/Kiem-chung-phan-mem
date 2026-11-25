@@ -1,0 +1,33 @@
+$kind: http-request
+name: '18. Thêm sản phẩm: Gộp max- Tên & Giá cũ (TC-PS-024)'
+url: '{{baseUrl}}/products/api/'
+method: POST
+headers:
+- key: Content-Type
+  value: application/json
+- key: Authorization
+  value: Basic dGVzdF9hZG1pbjphZG1pbjEyMw==
+body:
+  type: json
+  content: |-
+    {
+      "name": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
+      "price": "50000",
+      "description": "Tên 254 ký tự (max-), Giá bán 50.000 đ, Giá cũ 99.999.999 đ (max-)",
+      "old_price": "99999999"
+    }
+scripts:
+- type: afterResponse
+  code: |-
+    // Kỳ vọng: Tạo sản phẩm thành công (HTTP 201 Created)
+    pm.test("[TC-PS-024] Tạo sản phẩm thành công (HTTP 201)", function () {
+        pm.expect(pm.response.code).to.be.oneOf([200, 201]);
+    });
+    pm.test("Kiểm tra dữ liệu phản hồi trả về đúng tên sản phẩm", function () {
+        var jsonData = pm.response.json();
+        pm.expect(jsonData).to.have.property("name");
+    });
+  language: text/javascript
+settings:
+  followRedirects: true
+order: 18000

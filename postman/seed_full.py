@@ -8,6 +8,7 @@ Chạy tay (trên DB trống):
 
 Mã đơn và sản phẩm khớp với biến trong các collection, sửa ở đây thì phải sửa biến tương ứng:
   Sản phẩm #1 "Cây Sen Đá Mini"  : PH2 (TC-PS-006, 009), PH4 product_id, PH5 product_id
+  Tài khoản test_admin / admin123 : PH2 (Basic Auth khi thêm/sửa/xóa sản phẩm qua API)
   Danh mục #1                    : PH5 category_id
   Đơn #1  Hoàn thành, SĐT 0912345678 : PH6 order_id, final_order_id, phone_known
   Đơn #2  Hoàn thành, QR, Tran Thi B : PH6 search_order_id, detail_order_id
@@ -35,6 +36,8 @@ if Product.objects.exists() or Order.objects.exists():
 User.objects.create_superuser('admin', 'admin@example.com', 'Admin@12345')
 user1 = User.objects.create_user('user1', 'user1@example.com', 'User@12345', first_name='Nguyen', last_name='Van A')
 User.objects.create_user('user2', 'user2@example.com', 'User@12345')
+# PH2 (Huy): các request thêm/sửa/xóa sản phẩm qua API đăng nhập Basic Auth bằng test_admin / admin123 (giống CI)
+User.objects.create_superuser('test_admin', 'test_admin@example.com', 'admin123')
 
 # ---- đăng nhập Google: thiếu SocialApp thì trang đăng nhập lỗi 500 (SCRUM-10)
 app = SocialApp.objects.create(provider='google', name='Google (test)', client_id='test', secret='test')

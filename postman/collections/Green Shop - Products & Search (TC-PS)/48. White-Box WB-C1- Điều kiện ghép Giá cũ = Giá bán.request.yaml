@@ -1,0 +1,27 @@
+$kind: http-request
+name: '48. White-Box WB-C1: Điều kiện ghép Giá cũ <= Giá bán (TC-PS-054)'
+url: '{{baseUrl}}/products/api/'
+method: POST
+headers:
+- key: Content-Type
+  value: application/json
+- key: Authorization
+  value: Basic dGVzdF9hZG1pbjphZG1pbjEyMw==
+body:
+  type: json
+  content: |-
+    {
+      "name": "Cây Giá Cũ Bằng Giá Bán",
+      "price": 50000,
+      "old_price": 50000
+    }
+scripts:
+- type: afterResponse
+  code: |-
+    pm.test("[WB-C1] Giá cũ <= Giá bán bị từ chối (Status 400 Bad Request)", function () {
+        pm.response.to.have.status(400);
+    });
+  language: text/javascript
+settings:
+  followRedirects: true
+order: 48000

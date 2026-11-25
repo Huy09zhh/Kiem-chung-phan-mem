@@ -1,0 +1,23 @@
+$kind: http-request
+name: '47. White-Box WB-S5: POST bằng Admin dữ liệu rỗng (TC-PS-053)'
+url: '{{baseUrl}}/products/api/'
+method: POST
+headers:
+- key: Content-Type
+  value: application/json
+- key: Authorization
+  value: Basic dGVzdF9hZG1pbjphZG1pbjEyMw==
+body:
+  type: json
+  content: |-
+    {}
+scripts:
+- type: afterResponse
+  code: |-
+    pm.test("[WB-S5] Admin gửi dữ liệu rỗng báo lỗi (Status 400 Bad Request)", function () {
+        pm.response.to.have.status(400);
+    });
+  language: text/javascript
+settings:
+  followRedirects: true
+order: 47000

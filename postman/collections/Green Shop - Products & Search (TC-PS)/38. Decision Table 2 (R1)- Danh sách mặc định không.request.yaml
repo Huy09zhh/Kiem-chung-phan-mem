@@ -1,0 +1,18 @@
+$kind: http-request
+name: '38. Decision Table 2 (R1): Danh sách mặc định không lọc/sắp xếp (TC-PS-044)'
+url: '{{baseUrl}}/products/'
+method: GET
+headers:
+- key: Content-Type
+  value: application/json
+scripts:
+- type: afterResponse
+  code: |-
+    pm.test("[TC-PS-044] R1: Trang danh sách mặc định 200 OK", function () {
+        pm.response.to.have.status(200);
+        pm.expect(pm.response.text()).to.include("Tất cả sản phẩm");
+    });
+  language: text/javascript
+settings:
+  followRedirects: true
+order: 38000

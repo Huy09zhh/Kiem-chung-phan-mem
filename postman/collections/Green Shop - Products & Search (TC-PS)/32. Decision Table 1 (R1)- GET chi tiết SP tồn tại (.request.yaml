@@ -1,0 +1,18 @@
+$kind: http-request
+name: '32. Decision Table 1 (R1): GET chi tiết SP tồn tại (TC-PS-038)'
+url: '{{baseUrl}}/products/api/2/'
+method: GET
+headers:
+- key: Content-Type
+  value: application/json
+scripts:
+- type: afterResponse
+  code: |-
+    pm.test("[TC-PS-038] R1: GET SP tồn tại trả 200 OK", function () {
+        pm.response.to.have.status(200);
+        pm.expect(pm.response.json()).to.have.property("name");
+    });
+  language: text/javascript
+settings:
+  followRedirects: true
+order: 32000

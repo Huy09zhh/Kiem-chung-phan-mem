@@ -1,0 +1,26 @@
+$kind: http-request
+name: '37. Decision Table 1 (R6): PATCH Admin cập nhật giá hợp lệ (TC-PS-043)'
+url: '{{baseUrl}}/products/api/2/'
+method: PATCH
+headers:
+- key: Content-Type
+  value: application/json
+- key: Authorization
+  value: Basic dGVzdF9hZG1pbjphZG1pbjEyMw==
+body:
+  type: json
+  content: |-
+    {
+      "price": "30000"
+    }
+scripts:
+- type: afterResponse
+  code: |-
+    pm.test("[TC-PS-043] R6: Cập nhật giá hợp lệ trả 200 OK", function () {
+        pm.response.to.have.status(200);
+        pm.expect(pm.response.json().price).to.eql("30000");
+    });
+  language: text/javascript
+settings:
+  followRedirects: true
+order: 37000

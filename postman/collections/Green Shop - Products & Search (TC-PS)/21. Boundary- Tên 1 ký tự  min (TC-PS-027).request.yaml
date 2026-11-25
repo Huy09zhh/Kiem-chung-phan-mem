@@ -1,0 +1,29 @@
+$kind: http-request
+name: '21. Boundary: Tên 1 ký tự < min (TC-PS-027)'
+url: '{{baseUrl}}/products/api/'
+method: POST
+headers:
+- key: Content-Type
+  value: application/json
+- key: Authorization
+  value: Basic dGVzdF9hZG1pbjphZG1pbjEyMw==
+body:
+  type: json
+  content: |-
+    {
+      "name": "A",
+      "price": "50000",
+      "description": "Tên 1 ký tự (< 2 ký tự min)",
+      "old_price": "70000"
+    }
+scripts:
+- type: afterResponse
+  code: |-
+    // Kỳ vọng: Hệ thống từ chối dữ liệu không hợp lệ (HTTP 400 Bad Request)
+    pm.test("[TC-PS-027] Từ chối dữ liệu vi phạm biên (HTTP 400)", function () {
+        pm.expect(pm.response.code).to.be.oneOf([400, 422]);
+    });
+  language: text/javascript
+settings:
+  followRedirects: true
+order: 21000

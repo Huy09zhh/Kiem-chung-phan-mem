@@ -1,0 +1,30 @@
+$kind: http-request
+name: '27. State Transition: Chưa tồn tại -> Giá thường (TC-PS-033)'
+url: '{{baseUrl}}/products/api/'
+method: POST
+headers:
+- key: Content-Type
+  value: application/json
+- key: Authorization
+  value: Basic dGVzdF9hZG1pbjphZG1pbjEyMw==
+body:
+  type: json
+  content: |-
+    {
+      "name": "Sen đá nâu STT",
+      "price": "50000"
+    }
+scripts:
+- type: afterResponse
+  code: |-
+    pm.test("[TC-PS-033] Tạo sản phẩm giá thường thành công (HTTP 201)", function () {
+        pm.response.to.have.status(201);
+        var jsonData = pm.response.json();
+        pm.expect(Boolean(jsonData.has_discount)).to.eql(false);
+        pm.expect(jsonData.discount_percent).to.eql(0);
+        pm.collectionVariables.set("stt_product_id", jsonData.id);
+    });
+  language: text/javascript
+settings:
+  followRedirects: true
+order: 27000

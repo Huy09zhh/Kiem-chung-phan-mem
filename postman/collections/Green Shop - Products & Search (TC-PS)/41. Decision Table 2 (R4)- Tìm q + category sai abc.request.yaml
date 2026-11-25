@@ -1,0 +1,18 @@
+$kind: http-request
+name: '41. Decision Table 2 (R4): Tìm q + category sai abc + sort A-Z (TC-PS-047)'
+url: '{{baseUrl}}/products/?q=a&category=abc&sort=name_asc'
+method: GET
+headers:
+- key: Content-Type
+  value: application/json
+scripts:
+- type: afterResponse
+  code: |-
+    pm.test("[TC-PS-047] R4: Category sai định dạng xử lý an toàn 200 OK", function () {
+        pm.response.to.have.status(200);
+        pm.expect(pm.response.text()).to.not.include("ValueError");
+    });
+  language: text/javascript
+settings:
+  followRedirects: true
+order: 41000

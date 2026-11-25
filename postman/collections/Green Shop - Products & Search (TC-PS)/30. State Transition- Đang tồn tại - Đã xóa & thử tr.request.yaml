@@ -1,0 +1,26 @@
+$kind: http-request
+name: '30. State Transition: Đang tồn tại -> Đã xóa & thử truy cập lại (TC-PS-036)'
+url: '{{baseUrl}}/products/api/{{stt_product_id}}/'
+method: DELETE
+headers:
+- key: Content-Type
+  value: application/json
+- key: Authorization
+  value: Basic dGVzdF9hZG1pbjphZG1pbjEyMw==
+scripts:
+- type: afterResponse
+  code: |-
+    pm.test("[TC-PS-036] Xóa sản phẩm thành công (HTTP 204)", function () {
+        pm.response.to.have.status(204);
+    });
+    pm.test("[TC-PS-036] Truy cập lại sản phẩm đã xóa phải trả 404", function () {
+        var baseUrl = pm.collectionVariables.get("baseUrl") || "http://127.0.0.1:8000";
+        var pid = pm.collectionVariables.get("stt_product_id");
+        pm.sendRequest(baseUrl + "/products/api/" + pid + "/", function (err, res) {
+            pm.expect(res.code).to.eql(404);
+        });
+    });
+  language: text/javascript
+settings:
+  followRedirects: true
+order: 30000

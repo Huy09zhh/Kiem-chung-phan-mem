@@ -1,0 +1,18 @@
+$kind: http-request
+name: '42. Decision Table 2 (R5): Danh mục hợp lệ + từ khóa không khớp (TC-PS-048)'
+url: '{{baseUrl}}/products/?category=1&q=KhongTonTai9999'
+method: GET
+headers:
+- key: Content-Type
+  value: application/json
+scripts:
+- type: afterResponse
+  code: |-
+    pm.test("[TC-PS-048] R5: Không khớp từ khóa hiển thị thông báo rỗng 200 OK", function () {
+        pm.response.to.have.status(200);
+        pm.expect(pm.response.text()).to.include("Chưa tìm thấy sản phẩm phù hợp");
+    });
+  language: text/javascript
+settings:
+  followRedirects: true
+order: 42000

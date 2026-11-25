@@ -1,0 +1,24 @@
+$kind: http-request
+name: '44. White-Box WB-S2: POST khi chưa đăng nhập (TC-PS-050)'
+url: '{{baseUrl}}/products/api/'
+method: POST
+headers:
+- key: Content-Type
+  value: application/json
+body:
+  type: json
+  content: |-
+    {
+      "name": "Cây Khách Chưa Đăng Nhập",
+      "price": 50000
+    }
+scripts:
+- type: afterResponse
+  code: |-
+    pm.test("[WB-S2] Chưa xác thực bị từ chối (Status 401 Unauthorized)", function () {
+        pm.response.to.have.status(401);
+    });
+  language: text/javascript
+settings:
+  followRedirects: true
+order: 44000
