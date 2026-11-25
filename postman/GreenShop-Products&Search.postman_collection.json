@@ -65,7 +65,9 @@
               "",
               "pm.test(\"[TC-PS-006] Kiểm tra định dạng dữ liệu trả về (JSON chứa 'Cây Sen Đá Mini')\", function () {",
               "    pm.response.to.be.json;",
-              "    pm.expect(pm.response.text()).to.include(\"Cây Sen Đá Mini\");",
+              "    var data = pm.response.json();",
+              "    var found = (data.results || []).some(function(item) { return item.name && item.name.indexOf(\"Cây Sen Đá Mini\") !== -1; });",
+              "    pm.expect(found).to.be.true;",
               "});"
             ]
           }
